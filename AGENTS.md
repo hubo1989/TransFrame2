@@ -176,3 +176,9 @@
 - Real Vision OCR + sensitive detector integration tests pass (30 s cold Vision load).
 - P1-6 mitigated (canvas on largest-intersection display; cross-display live preview remains a documented limitation).
 - swiftlint --strict: 188 violations (166 line_length >160, rest mechanical: force_cast in TextAccess, force_try in HistoryStore, optional_data_string_conversion, is_disjoint, empty_count, CompositionRoot init >100 lines, Settings.swift >600 lines). Plan: after review-2 fixes, delegate lint pass to codex (workspace-write).
+- Codex review 2 done → build/review-2-result.md (14 P1 + P2s: privacy bypass via glossary/tone/uploads, locality classify, cache key
+  vs IDs, cancel/limiter, Paddle stderr hang, stale translation write, insert target, all-failed counted as success, COS host encoding,
+  keyless local engines vs locked keychain, scroll cancel race, VLM table bounds; P2 OpenAI max_tokens / Anthropic temperature …).
+- Codex FIX worker (resumed review session 01a2097b…, workspace-write) running: fixes all review-2 findings + swiftlint strict zero.
+  Output → build/fix-2-result.md, log build/fix-2.log. DO NOT edit source files until it finishes (single writer). Then verify all gates,
+  review diff, commit as "fix: review-2 findings + lint".
