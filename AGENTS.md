@@ -171,3 +171,4 @@
 - FULL swift test green: 127 tests, 0 failures (after l10n completion).
 - Codex review 2 (phases 4–7) launched → build/review-2-result.md
 - Review-1 P2 fixes committed (all except P1-6 cross-display canvas, P2-13 revised-segment undo, P2-15 onRetry closure, P2-16 already moot). Smoke OK, gates 0.
+- perf.sh pipeline added; M4 Pro: R-04 p95 0.13ms, R-05 0.13 (fake measurer), R-06 6.95ms (real CG), R-09 0.10, O-02 0.04, O-03 0.89 (in-memory store). Baseline PerfBaselines/m4pro.json. P-* screen metrics not measured (need perf driver).
