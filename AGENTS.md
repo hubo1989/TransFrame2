@@ -93,3 +93,22 @@
   (EnginesModel/EnginesPage etc. in SettingsFeature/PendingPages.swift are EmptyView stubs!), EngineCatalogService, Glossary store/service,
   Phase 5 text translation (TFSystemInfra SelectedTextCapturer/TextInserter + Pipelines TextTranslationService + TextTranslationFeature),
   Phase 6 SwiftData history + HistoryFeature windows + uploads + scroll capture, Phase 7 AI (TFAIInfra), Phase 8 docs/release/perf.
+- Added TFPipelines/EngineCatalog.swift (EngineCatalogService: testTranslation, testAnalysis, models, paddleStatus, generators, testUpload).
+  Not yet wired into App (SettingsDependencies.catalog still nil) and settings pages still stubs. Next step: write real
+  EnginesModel + pages (engines: mode/chain/compare/cards/compatible instances/credentials/health/test; prompts; privacy; AI; glossary;
+  image host; recognition section incl. Paddle status + analysis provider config), then wire catalog in CompositionRoot
+  (EngineCatalogService(translation: translationEngines, discovery: translationEngines, health: EngineHealthProber(factory:transport:),
+  recognition: recognitionEngines, paddle: PaddleInstallationService(), generators: nil, uploader: nil, encoder: codec)).
+- IN PROGRESS: SettingsFeature/PendingPages.swift now holds the real EnginesModel (health, secrets, models, tests, glossary, chain/compare
+  edits). View structs EnginesPage/PromptsPage/PrivacyPage/AIPage/GlossaryPage/ImageHostPage were REMOVED and must be written in a new
+  file SettingsFeature/EnginePages.swift (PrivacyPage takes SettingsViewModel, others take EnginesModel; call `await model.load()` in .task).
+  EnginesModel.copy uses NSPasteboard → violates check-deps; add `pasteboard: any PasteboardAccessing` to SettingsDependencies and use it.
+  New l10n keys used: .enginesInstanceName (format %d), .enginesTesting.
+- Wrote SettingsFeature/EnginePages.swift (EnginesPage+EngineCard+HealthDot+RecognitionSection, PromptsPage, PrivacyPage, AIPage,
+  GlossaryPage, ImageHostPage). Not compiled yet. Needs many new l10n keys (engines.*, health.*, prompts.*, privacy.*, ai.*, glossary.*,
+  imageHost.*, analysis.<provider>, sensitive.<category>, tone.<style>, prompts.scene.<scene>, action.show/hide/delete) — run
+  /tmp/tf2l10n/missing_keys.py (script may be gone; regenerate: scan `l10n[.x]`/`l10n.string(.x` vs camel(catalog keys)) and add en+zh,
+  then agy for 8 languages. EngineCard uses `.onTapGesture` on Menu (check-design OK). Then wire catalog in CompositionRoot.
+- Merged l10n batch b6 (settings pages keys, en+zh). Other 8 languages pending → run agy translation (input-3) after phase 5/6 strings.
+- SettingsFeature compiles with real pages. NEXT: wire catalog in CompositionRoot (see note above), replace NSPasteboard in
+  EnginesModel.copy with injected PasteboardAccessing, settings base six pages always visible (review P2-16), commit; then Phase 5.

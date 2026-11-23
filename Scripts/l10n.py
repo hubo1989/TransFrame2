@@ -19,7 +19,7 @@ KEYS_SWIFT = os.path.join(PKG, "Sources", "TFLocalization", "L10nKeys.generated.
 EXEMPTIONS = os.path.join(ROOT, "Scripts", "l10n-exemptions.txt")
 LANGS = ["en", "zh-Hans", "de", "es", "fr", "it", "ja", "ko", "pt", "ru"]
 # Keys resolved from Domain values at runtime; their presence is verified by Swift tests.
-DYNAMIC_PREFIXES = ("error.", "color.", "undo.", "provenance.sent.", "engine.name.", "language.", "settings.page.", "tool.", "hotkey.", "category.", "sensitive.", "smartAction.", "tone.", "history.kind.", "stage.")
+DYNAMIC_PREFIXES = ("error.", "analysis.", "imageHost.field.", "prompts.scene.", "color.", "undo.", "provenance.sent.", "engine.name.", "language.", "settings.page.", "tool.", "hotkey.", "category.", "sensitive.", "smartAction.", "tone.", "history.kind.", "stage.")
 PLACEHOLDER = re.compile(r"%(?:\d+\$)?(?:lld|ld|d|@|f|\.\d+f|s|u)")
 
 
