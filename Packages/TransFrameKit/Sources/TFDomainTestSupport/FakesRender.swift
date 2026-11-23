@@ -40,9 +40,11 @@ public final class FakeRenderExecutor: RenderPlanExecuting, @unchecked Sendable 
 
 public final class FakeImageCodec: ImageEncoding, Thumbnailing, @unchecked Sendable {
     public let encoded = CallLog<(ExportFormat, Double)>()
+    public let encodedSizes = CallLog<PixelSize>()
     public init() {}
     public func encode(_ image: PixelImage, format: ExportFormat, quality: Double) throws(AppError) -> Data {
         encoded.append((format, quality))
+        encodedSizes.append(image.pixelSize)
         return Data("\(format.rawValue):\(image.pixelSize.width)x\(image.pixelSize.height)".utf8)
     }
     public func decode(_ data: Data) throws(AppError) -> PixelImage { TestImages.solid(width: 10, height: 10) }
@@ -51,15 +53,18 @@ public final class FakeImageCodec: ImageEncoding, Thumbnailing, @unchecked Senda
 
 public final class FakeFileExporter: FileExporting, @unchecked Sendable {
     public let written = CallLog<(String, String, URL)>()
+    public let payloads = CallLog<Data>()
     public let failure = Locked<AppError?>(nil)
     public init() {}
     public func write(_ data: Data, baseName: String, fileExtension: String, to directory: URL) async throws(AppError) -> URL {
         if let failure = failure.current { throw failure }
+        payloads.append(data)
         written.append((baseName, fileExtension, directory))
         return directory.appending(path: "\(baseName).\(fileExtension)")
     }
     public func write(_ data: Data, to url: URL) async throws(AppError) {
         if let failure = failure.current { throw failure }
+        payloads.append(data)
         written.append((url.deletingPathExtension().lastPathComponent, url.pathExtension, url.deletingLastPathComponent()))
     }
 }
