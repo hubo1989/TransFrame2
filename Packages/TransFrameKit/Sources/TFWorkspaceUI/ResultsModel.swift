@@ -68,6 +68,7 @@ public final class ResultsModel {
     @ObservationIgnored public let services: WorkspaceServices
     @ObservationIgnored public let sessionID: SessionID
     @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var generation = 0
 
     public init(services: WorkspaceServices, sessionID: SessionID) {
         self.services = services
@@ -107,10 +108,12 @@ public final class ResultsModel {
             settings: services.settings.snapshot, target: target, cache: force ? .forceRefresh : .normal, overridePrivacyGuard: overridePrivacy
         )
         let stream = start(pipeline, options)
+        generation += 1
+        let current = generation
         task = Task { [weak self] in
             do {
                 for try await event in stream {
-                    guard let self else { return }
+                    guard let self, self.generation == current else { return }
                     switch event {
                     case .stage(let stage): self.stage = stage
                     case .privacy(let report) where report.applied:
@@ -118,9 +121,9 @@ public final class ResultsModel {
                     default: break
                     }
                 }
-                self?.stage = nil
+                if self?.generation == current { self?.stage = nil }
             } catch {
-                guard let self else { return }
+                guard let self, self.generation == current else { return }
                 self.stage = nil
                 let appError = AppError.from(error)
                 if appError != .cancelled { self.error = appError }
@@ -129,6 +132,7 @@ public final class ResultsModel {
     }
 
     public func cancel() {
+        generation += 1
         task?.cancel()
         stage = nil
         let pipeline = services.pipeline, id = sessionID

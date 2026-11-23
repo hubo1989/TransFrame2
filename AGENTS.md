@@ -167,3 +167,6 @@
 - l10n: merged agy output-2; agy input-3 (141 keys) running in background → /tmp/tf2l10n/agy/output-3.json, merge with Scripts/l10n.py merge. (agentcompass record for antigravity fails: disabled_in_magpie; agy itself not gated.)
 - Phase4Tests committed (52 pipeline tests pass). Next: infra tests (upload signing, LLM/VLM parsers, continuation merge), then full test + l10n merge output-3.
 - Infra tests committed (network/upload/translation/recognition pass).
+- l10n complete: 473 keys × 10 languages, check-l10n 0 problems (committed).
+- FULL swift test green: 127 tests, 0 failures (after l10n completion).
+- Codex review 2 (phases 4–7) launched → build/review-2-result.md

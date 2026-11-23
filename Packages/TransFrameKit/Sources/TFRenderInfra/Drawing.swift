@@ -45,10 +45,11 @@ enum TextDrawing {
         guard rect.width > 0, rect.height > 0 else { return }
         let string = NSAttributedString(string: text, attributes: attributes(fontSize: fontSize, color: color, alignment: alignment, rightToLeft: rightToLeft, fontName: fontName, bold: bold))
         let framesetter = CTFramesetterCreateWithAttributedString(string)
-        let height = rect.height + fontSize
+        let height = rect.height + 2
         let path = CGPath(rect: CGRect(x: 0, y: 0, width: rect.width, height: height), transform: nil)
         let frame = CTFramesetterCreateFrame(framesetter, CFRange(location: 0, length: 0), path, nil)
         context.saveGState()
+        context.clip(to: rect.insetBy(dx: -1, dy: -1))
         context.translateBy(x: rect.minX, y: rect.minY + height)
         context.scaleBy(x: 1, y: -1)
         context.textMatrix = .identity

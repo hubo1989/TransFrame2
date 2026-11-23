@@ -186,7 +186,7 @@ final class OverlayView: NSView {
         let span = 15
         let center = CGPoint(x: (p.x * scale).rounded(.down), y: (p.y * scale).rounded(.down))
         let cropRect = CGRect(x: center.x - CGFloat(span / 2), y: center.y - CGFloat(span / 2), width: CGFloat(span), height: CGFloat(span))
-        magnifierImage.contents = frame0.image.cgImage.cropping(to: cropRect)
+        magnifierImage.contents = Self.magnified(frame0.image.cgImage, cropRect, span: span)
         let cross = CGMutablePath()
         let cell = magnifier.bounds.width / CGFloat(span)
         let mid = CGFloat(span / 2) * cell
@@ -202,6 +202,19 @@ final class OverlayView: NSView {
             magnifierLabel.frame = CGRect(x: origin.x, y: origin.y + 124, width: 120, height: 20)
             magnifierLabel.isHidden = false
         }
+    }
+
+    /// Copies the requested window into a fixed span×span buffer; out-of-frame cells stay empty (review-1 P2-3).
+    static func magnified(_ image: CGImage, _ rect: CGRect, span: Int) -> CGImage? {
+        let bounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
+        let visible = rect.intersection(bounds)
+        guard !visible.isNull, let crop = image.cropping(to: visible),
+              let context = CGContext(data: nil, width: span, height: span, bitsPerComponent: 8, bytesPerRow: 0,
+                                      space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        let dx = visible.minX - rect.minX, dyTop = visible.minY - rect.minY
+        context.draw(crop, in: CGRect(x: dx, y: CGFloat(span) - dyTop - visible.height, width: visible.width, height: visible.height))
+        return context.makeImage()
     }
 
     /// HEX of the frozen pixel under a global point (CAP-12).

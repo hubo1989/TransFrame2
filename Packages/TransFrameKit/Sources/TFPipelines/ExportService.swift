@@ -43,7 +43,7 @@ public struct ExportService: ExportWorkflow {
     public func save(_ id: SessionID, as format: ExportFormat?, settings: SettingsSnapshot) async throws(AppError) -> SaveReceipt {
         let format = format ?? settings.export.format
         let session = try await sessions.snapshot(of: id)
-        let image = try await render.image(for: id, purpose: .file(format))
+        let image = try await render.image(of: session, purpose: .file(format))
         let data = try encoder.encode(image, format: format, quality: settings.export.quality(for: format))
         let directory = settings.general.saveLocationPath.map { URL(fileURLWithPath: $0, isDirectory: true) } ?? defaultDirectory()
         let name = await namer.name(for: session, settings: settings, date: now())
@@ -60,7 +60,7 @@ public struct ExportService: ExportWorkflow {
     public func upload(_ id: SessionID, settings: SettingsSnapshot) async throws(AppError) -> UploadReceipt {
         guard let uploader, settings.imageHost.provider != nil else { throw .upload(.notConfigured) }
         let session = try await sessions.snapshot(of: id)
-        let image = try await render.image(for: id, purpose: .file(.png))
+        let image = try await render.image(of: session, purpose: .file(.png))
         let data = try encoder.encode(image, format: .png, quality: 1)
         let base = await namer.name(for: session, settings: settings, date: now()).base
         let receipt = try await uploader.upload(data, fileName: "\(base).png", contentType: "image/png", settings: settings.imageHost)

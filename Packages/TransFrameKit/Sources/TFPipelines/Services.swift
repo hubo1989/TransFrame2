@@ -85,7 +85,11 @@ public struct RenderService: RenderWorkflow {
     }
 
     public func image(for id: SessionID, purpose: RenderPurpose) async throws(AppError) -> PixelImage {
-        let session = try await sessions.snapshot(of: id)
+        try await image(of: try await sessions.snapshot(of: id), purpose: purpose)
+    }
+
+    /// Renders one immutable snapshot so pixels, names and saved revisions agree (review-1 P2-12).
+    public func image(of session: DocumentSession, purpose: RenderPurpose) async throws(AppError) -> PixelImage {
         let plan = try planner.plan(for: session, purpose: purpose)
         let start = ContinuousClock.now
         let image = try await executor.image(for: plan, base: session.baseImage)

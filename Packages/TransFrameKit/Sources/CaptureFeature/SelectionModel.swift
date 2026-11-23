@@ -85,6 +85,7 @@ public final class SelectionModel {
 
     /// Tab cycles overlapping candidates under the pointer (CAP-06).
     public func cycleCandidates() {
+        guard snapsToWindows else { return }
         let list = candidates(at: pointer)
         guard list.count > 1 else { return }
         cycleIndex = (cycleIndex + 1) % list.count
@@ -138,7 +139,10 @@ public final class SelectionModel {
     public func mouseDragged(to point: QuartzPoint) {
         pointer = point
         if let resizing {
-            setRect(Self.resized(resizing.rect, handle: resizing.handle, to: point), source: .freeform)
+            let resized = Self.resized(resizing.rect, handle: resizing.handle, to: point)
+            if let clipped = resized.intersection(bounds), clipped.width >= SelectionGeometry.minimumPointSize, clipped.height >= SelectionGeometry.minimumPointSize {
+                setRect(clipped, source: .freeform)
+            }
         } else if let moveOrigin {
             let dx = point.x - moveOrigin.pointer.x, dy = point.y - moveOrigin.pointer.y
             setRect(clampedMove(moveOrigin.rect, dx: dx, dy: dy), source: source)
@@ -170,9 +174,13 @@ public final class SelectionModel {
             updateHover()
             return false
         }
-        if dragStart != nil, phase == .choosing, let hovered {
-            select(hovered.rect, source: hovered.source)
-            return true
+        if dragStart != nil, phase == .choosing, snapsToWindows {
+            pointer = point
+            updateHover()
+            if let hovered {
+                select(hovered.rect, source: hovered.source)
+                return true
+            }
         }
         return false
     }

@@ -124,7 +124,7 @@ final class PinController: NSObject, NSWindowDelegate {
     }
 
     func applyZoom(keepCenter: Bool = true) {
-        let size = NSSize(width: max(baseSize.width * state.zoom, 60), height: max(baseSize.height * state.zoom, 40))
+        let size = NSSize(width: max(baseSize.width * state.zoom, 1), height: max(baseSize.height * state.zoom, 1))
         var frame = window.frame
         if keepCenter { frame.origin = NSPoint(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2) }
         frame.size = size
@@ -179,7 +179,7 @@ final class PinController: NSObject, NSWindowDelegate {
         case 53, 51, 117: window.close(); return true
         default: break
         }
-        if key == "e" { edit(); return true }
+        if key == "e", flags.isDisjoint(with: [.command, .option, .control]) { edit(); return true }
         return false
     }
 }
@@ -190,7 +190,10 @@ final class PinWindow: NSPanel {
     override var canBecomeKey: Bool { true }
     override func scrollWheel(with event: NSEvent) { handler?.scrolled(event) }
     override func keyDown(with event: NSEvent) { if handler?.key(event) != true { super.keyDown(with: event) } }
-    override func performKeyEquivalent(with event: NSEvent) -> Bool { handler?.key(event) ?? super.performKeyEquivalent(with: event) }
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if handler?.key(event) == true { return true }
+        return super.performKeyEquivalent(with: event)
+    }
 }
 
 struct PinActions {

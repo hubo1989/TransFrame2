@@ -29,7 +29,9 @@ extension EditTransaction {
     }
 
     public static func setCrop(_ crop: DocumentRect?, in session: DocumentSession, label: String) -> EditTransaction? {
-        guard crop != session.crop else { return nil }
+        let normalized = crop == session.imageBounds ? nil : crop
+        guard normalized != session.crop else { return nil }
+        let crop = normalized
         return EditTransaction(label: label, forward: [.setCrop(crop)], inverse: [.setCrop(session.crop)])
     }
 

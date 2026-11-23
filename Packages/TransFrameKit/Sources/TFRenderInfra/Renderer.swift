@@ -8,7 +8,12 @@ import TFDomain
 /// The single render executor (ADR-0006): screen, clipboard, file, pin, thumbnail and analysis input
 /// all draw through `draw(_:base:in:)`. Deterministic for a given plan, base image and fonts.
 public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
-    private let mosaicCache = OSAllocatedUnfairLock<[MosaicKey: CGImage]>(initialState: [:])
+    /// Entries belong to `base`; a different base image resets the cache, so reused object addresses never match (review-1 P2-8).
+    private struct MosaicState: @unchecked Sendable {
+        var base: CGImage?
+        var entries: [MosaicKey: CGImage] = [:]
+    }
+    private let mosaicCache = OSAllocatedUnfairLock<MosaicState>(initialState: MosaicState())
 
     public init() {}
 
@@ -144,7 +149,11 @@ public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
             image: ObjectIdentifier(base.cgImage), x: Int(region.minX), y: Int(region.minY),
             width: Int(region.width), height: Int(region.height), block: block
         )
-        if let cached = mosaicCache.withLock({ $0[key] }) { return cached }
+        let image = base.cgImage
+        if let cached = mosaicCache.withLock({ state -> CGImage? in
+            if state.base !== image { state = MosaicState(base: image) }
+            return state.entries[key]
+        }) { return cached }
         guard let crop = base.cgImage.cropping(to: region) else { return nil }
         let size = PixelSize(width: max(Int(region.width) / block, 1), height: max(Int(region.height) / block, 1))
         guard let small = Bitmap.context(size: size, colorSpace: crop.colorSpace) else { return nil }
@@ -152,9 +161,10 @@ public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
         small.draw(crop, in: CGRect(x: 0, y: 0, width: size.width, height: size.height))
         let result = small.makeImage()
         if let result {
-            mosaicCache.withLock { cache in
-                if cache.count > 64 { cache.removeAll() }
-                cache[key] = result
+            mosaicCache.withLock { state in
+                guard state.base === image else { return }
+                if state.entries.count > 64 { state.entries.removeAll() }
+                state.entries[key] = result
             }
         }
         return result
@@ -171,7 +181,7 @@ public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
 
 enum Bitmap {
     static func context(size: PixelSize, colorSpace: CGColorSpace?) -> CGContext? {
-        let space = (colorSpace?.supportsOutput == true ? colorSpace : nil) ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        let space = (colorSpace.map { $0.supportsOutput && $0.model == .rgb } == true ? colorSpace : nil) ?? CGColorSpace(name: CGColorSpace.sRGB)!
         return CGContext(
             data: nil, width: size.width, height: size.height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue

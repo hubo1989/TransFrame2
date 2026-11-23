@@ -141,7 +141,8 @@ final class CaptureController: OverlayViewDelegate {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
         switch event.keyCode {
-        case 53: // Esc
+        case 53: // Esc: text → selection → tool → drawer → capture (EDT-08, INP-12)
+            if editor?.cancelStep() == true { return true }
             if drawerPanel != nil { closeDrawer(); return true }
             cancel(); return true
         case 36, 76: // Enter
@@ -233,6 +234,16 @@ final class CaptureController: OverlayViewDelegate {
         let canvas = DocumentCanvasView(render: services.render, sessionID: id, editor: editor)
         canvas.frame = overlay.local(rect)
         canvas.onEscapeUnhandled = { [weak self] in self?.cancel() }
+        canvas.keyHandler = { [weak self] event in self?.overlayKeyDown(event) ?? false }
+        let selectionFrame = canvas.frame
+        canvas.onRender = { [weak canvas] plan in
+            // Padding (beautify) extends outside the selection so the content stays aligned with the frozen pixels.
+            let scale = plan.scale
+            canvas?.frame = CGRect(
+                x: selectionFrame.minX - plan.contentFrame.minX / scale, y: selectionFrame.minY - plan.contentFrame.minY / scale,
+                width: Double(plan.canvas.width) / scale, height: Double(plan.canvas.height) / scale
+            )
+        }
         overlay.addSubview(canvas)
         let observer = DocumentObserver(sessions: services.sessions, sessionID: id)
         observer.onChange = { [weak self, weak canvas] session in

@@ -19,11 +19,12 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
     /// Drafts and selection handles sit above the rendered image and never take events.
     private lazy var overlayView = CanvasOverlayView(canvas: self)
     private var renderTask: Task<Void, Never>?
-    private var renderedKey: (revision: Int, hidden: AnnotationID?, translation: Bool)?
     private var textField: NSTextField?
     /// Called after each committed render (pins and previews resize from it).
     public var onRender: ((RenderPlan) -> Void)?
     public var onEscapeUnhandled: (() -> Void)?
+    /// Host shortcuts get the first look at keys (capture overlay actions), then the annotation editor.
+    public var keyHandler: ((NSEvent) -> Bool)?
 
     public init(render: any RenderWorkflow, sessionID: SessionID, editor: AnnotationEditor?, purpose: RenderPurpose = .screen) {
         self.render = render
@@ -70,20 +71,33 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
 
     // MARK: Rendering
 
+    private struct RenderKey: Equatable {
+        let revision: Int
+        let hidden: AnnotationID?
+        let translation: OperationID?
+        let engine: EngineID?
+        let overlay: Bool
+    }
+
+    private var renderGeneration = 0
+    private var renderedKey: RenderKey?
+
     private func scheduleRender(force: Bool = false) {
         guard let session else { return }
-        let hidden = editor?.hiddenID
-        let key = (session.editRevision, hidden, session.presentation.showsTranslationOverlay && session.translation != nil)
-        if !force, let renderedKey, renderedKey.revision == key.0, renderedKey.hidden == key.1, renderedKey.translation == key.2,
-           session.translation == nil || renderedKey.translation == key.2 {
-            return
-        }
+        let key = RenderKey(
+            revision: session.editRevision, hidden: editor?.hiddenID, translation: session.translation?.operation,
+            engine: session.translation?.effective, overlay: session.presentation.showsTranslationOverlay
+        )
+        // Any newer request invalidates in-flight renders, including cache hits (review-1 P2-6).
+        renderGeneration += 1
+        let generation = renderGeneration
         renderTask?.cancel()
-        let render = render, id = sessionID, purpose = purpose, base = session.baseImage
+        if !force, renderedKey == key { return }
+        let render = render, id = sessionID, purpose = purpose, base = session.baseImage, hidden = key.hidden
         renderTask = Task { [weak self] in
             guard let plan = try? await render.plan(for: id, purpose: purpose, excluding: hidden.map { [$0] } ?? []) else { return }
             let image = await Self.rasterize(plan, base: base, render: render)
-            guard !Task.isCancelled, let self else { return }
+            guard !Task.isCancelled, let self, self.renderGeneration == generation else { return }
             self.plan = plan
             self.renderedKey = key
             CATransaction.begin()
@@ -99,7 +113,8 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
     nonisolated static func rasterize(_ plan: RenderPlan, base: PixelImage, render: any RenderWorkflow) async -> CGImage? {
         guard let context = CGContext(
             data: nil, width: plan.canvas.width, height: plan.canvas.height, bitsPerComponent: 8, bytesPerRow: 0,
-            space: base.cgImage.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            space: base.cgImage.colorSpace.flatMap { $0.model == .rgb && $0.supportsOutput ? $0 : nil } ?? CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) ?? CGContext(
             data: nil, width: plan.canvas.width, height: plan.canvas.height, bitsPerComponent: 8, bytesPerRow: 0,
             space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
@@ -229,6 +244,7 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
 
     override public func keyDown(with event: NSEvent) {
         guard let editor else { return super.keyDown(with: event) }
+        if editor.textEditing == nil, keyHandler?(event) == true { return }
         if event.keyCode == 53 {
             if !editor.cancelStep() { onEscapeUnhandled?() }
             return
