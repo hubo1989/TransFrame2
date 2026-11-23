@@ -164,3 +164,8 @@ public struct PrivacyReport: Sendable, Codable, Equatable, Hashable {
 
     public static let notApplied = PrivacyReport(applied: false, redactedCount: 0, categories: [])
 }
+
+/// Pure derivation of smart actions from a recognition result (SPEC §02 §11.1).
+public protocol SmartActionDeriving: Sendable {
+    func actions(for result: AnalysisResult) -> [SmartAction]
+}

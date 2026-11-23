@@ -11,10 +11,13 @@ import TFDesignSystem
 import TFDomain
 import TFCaptureInfra
 import TFLocalization
+import TFNetworkInfra
 import TFPersistenceInfra
 import TFPipelines
+import TFRecognitionInfra
 import TFRenderInfra
 import TFSystemInfra
+import TFTranslationInfra
 import TFWorkspaceUI
 
 /// The only place that names concrete Infrastructure types (SPEC §01 §4, ADR-0003).
@@ -71,10 +74,24 @@ final class CompositionRoot {
             defaultDirectory: { FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0] }
         )
         let colorPick = ColorPickService(sampler: ScreenColorSampler(), pasteboard: pasteboard, history: history)
-        let capture = CaptureService(snapshotter: snapshotter, blocks: nil, performance: performance)
+        let capture = CaptureService(snapshotter: snapshotter, blocks: LocalContentBlockDetector(), performance: performance)
+        let transport = URLSessionTransport()
+        let credentials = credentials
+        let secrets: @Sendable (CredentialRef) async throws(AppError) -> String? = { ref throws(AppError) in try await credentials.secret(for: ref) }
+        let translationEngines = TranslationEngineFactory(transport: transport, secrets: secrets)
+        let recognitionEngines = RecognitionEngineFactory(transport: transport, secrets: secrets)
+        let detector = LocalSensitiveContentDetector()
+        let recognition = RecognitionService(
+            sessions: sessions, render: render, engines: recognitionEngines, guardian: PrivacyGuard(detector: detector), performance: performance
+        )
+        let translation = TranslationService(engines: translationEngines, performance: performance)
+        let pipeline = DocumentPipelineService(
+            sessions: sessions, recognition: recognition, translation: translation, history: history, thumbnails: codec,
+            glossary: nil, codes: VisionCodeDetector(), detector: detector
+        )
         Task { await snapshotter.prewarm() }
         let workspace = WorkspaceServices(
-            sessions: sessions, render: render, export: export, pipeline: nil, glossary: nil, colorPick: colorPick,
+            sessions: sessions, render: render, export: export, pipeline: pipeline, glossary: nil, colorPick: colorPick,
             pasteboard: pasteboard, settings: settings, localizer: localizer, errors: errors, router: coordinator, performance: performance
         )
         let sessions = sessions, codec = codec

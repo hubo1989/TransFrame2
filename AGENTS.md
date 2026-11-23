@@ -37,3 +37,37 @@
   then Phase 4 engines (Vision/Paddle/VLM recognition, translation engines, health, DocumentPipeline, RecognitionWorkflow,
   TranslationWorkflow, ResultCache, PrivacyGuard), settings engine pages; Phase 5 text translation; Phase 6 history (SwiftData),
   uploads, scroll capture; Phase 7 AI; Phase 8 docs/perf/release + codex review.
+- Phase 2/3 committed (c415039). Delegation notes: AgentCompass gate blocks `codex exec`/`agy` unless a ledger record exists.
+  `agentcompass roll` currently fails (classifier unavailable), so run
+  `agentcompass record --constraint user_override --provider codex --account codex --model remote-magpie/codex/gpt-6.2-sol --effort high --basis "<user words>"`
+  in its own command, then `codex exec --sandbox read-only -C <repo> --output-last-message build/<x>-result.md "$(cat build/<x>.md)"` in background.
+  Review 1 (phases 1–3) launched → build/review-1-result.md.
+- Phase 4 in progress (uncommitted): TFNetworkInfra (URLSessionTransport, HTTPStatusMapping, Endpoint, LLMClient with 4 wires +
+  continuation merge), TFTranslationInfra (MTran/Google/DeepL/Baidu/LLM engines, Apple 26+, TranslationEngineFactory, EngineHealthProber,
+  AppleLanguageAvailability), TFDomain/SensitiveText.swift (rule classifier), TFRecognitionInfra (VisionEngines.swift: Vision OCR,
+  DocumentRecognizer 26+ [API names unverified], code/sensitive/content-block detectors; RemoteEngines.swift: VLM, Paddle local/cloud,
+  ProcessRunner, RecognitionEngineFactory). ToolbarModel/CaptureController reference `pipeline` (DocumentPipelineWorkflow) — still nil in App.
+- Phase 4 remaining: TFPipelines RecognitionService (analysis input via RenderService .analysisInput, hash+ResultCache, PrivacyGuard,
+  tiling OCR-10, Normalizer reading order/paragraphs/noise→excluded, empty→OCR fallback OCR-12), TranslationService (ordered/compare,
+  cache, coalescing, glossary post-replace, text privacy placeholders), DocumentPipelineService (recognize/translate/history/smart actions/
+  smart mosaic), SmartActionDeriver, GlossaryService, EngineCatalogService; settings pages (PendingPages.swift placeholders → real);
+  wire in App CompositionRoot; strings; tests.
+- Done (uncommitted): TFPipelines/ResultCache.swift (LRU + in-flight coalescing, CacheKey.digest/fingerprint), Normalizer.swift
+  (RecognitionNormalizer: filtering→excluded, visual-line merge, paragraph ContentBlocks for line engines, translatability;
+  ImageTiling tiles/merge). Codex review 1 output: build/review-1-result.md (read & fix findings).
+- Design decisions pending implementation: (1) TranslationLayoutPlanner belowOriginal should place one translation per paragraph
+  block (join segment translations, union box) — replace mode stays per segment; (2) glossary for non-glossary engines via
+  placeholders ⟦Gn⟧ replaced after translation; (3) text privacy guard: withhold whole-sensitive units, placeholder ⟦Pn⟧ spans;
+  (4) image privacy guard draws black rects on the analysis input before cloud engines; (5) default analysis provider is Vision.
+- Done (uncommitted, builds): TFPipelines/PrivacyGuard.swift (image/text guard, GlossaryMatcher), TranslationService.swift
+  (ordered/compare, EngineRun{result,privacy}, internal translate(_:settings:overridePrivacy:), cache, limiter, Deadline, cleanup).
+- Next: RecognitionService, DocumentPipelineService, SmartActionDeriver, GlossaryService(+GlossaryStore in Persistence),
+  EngineCatalogService, wire App (URLSessionTransport, factories, KeychainCredentialStore.secret as SecretReader), settings pages.
+- Done (uncommitted, TFPipelines builds): RecognitionService (internal recognize(_:settings:provider:overridePrivacy:) → Outcome{result,privacy,input}),
+  DocumentPipeline.swift (DocumentPipelineService: recognize/translate streams via store.beginOperation/attach/finishOperation, makeJob
+  with prompt/glossary/context, history record w/ thumbnail, smartActions (+QR), smartMosaic; SmartActionDeriver). Domain: SmartActionDeriving.
+- Next immediately: wire App CompositionRoot (URLSessionTransport, TranslationEngineFactory/RecognitionEngineFactory with
+  `secrets: { try await credentials.secret(for: $0) }`, LocalSensitiveContentDetector, VisionCodeDetector, LocalContentBlockDetector into
+  CaptureService blocks, RecognitionService, TranslationService, DocumentPipelineService → WorkspaceServices.pipeline);
+  then EngineCatalogService + settings pages (replace PendingPages.swift), GlossaryStore/GlossaryService, strings batch + agy translate,
+  tests for pipeline/translation/normalizer/privacy; commit "feat: phase 4"; then phases 5–8.
