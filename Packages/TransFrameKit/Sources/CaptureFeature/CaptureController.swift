@@ -229,7 +229,11 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     private func attachCanvas(_ id: SessionID) {
-        guard let rect = selection.rect, let overlay = overlays.first(where: { $0.display.frame.intersects(rect) }) else { return }
+        // The canvas lives on the display holding most of the selection; other displays keep showing the identical frozen
+        // pixels (known limitation: live annotations are previewed on that one display only).
+        guard let rect = selection.rect, let overlay = overlays.max(by: {
+            ($0.display.frame.intersection(rect)?.area ?? 0) < ($1.display.frame.intersection(rect)?.area ?? 0)
+        }) else { return }
         let editor = services.makeEditor(for: id)
         let canvas = DocumentCanvasView(render: services.render, sessionID: id, editor: editor)
         canvas.frame = overlay.local(rect)
