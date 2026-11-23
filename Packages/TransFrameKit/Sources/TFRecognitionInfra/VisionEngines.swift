@@ -271,7 +271,6 @@ enum UploadImage {
     }
 }
 
-
 /// Vision's normalized, bottom-left coordinates → top-left frame pixels, in explicit Double math
 /// (mixed CGFloat/Double operators are ambiguous on the Swift 6.2 compile floor).
 enum VisionGeometry {
