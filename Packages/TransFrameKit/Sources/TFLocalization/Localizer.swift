@@ -24,8 +24,16 @@ public struct LocalizationTable: Sendable {
     }
 
     private static func bundle(for language: String) -> Bundle? {
-        guard let path = Bundle.module.path(forResource: language, ofType: "lproj") else { return nil }
+        guard let path = Bundle.module.path(forResource: language, ofType: "lproj") ?? lprojPath(matching: language) else { return nil }
         return Bundle(path: path)
+    }
+
+    /// Some toolchains rename localization folders (`zh-hans.lproj`, `zh_Hans.lproj`); match case- and separator-insensitively.
+    private static func lprojPath(matching language: String) -> String? {
+        func normalized(_ name: String) -> String { name.lowercased().replacingOccurrences(of: "_", with: "-") }
+        guard let root = Bundle.module.resourcePath, let items = try? FileManager.default.contentsOfDirectory(atPath: root) else { return nil }
+        let wanted = normalized(language)
+        return items.first { $0.hasSuffix(".lproj") && normalized(String($0.dropLast(6))) == wanted }.map { root + "/" + $0 }
     }
 
     private static let missing = "\u{1}missing\u{1}"
