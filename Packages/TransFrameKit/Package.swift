@@ -72,7 +72,7 @@ let package = Package(
             .product(name: "PermissionFlow", package: "PermissionFlow"),
         ]),
         infra("TFUploadInfra"),
-        .target(name: "TFLocalization", resources: [.process("Resources")]),
+        .target(name: "TFLocalization", exclude: ["Resources/Localizable.xcstrings"], resources: [.process("Resources")]),
         .target(name: "TFDesignSystem", dependencies: ["TFLocalization"], swiftSettings: mainActorUI),
         // L2
         .target(
