@@ -170,3 +170,4 @@
 - l10n complete: 473 keys × 10 languages, check-l10n 0 problems (committed).
 - FULL swift test green: 127 tests, 0 failures (after l10n completion).
 - Codex review 2 (phases 4–7) launched → build/review-2-result.md
+- Review-1 P2 fixes committed (all except P1-6 cross-display canvas, P2-13 revised-segment undo, P2-15 onRetry closure, P2-16 already moot). Smoke OK, gates 0.
