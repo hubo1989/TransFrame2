@@ -153,3 +153,4 @@
 - Added GlossaryFileStore (TFPersistenceInfra, JSON at supportDirectory/Glossary.json) + GlossaryService (TFPipelines, correct()).
   Both compile. TODO wire: `let glossaryStore = GlossaryFileStore(url: environment.supportDirectory.appending(path: "Glossary.json"))`,
   `GlossaryService(store:sessions:)` → WorkspaceServices.glossary + SettingsDependencies.glossary; pass glossaryStore to DocumentPipelineService.
+- Glossary wired in App (store+service). Verify build.

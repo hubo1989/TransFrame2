@@ -88,13 +88,15 @@ final class CompositionRoot {
             sessions: sessions, render: render, engines: recognitionEngines, guardian: PrivacyGuard(detector: detector), performance: performance
         )
         let translation = TranslationService(engines: translationEngines, performance: performance)
+        let glossaryStore = GlossaryFileStore(url: environment.isUITest ? nil : environment.supportDirectory.appending(path: "Glossary.json"))
+        let glossary = GlossaryService(store: glossaryStore, sessions: sessions)
         let pipeline = DocumentPipelineService(
             sessions: sessions, recognition: recognition, translation: translation, history: history, thumbnails: codec,
-            glossary: nil, codes: VisionCodeDetector(), detector: detector
+            glossary: glossaryStore, codes: VisionCodeDetector(), detector: detector
         )
         Task { await snapshotter.prewarm() }
         let workspace = WorkspaceServices(
-            sessions: sessions, render: render, export: export, pipeline: pipeline, glossary: nil, colorPick: colorPick,
+            sessions: sessions, render: render, export: export, pipeline: pipeline, glossary: glossary, colorPick: colorPick,
             pasteboard: pasteboard, settings: settings, localizer: localizer, errors: errors, router: coordinator, performance: performance
         )
         let textAccess = AccessibilityTextService(pasteboard: pasteboard)
@@ -117,7 +119,7 @@ final class CompositionRoot {
             ),
             settings: SettingsCoordinator(dependencies: SettingsDependencies(
                 settings: settings, localizer: localizer, permissions: permissions, credentials: credentials,
-                unlocker: unlocker, catalog: catalog, glossary: nil, errors: errors, router: coordinator, pasteboard: pasteboard
+                unlocker: unlocker, catalog: catalog, glossary: glossary, errors: errors, router: coordinator, pasteboard: pasteboard
             )),
             onboarding: OnboardingCoordinator(
                 permissions: permissions, settings: settings, localizer: localizer, appVersion: environment.version
