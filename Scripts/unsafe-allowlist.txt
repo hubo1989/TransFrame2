@@ -1,2 +1,3 @@
 Packages/TransFrameKit/Sources/TFDomainTestSupport/* # test doubles: mutable fake state is guarded by NSLock (Locked/CallLog); test-only target
 Packages/TransFrameKit/Sources/TFCaptureInfra/CaptureInfra.swift # OneShotCapture.Gate guards a single continuation with NSLock so the deadline and the capture callback resume it exactly once
+Packages/TransFrameKit/Sources/TFDomainTestSupport/FakesEngines.swift # test-only fakes; mutable state is guarded by CallLog locks

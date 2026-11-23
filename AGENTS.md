@@ -158,3 +158,10 @@
 - Wrote TFUploadInfra/ImageUploader.swift (PicGo, OSS v1 sig, COS q-sign, Kodo token multipart; UploadSigning pure). Compile + wire: ImageUploader(transport:secrets:) → ExportService.uploader + EngineCatalogService.uploader.
 - Uploads wired & committed. NEXT: ScrollCaptureService (Pipelines: begin strips via ScrollCapturing every ~120 ms, stitch by row-hash overlap search, 32k px limit, finish → sessions.create(importing:)), wire CaptureDependencies.scroll; then Phase 7 TFAIInfra.
 - Scroll capture wired & committed. Phase 6 code complete. NEXT: Phase 7 TFAIInfra: NLEmbedding (TextEmbedding), FoundationModels generator 26+, LLM generator via LLMClient, TextGeneratorProvider (TextGeneratorProviding) → wire embedding into HistoryService, generators into TextTranslationService/EngineCatalog/FileNamer (auto naming).
+- Phase 7 wired & committed: TFAIInfra/AIEngines.swift (FoundationModelsGenerator 26+, LLMGenerator, TextGeneratorProvider automatic order,
+  NaturalLanguageEmbedding 512-d), HistoryService embedding, FileNamer AI suggest (local unless allowsCloud), generators into text
+  translation + catalog. Structured recognition AI-01 = VLM structured prompt / Vision document; smart selection AI-03 = content blocks.
+- NEXT (Phase 8): run full swift test + gates (check-deps/design/l10n), fix; add tests for new code (normalizer, translation service
+  mapping/fallback/cancel, privacy guard, glossary, history store, upload signing, scroll shift, LLM parser); agy translation pass for all
+  missing keys; remaining review-1 P2 items + P1-6; docs (README/user guide/CHANGELOG), release workflow + perf script; codex review 2.
+- l10n: merged agy output-2; agy input-3 (141 keys) running in background → /tmp/tf2l10n/agy/output-3.json, merge with Scripts/l10n.py merge. (agentcompass record for antigravity fails: disabled_in_magpie; agy itself not gated.)
