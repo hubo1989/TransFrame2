@@ -156,3 +156,4 @@
 - Glossary wired in App (store+service). Verify build.
 - Glossary wiring committed. NEXT: TFUploadInfra uploader, ScrollCaptureService, Phase 7 TFAIInfra, tests, l10n agy pass, docs, release workflow, codex review 2.
 - Wrote TFUploadInfra/ImageUploader.swift (PicGo, OSS v1 sig, COS q-sign, Kodo token multipart; UploadSigning pure). Compile + wire: ImageUploader(transport:secrets:) → ExportService.uploader + EngineCatalogService.uploader.
+- Uploads wired & committed. NEXT: ScrollCaptureService (Pipelines: begin strips via ScrollCapturing every ~120 ms, stitch by row-hash overlap search, 32k px limit, finish → sessions.create(importing:)), wire CaptureDependencies.scroll; then Phase 7 TFAIInfra.

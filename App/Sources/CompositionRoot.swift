@@ -131,7 +131,8 @@ final class CompositionRoot {
                 localizer: localizer, router: coordinator, canCheckForUpdates: { [updater] in updater.canCheckForUpdates }
             ),
             capture: CaptureCoordinator(dependencies: CaptureDependencies(
-                workspace: workspace, capture: capture, topology: topology, permissions: permissions, scroll: nil, sound: sound
+                workspace: workspace, capture: capture, topology: topology, permissions: permissions,
+                scroll: ScrollCaptureService(capturer: snapshotter, sessions: sessions), sound: sound
             )),
             editor: EditorCoordinator(services: workspace) { url throws(AppError) in
                 guard let data = try? Data(contentsOf: url) else { throw .recognition(.imageUnreadable) }
