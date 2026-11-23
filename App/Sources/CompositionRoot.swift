@@ -68,37 +68,49 @@ final class CompositionRoot {
         let coordinator = AppCoordinator(environment: environment)
         self.coordinator = coordinator
 
+        let features = makeFeatures(makePipelines())
+        errors.attach(router: coordinator)
+        coordinator.attach(services: AppServices(
+            settings: settings, localizer: localizer, hotkeys: hotkeys, permissions: permissions, unlocker: unlocker,
+            credentials: credentials, updater: updater, runningApps: runningApps, errors: errors, feedback: feedback, logger: logger
+        ), features: features)
+    }
+
+    private struct Pipelines {
+        let snapshotter: ScreenSnapshotter
+        let capture: CaptureService
+        let colorPick: ColorPickService
+        let history: HistoryService
+        let workspace: WorkspaceServices
+        let glossary: GlossaryService
+        let textTranslation: TextTranslationService
+        let catalog: EngineCatalogService
+    }
+
+    private func makePipelines() -> Pipelines {
         // Pipelines over infrastructure.
         let snapshotter = ScreenSnapshotter(topology: topology, windows: WindowEnumerator())
         let render = RenderService(sessions: sessions, planner: RenderPlanner(measurer: renderer), executor: renderer, performance: performance)
-        let historyStore = SwiftDataHistoryStore.open(directory: environment.isUITest ? nil : environment.supportDirectory)
-        let history = HistoryService(store: historyStore, files: files, embedding: NaturalLanguageEmbedding(), index: historyStore, performance: performance)
+        let history = makeHistory()
         let transport = URLSessionTransport()
         let credentials = credentials
         let secrets: @Sendable (CredentialRef) async throws(AppError) -> String? = { ref throws(AppError) in try await credentials.secret(for: ref) }
+        let detector = LocalSensitiveContentDetector()
+        let guardian = PrivacyGuard(detector: detector)
         let uploader = ImageUploader(transport: transport, secrets: secrets)
         let translationEngines = TranslationEngineFactory(transport: transport, secrets: secrets)
         let generators = TextGeneratorProvider(transport: transport, secrets: secrets) { [translationEngines] in translationEngines.descriptors(for: $0) }
-        // AI naming (AI-07): local generators only unless cloud naming is allowed.
-        let namer = FileNamer { session, snapshot in
-            guard let generator = await generators.generator(for: snapshot.ai.generationEngine, settings: snapshot),
-                  generator.descriptor.locality == .onDevice || snapshot.ai.autoNamingAllowsCloud else { return nil }
-            let text = [session.context?.appName, session.context?.windowTitle, session.analysis.map { String($0.plainText.prefix(800)) }]
-                .compactMap { $0 }.joined(separator: "\n")
-            guard !text.isEmpty else { return nil }
-            return try? await generator.generate(GenerationRequest(task: .suggestFileName, input: text, maxOutputCharacters: 60))
-        }
+        let namer = makeNamer(generators)
         let export = ExportService(
             sessions: sessions, render: render, pasteboard: pasteboard, encoder: codec, files: files, sound: sound,
             uploader: uploader, history: history, namer: namer,
-            defaultDirectory: { FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0] }
+            guardian: guardian, defaultDirectory: { FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0] }
         )
         let colorPick = ColorPickService(sampler: ScreenColorSampler(), pasteboard: pasteboard, history: history)
         let capture = CaptureService(snapshotter: snapshotter, blocks: LocalContentBlockDetector(), performance: performance)
         let recognitionEngines = RecognitionEngineFactory(transport: transport, secrets: secrets)
-        let detector = LocalSensitiveContentDetector()
         let recognition = RecognitionService(
-            sessions: sessions, render: render, engines: recognitionEngines, guardian: PrivacyGuard(detector: detector), performance: performance
+            sessions: sessions, render: render, engines: recognitionEngines, guardian: guardian, performance: performance
         )
         let translation = TranslationService(engines: translationEngines, performance: performance)
         let glossaryStore = GlossaryFileStore(url: environment.isUITest ? nil : environment.supportDirectory.appending(path: "Glossary.json"))
@@ -122,13 +134,48 @@ final class CompositionRoot {
             health: EngineHealthProber(factory: translationEngines, transport: transport), recognition: recognitionEngines,
             paddle: PaddleInstallationService(), generators: generators, uploader: uploader, encoder: codec
         )
-        let sessions = sessions, codec = codec
+        return Pipelines(
+            snapshotter: snapshotter, capture: capture, colorPick: colorPick, history: history, workspace: workspace,
+            glossary: glossary, textTranslation: textTranslation, catalog: catalog
+        )
+    }
 
-        let features = AppFeatures(
+    private func makeNamer(_ generators: TextGeneratorProvider) -> FileNamer {
+        FileNamer { session, settings in
+            guard let generator = await generators.generator(for: settings.ai.generationEngine, settings: settings),
+                  generator.descriptor.locality == .onDevice || settings.ai.autoNamingAllowsCloud else { return nil }
+            let input = PrivacyGuard.namingInput(session: session, settings: settings, locality: generator.descriptor.locality)
+            guard !input.isEmpty else { return nil }
+            return try? await generator.generate(GenerationRequest(task: .suggestFileName, input: input, maxOutputCharacters: 60))
+        }
+    }
+
+    private func makeHistory() -> HistoryService {
+        do {
+            let directory = environment.isUITest ? nil : environment.supportDirectory
+            let store = try SwiftDataHistoryStore.open(directory: directory)
+            return HistoryService(
+                store: store, files: files, embedding: NaturalLanguageEmbedding(),
+                index: store, storeOwnsIndex: true, performance: performance
+            )
+        } catch {
+            errors.present(error, near: nil)
+            return HistoryService(store: InMemoryHistoryStore(), files: files, performance: performance)
+        }
+    }
+
+    private func makeFeatures(_ pipelines: Pipelines) -> AppFeatures {
+        let sessions = sessions, codec = codec, coordinator = coordinator
+        let workspace = pipelines.workspace, textTranslation = pipelines.textTranslation
+        let snapshotter = pipelines.snapshotter, capture = pipelines.capture
+        let history = pipelines.history, colorPick = pipelines.colorPick
+        let catalog = pipelines.catalog, glossary = pipelines.glossary
+        return AppFeatures(
             menuBar: MenuBarCoordinator(
                 settings: settings, localizer: localizer, router: coordinator,
                 image: NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil),
-                pinCount: { [weak coordinator] in coordinator?.pinCount ?? 0 }
+                pinCount: { [weak coordinator] in coordinator?.pinCount ?? 0 },
+                canPolish: { [textTranslation] settings in await textTranslation.canPolish(settings: settings) }
             ),
             settings: SettingsCoordinator(dependencies: SettingsDependencies(
                 settings: settings, localizer: localizer, permissions: permissions, credentials: credentials,
@@ -158,12 +205,8 @@ final class CompositionRoot {
             ),
             color: ColorCoordinator(workflow: colorPick, settings: settings, localizer: localizer, errors: errors, router: coordinator)
         )
-        errors.attach(router: coordinator)
-        coordinator.attach(services: AppServices(
-            settings: settings, localizer: localizer, hotkeys: hotkeys, permissions: permissions, unlocker: unlocker,
-            credentials: credentials, updater: updater, runningApps: runningApps, errors: errors, feedback: feedback, logger: logger
-        ), features: features)
     }
+
 }
 
 struct AppServices {

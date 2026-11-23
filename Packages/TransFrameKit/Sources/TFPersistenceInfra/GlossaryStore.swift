@@ -24,24 +24,31 @@ public actor GlossaryFileStore: GlossaryStoring {
     public func version() async -> Int { revision }
 
     public func upsert(_ entry: GlossaryEntry) async throws(AppError) {
-        items.removeAll { $0.id == entry.id || ($0.source.caseInsensitiveCompare(entry.source) == .orderedSame && $0.to == entry.to && $0.scope == entry.scope) }
-        items.append(entry)
-        try persist()
+        let updated = items.filter { item in
+            guard item.id != entry.id else { return false }
+            guard item.from == entry.from, item.to == entry.to, item.scope == entry.scope, item.caseSensitive == entry.caseSensitive else {
+                return true
+            }
+            return entry.caseSensitive ? item.source != entry.source : item.source.caseInsensitiveCompare(entry.source) != .orderedSame
+        }
+        try persist(updated + [entry])
     }
 
     public func remove(_ id: GlossaryEntryID) async throws(AppError) {
-        items.removeAll { $0.id == id }
-        try persist()
+        try persist(items.filter { $0.id != id })
     }
 
-    private func persist() throws(AppError) {
-        revision += 1
-        guard let url else { return }
-        do {
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(Stored(version: revision, entries: items)).write(to: url, options: .atomic)
-        } catch {
-            throw .persistence(.writeFailed)
+    private func persist(_ updated: [GlossaryEntry]) throws(AppError) {
+        let next = revision + 1
+        if let url {
+            do {
+                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try JSONEncoder().encode(Stored(version: next, entries: updated)).write(to: url, options: .atomic)
+            } catch {
+                throw .persistence(.writeFailed)
+            }
         }
+        items = updated
+        revision = next
     }
 }

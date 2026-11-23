@@ -99,3 +99,17 @@ public final class FakeHistoryWorkflow: HistoryWorkflow, @unchecked Sendable {
     public func record(_ entry: HistoryEntry, settings: SettingsSnapshot) async { recorded.append(entry) }
     public func notice() async -> HistoryStoreNotice? { nil }
 }
+
+public struct FakeImageUploader: ImageUploading {
+    public let objectNames = CallLog<String>()
+
+    public init() {}
+
+    public func upload(_ data: Data, fileName: String, contentType: String, settings: ImageHostSettings) async throws(AppError) -> UploadReceipt {
+        guard let provider = settings.provider, let url = URL(string: "https://example.invalid/") else {
+            throw .upload(.notConfigured)
+        }
+        objectNames.append(fileName)
+        return UploadReceipt(url: url.appending(path: fileName), provider: provider)
+    }
+}

@@ -14,6 +14,7 @@ public indirect enum AppRoute: Sendable, Equatable {
     case openImage(URL?)
     case translateSelectedText
     case translateAndInsert
+    case polishSelection
     case openEditor(SessionID, focus: EditorFocus?)
     case pin(SessionID)
     case restorePinInteractions, showAllPins

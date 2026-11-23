@@ -164,9 +164,13 @@ public final class AnnotationEditor {
         if let tool {
             switch tool {
             case .text:
-                textEditing = TextEditingState(annotationID: nil, anchor: point, text: "", fontSize: style.fontSize * scale, color: style.color, isCallout: false)
+                textEditing = TextEditingState(
+                    annotationID: nil, anchor: point, text: "", fontSize: style.fontSize * scale, color: style.color, isCallout: false)
             case .numberLabel:
-                commitInsert(.numberLabel(NumberLabelAnnotation(center: point, number: nextNumber(), color: style.color, diameter: max(style.fontSize * 1.6, 18) * scale)))
+                commitInsert(
+                    .numberLabel(
+                        NumberLabelAnnotation(
+                            center: point, number: nextNumber(), color: style.color, diameter: max(style.fontSize * 1.6, 18) * scale)))
             case .freehand:
                 gesture = .freehand([point])
             default:
@@ -236,7 +240,7 @@ public final class AnnotationEditor {
             self.selectedID = nil
             return true
         }
-        guard modifiers.intersection([.command, .control, .option]).isEmpty, let character = characters.first,
+        guard modifiers.isDisjoint(with: [.command, .control, .option]), let character = characters.first,
               let tool = AnnotationTool.forKey(character) else { return false }
         self.tool = self.tool == tool ? nil : tool
         return true
@@ -324,15 +328,26 @@ public final class AnnotationEditor {
         let rect = AnnotationGeometry.rect(from: start, to: end, square: constrain && [.rectangle, .ellipse].contains(tool))
         let width = style.lineWidth * scale
         switch tool {
-        case .rectangle: return .rectangle(ShapeAnnotation(rect: rect, strokeColor: style.color, lineWidth: width, isFilled: style.isFilled, fillColor: style.fillColor))
-        case .ellipse: return .ellipse(ShapeAnnotation(rect: rect, strokeColor: style.color, lineWidth: width, isFilled: style.isFilled, fillColor: style.fillColor))
+        case .rectangle:
+            return .rectangle(
+                ShapeAnnotation(rect: rect, strokeColor: style.color, lineWidth: width, isFilled: style.isFilled, fillColor: style.fillColor))
+        case .ellipse:
+            return .ellipse(
+                ShapeAnnotation(rect: rect, strokeColor: style.color, lineWidth: width, isFilled: style.isFilled, fillColor: style.fillColor))
         case .highlight: return .highlight(ShapeAnnotation(rect: rect, strokeColor: style.color, lineWidth: 0))
-        case .line: return .line(LineAnnotation(start: start, end: constrain ? AnnotationGeometry.snap45(start, end) : end, color: style.color, lineWidth: width))
-        case .arrow: return .arrow(LineAnnotation(start: start, end: constrain ? AnnotationGeometry.snap45(start, end) : end, color: style.color, lineWidth: width))
+        case .line:
+            return .line(
+                LineAnnotation(start: start, end: constrain ? AnnotationGeometry.snap45(start, end) : end, color: style.color, lineWidth: width))
+        case .arrow:
+            return .arrow(
+                LineAnnotation(start: start, end: constrain ? AnnotationGeometry.snap45(start, end) : end, color: style.color, lineWidth: width))
         case .mosaic: return .mosaic(MosaicAnnotation(rect: rect, blockSize: style.mosaicBlockSize * scale))
         case .redaction: return .redaction(RedactionAnnotation(rect: rect))
         case .callout:
-            return .callout(CalloutAnnotation(bubble: rect, pointer: DocumentPoint(x: rect.minX - 20 * scale, y: rect.maxY + 20 * scale), text: "", color: style.color, fontSize: style.fontSize * scale, fillColor: .white))
+            return .callout(
+                CalloutAnnotation(
+                    bubble: rect, pointer: DocumentPoint(x: rect.minX - 20 * scale, y: rect.maxY + 20 * scale), text: "", color: style.color,
+                    fontSize: style.fontSize * scale, fillColor: .white))
         case .freehand, .text, .numberLabel: return nil
         }
     }

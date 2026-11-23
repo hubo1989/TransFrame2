@@ -69,33 +69,60 @@ enum HistoryMigrationPlan: SchemaMigrationPlan {
 public actor SwiftDataHistoryStore: HistoryStoring, EmbeddingIndexStoring {
     private var movedAside: String?
 
-    public static func open(directory: URL?) -> SwiftDataHistoryStore {
+    private init(container: ModelContainer, movedAside: String? = nil) {
+        modelContainer = container
+        modelExecutor = DefaultSerialModelExecutor(modelContext: ModelContext(container))
+        self.movedAside = movedAside
+    }
+
+    public static func open(directory: URL?) throws(AppError) -> SwiftDataHistoryStore {
         let schema = Schema(versionedSchema: HistorySchemaV1.self)
-        guard let directory else {
-            let container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-            return SwiftDataHistoryStore(modelContainer: container)
-        }
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appending(path: "History.store")
         do {
-            let container = try ModelContainer(for: schema, migrationPlan: HistoryMigrationPlan.self, configurations: ModelConfiguration(url: url))
-            return SwiftDataHistoryStore(modelContainer: container)
-        } catch {
-            let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
-            let aside = directory.appending(path: "History-unreadable-\(stamp).store")
-            try? FileManager.default.moveItem(at: url, to: aside)
-            for suffix in ["-shm", "-wal"] {
-                try? FileManager.default.moveItem(at: URL(fileURLWithPath: url.path + suffix), to: URL(fileURLWithPath: aside.path + suffix))
+            guard let directory else { return try inMemoryStore(schema) }
+            let files = FileManager.default
+            try files.createDirectory(at: directory, withIntermediateDirectories: true)
+            let url = directory.appending(path: "History.store")
+            do {
+                let container = try ModelContainer(for: schema, migrationPlan: HistoryMigrationPlan.self, configurations: ModelConfiguration(url: url))
+                return SwiftDataHistoryStore(container: container)
+            } catch {
+                guard files.fileExists(atPath: url.path) else { throw error }
+                let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+                let aside = directory.appending(path: "History-unreadable-\(stamp)-\(UUID().uuidString)")
+                try moveStore(url: url, aside: aside, files: files)
+                if let container = try? ModelContainer(
+                    for: schema, migrationPlan: HistoryMigrationPlan.self, configurations: ModelConfiguration(url: url)
+                ) {
+                    return SwiftDataHistoryStore(container: container, movedAside: aside.path)
+                }
+                return try inMemoryStore(schema, movedAside: aside.path)
             }
-            let container = (try? ModelContainer(for: schema, configurations: ModelConfiguration(url: url)))
-                ?? (try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
-            let store = SwiftDataHistoryStore(modelContainer: container)
-            Task { await store.setMovedAside(aside.path) }
-            return store
+        } catch {
+            throw .persistence(.storeUnavailable)
         }
     }
 
-    func setMovedAside(_ path: String) { movedAside = path }
+    private static func inMemoryStore(_ schema: Schema, movedAside: String? = nil) throws -> SwiftDataHistoryStore {
+        let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        return SwiftDataHistoryStore(container: container, movedAside: movedAside)
+    }
+
+    private static func moveStore(url: URL, aside: URL, files: FileManager) throws {
+        try files.createDirectory(at: aside, withIntermediateDirectories: false)
+        var moved: [(URL, URL)] = []
+        do {
+            for suffix in ["", "-shm", "-wal"] {
+                let original = URL(fileURLWithPath: url.path + suffix)
+                guard files.fileExists(atPath: original.path) else { continue }
+                let target = aside.appending(path: original.lastPathComponent)
+                try files.moveItem(at: original, to: target)
+                moved.append((original, target))
+            }
+        } catch {
+            for (original, target) in moved.reversed() { try files.moveItem(at: target, to: original) }
+            throw error
+        }
+    }
 
     public func notice() async -> HistoryStoreNotice? { movedAside.map(HistoryStoreNotice.init) }
 
@@ -107,27 +134,33 @@ public actor SwiftDataHistoryStore: HistoryStoring, EmbeddingIndexStoring {
         }
     }
 
-    private func save() throws(AppError) {
-        do { try modelContext.save() } catch { throw .persistence(.writeFailed) }
+    private func transaction<T>(_ updates: () throws -> T) throws(AppError) -> T {
+        do {
+            let value = try updates()
+            try modelContext.save()
+            return value
+        } catch {
+            modelContext.rollback()
+            throw error as? AppError ?? .persistence(.writeFailed)
+        }
     }
 
     /// Identical content merges keeping the favorite flag (HIS-10); oldest unfavorited entries go first (ADR-0009 §5).
     public func add(_ entry: HistoryEntry, limit: Int) async throws(AppError) -> HistoryEntry {
-        var entry = entry
-        let key = entry.contentKey
-        let duplicates = try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredEntry>(predicate: #Predicate { $0.contentKey == key }))
-        for duplicate in duplicates {
-            entry.isFavorite = entry.isFavorite || duplicate.isFavorite
-            modelContext.delete(duplicate)
+        try transaction {
+            var entry = entry
+            let originals = try fetchAll()
+            let key = entry.contentKey
+            let duplicates = originals.filter { $0.contentKey == key }
+            entry.isFavorite = entry.isFavorite || duplicates.contains(where: \.isFavorite)
+            let duplicateIDs = Set(duplicates.map(\.id))
+            var retained = [entry] + originals.filter { !duplicateIDs.contains($0.id) }.map(\.value)
+            HistoryRetentionPolicy.trim(&retained, limit: limit)
+            let keep = Set(retained.map { $0.id.raw })
+            try delete(originals.filter { duplicateIDs.contains($0.id) || !keep.contains($0.id) })
+            if keep.contains(entry.id.raw) { modelContext.insert(HistorySchemaV1.StoredEntry(entry)) }
+            return entry
         }
-        modelContext.insert(HistorySchemaV1.StoredEntry(entry))
-        var all = try fetchAll().map(\.value)
-        let before = Set(all.map(\.id))
-        HistoryRetentionPolicy.trim(&all, limit: limit)
-        let removed = before.subtracting(all.map(\.id))
-        if !removed.isEmpty { try await remove(Array(removed)) }
-        try save()
-        return entry
     }
 
     public func page(_ query: HistoryQuery) async throws(AppError) -> HistoryPage {
@@ -148,53 +181,68 @@ public actor SwiftDataHistoryStore: HistoryStoring, EmbeddingIndexStoring {
     }
 
     public func setFavorite(_ id: HistoryEntryID, _ on: Bool) async throws(AppError) {
-        let raw = id.raw
-        for item in try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredEntry>(predicate: #Predicate { $0.id == raw })) { item.isFavorite = on }
-        try save()
+        try transaction {
+            let raw = id.raw
+            for item in try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredEntry>(predicate: #Predicate { $0.id == raw })) {
+                item.isFavorite = on
+            }
+        }
+    }
+
+    private func delete(_ entries: [HistorySchemaV1.StoredEntry]) throws(AppError) {
+        guard !entries.isEmpty else { return }
+        let wanted = Set(entries.map(\.id))
+        let vectors = try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredVector>())
+        for item in entries { modelContext.delete(item) }
+        for vector in vectors where wanted.contains(vector.entryID) { modelContext.delete(vector) }
     }
 
     public func remove(_ ids: [HistoryEntryID]) async throws(AppError) {
         let wanted = Set(ids.map(\.raw))
-        for item in try fetchAll() where wanted.contains(item.id) { modelContext.delete(item) }
-        for vector in try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredVector>()) where wanted.contains(vector.entryID) {
-            modelContext.delete(vector)
-        }
-        try save()
+        try transaction { try delete(fetchAll().filter { wanted.contains($0.id) }) }
     }
 
     public func clear(_ scope: HistoryScope) async throws(AppError) {
-        let items = try fetchAll()
-        let doomed: [HistoryEntryID] = items.compactMap { item in
-            switch scope {
-            case .all: HistoryEntryID(raw: item.id)
-            case .kinds(let kinds): kinds.contains(HistoryKind(rawValue: item.kind) ?? .textTranslation) ? HistoryEntryID(raw: item.id) : nil
+        try transaction {
+            let doomed = try fetchAll().filter { item in
+                switch scope {
+                case .all: true
+                case .kinds(let kinds): kinds.contains(HistoryKind(rawValue: item.kind) ?? .textTranslation)
+                }
             }
+            try delete(doomed)
         }
-        try await remove(doomed)
     }
 
     // MARK: EmbeddingIndexStoring
 
     public func upsert(_ id: HistoryEntryID, vector: [Float]) async throws(AppError) {
-        let raw = id.raw
-        for existing in try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredVector>(predicate: #Predicate { $0.entryID == raw })) {
-            modelContext.delete(existing)
+        try transaction {
+            let raw = id.raw
+            let entries = FetchDescriptor<HistorySchemaV1.StoredEntry>(predicate: #Predicate { $0.id == raw })
+            guard !(try modelContext.fetchSafe(entries)).isEmpty else { return }
+            let matches = FetchDescriptor<HistorySchemaV1.StoredVector>(predicate: #Predicate { $0.entryID == raw })
+            if let existing = try modelContext.fetchSafe(matches).first {
+                existing.vector = vector
+            } else {
+                modelContext.insert(HistorySchemaV1.StoredVector(entryID: raw, vector: vector))
+            }
         }
-        modelContext.insert(HistorySchemaV1.StoredVector(entryID: raw, vector: vector))
-        try save()
     }
 
     public func removeAll() async throws(AppError) {
-        for vector in try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredVector>()) { modelContext.delete(vector) }
-        try save()
+        try transaction {
+            for vector in try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredVector>()) { modelContext.delete(vector) }
+        }
     }
 
     /// Cosine similarity, best first.
     public func nearest(to vector: [Float], limit: Int) async throws(AppError) -> [(HistoryEntryID, Double)] {
         let norm = sqrt(vector.reduce(0) { $0 + Double($1 * $1) })
         guard norm > 0 else { return [] }
+        let validIDs = Set(try fetchAll().map(\.id))
         let scored = try modelContext.fetchSafe(FetchDescriptor<HistorySchemaV1.StoredVector>()).compactMap { stored -> (HistoryEntryID, Double)? in
-            guard stored.vector.count == vector.count else { return nil }
+            guard validIDs.contains(stored.entryID), stored.vector.count == vector.count else { return nil }
             var dot = 0.0, other = 0.0
             for i in vector.indices {
                 dot += Double(vector[i] * stored.vector[i])

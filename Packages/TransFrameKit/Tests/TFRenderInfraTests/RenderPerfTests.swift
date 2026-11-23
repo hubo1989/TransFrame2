@@ -13,12 +13,17 @@ struct RenderPerfTests {
         let base = TestImages.pattern(width: 3840, height: 2160, scale: 2)
         let placements = (0..<100).map { i in
             TranslationPlacement(
-                segment: SegmentID(), text: "Translated line number \(i) with some words", frame: CanvasRect(x: Double(i % 10) * 380, y: Double(i / 10) * 210, width: 360, height: 40),
+                segment: SegmentID(), text: "Translated line number \(i) with some words",
+                frame: CanvasRect(x: Double(i % 10) * 380, y: Double(i / 10) * 210, width: 360, height: 40),
                 fontSize: 24, color: .black, backdrop: .fill(.white), fit: .fits
             )
         }
         let annotations: [PlacedAnnotation] = (0..<20).map { i in
-            PlacedAnnotation(annotation: .rectangle(ShapeAnnotation(rect: DocumentRect(x: Double(i) * 150, y: 100, width: 120, height: 80), strokeColor: RGBA(red: 1, green: 0, blue: 0), lineWidth: 4)), offsetX: 0, offsetY: 0)
+            PlacedAnnotation(
+                annotation: .rectangle(
+                    ShapeAnnotation(
+                        rect: DocumentRect(x: Double(i) * 150, y: 100, width: 120, height: 80), strokeColor: RGBA(red: 1, green: 0, blue: 0),
+                        lineWidth: 4)), offsetX: 0, offsetY: 0)
         }
         let plan = RenderPlan(
             session: SessionID(), editRevision: 1, canvas: PixelSize(width: 3840, height: 2160), scale: 2, background: .transparent,

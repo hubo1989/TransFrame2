@@ -52,11 +52,13 @@ public struct RenderPlanner: Sendable {
         }
 
         if isAnalysis != .original {
-            let solidForUpload = isAnalysis == .safe || isAnalysis == .asDisplayed
+            let solidForUpload = purpose == .upload || isAnalysis == .safe || isAnalysis == .asDisplayed
             let redactions: [PlacedRedaction] = annotations.compactMap { annotation in
                 switch annotation {
                 case .redaction(let r):
-                    return PlacedRedaction(id: r.id, frame: CanvasRect(r.rect.raw.offsetBy(dx: offsetX, dy: offsetY)), source: r.rect, style: .solid(r.fill))
+                    return PlacedRedaction(
+                        id: r.id, frame: CanvasRect(r.rect.raw.offsetBy(dx: offsetX, dy: offsetY)), source: r.rect,
+                        style: .solid(solidForUpload ? r.fill.withAlpha(1) : r.fill))
                 case .mosaic(let m) where m.isPrivacy:
                     let frame = CanvasRect(m.rect.raw.offsetBy(dx: offsetX, dy: offsetY))
                     return PlacedRedaction(id: m.id, frame: frame, source: m.rect, style: solidForUpload ? .solid(.black) : .mosaic(blockSize: m.blockSize))

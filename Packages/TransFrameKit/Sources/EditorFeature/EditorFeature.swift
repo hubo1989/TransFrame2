@@ -75,7 +75,10 @@ final class EditorModel {
     var l10n: Localizer { services.localizer }
 
     func copyAndClose(_ close: @escaping () -> Void) {
-        act { try await self.services.export.copyImage(of: self.sessionID, settings: self.services.settings.snapshot); self.toast(self.l10n[.feedbackCopied]); close() }
+        act {
+            try await self.services.export.copyImage(of: self.sessionID, settings: self.services.settings.snapshot)
+            self.toast(self.l10n[.feedbackCopied]); close()
+        }
     }
 
     /// Save failures keep the editing state and report the reason (EDT-14).
@@ -153,7 +156,9 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
         model = EditorModel(services: services, sessionID: sessionID)
         canvas = DocumentCanvasView(render: services.render, sessionID: sessionID, editor: model.editor)
         self.onClose = onClose
-        window = EditorWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 480), styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
+        window = EditorWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         super.init()
         window.title = services.localizer[.editorTitle]
         window.level = .floating
@@ -193,7 +198,9 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
         sized = true
         let visible = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
         let chrome = NSSize(width: 32, height: 120)
-        let size = NSSize(width: min(max(pointSize.width + chrome.width, 520), visible.width * 0.9), height: min(max(pointSize.height + chrome.height, 260), visible.height * 0.9))
+        let size = NSSize(
+            width: min(max(pointSize.width + chrome.width, 520), visible.width * 0.9),
+            height: min(max(pointSize.height + chrome.height, 260), visible.height * 0.9))
         window.setContentSize(size)
         window.center()
     }
@@ -213,7 +220,9 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
             switch key {
             case "c": model.copyAndClose { [weak self] in self?.window.close() }; return true
             case "s": model.save(); return true
-            case "z": flags.contains(.shift) ? model.observer.redo() : model.observer.undo(); return true
+            case "z":
+                if flags.contains(.shift) { model.observer.redo() } else { model.observer.undo() }
+                return true
             default: return false
             }
         }
@@ -261,11 +270,17 @@ struct EditorRootView: View {
             HStack(spacing: DS.Space.s1) {
                 AnnotationToolbar(editor: model.editor)
                 ToolbarDivider()
-                IconButton(l10n[.actionUndo], systemImage: "arrow.uturn.backward", shortcutHint: "⌘Z") { model.observer.undo() }.disabled(!model.observer.canUndo)
-                IconButton(l10n[.actionRedo], systemImage: "arrow.uturn.forward", shortcutHint: "⇧⌘Z") { model.observer.redo() }.disabled(!model.observer.canRedo)
+                IconButton(l10n[.actionUndo], systemImage: "arrow.uturn.backward", shortcutHint: "⌘Z") { model.observer.undo() }.disabled(
+                    !model.observer.canUndo)
+                IconButton(l10n[.actionRedo], systemImage: "arrow.uturn.forward", shortcutHint: "⇧⌘Z") { model.observer.redo() }.disabled(
+                    !model.observer.canRedo)
                 Spacer(minLength: DS.Space.s2)
-                IconButton(l10n[.actionCrop], systemImage: "crop", shortcutHint: "C", isActive: model.isCropping) { model.isCropping ? model.applyCrop() : model.beginCrop() }
-                IconButton(l10n[.actionBeautify], systemImage: "sparkles.rectangle.stack", isActive: model.observer.session?.presentation.beautify ?? false) { model.toggleBeautify() }
+                IconButton(l10n[.actionCrop], systemImage: "crop", shortcutHint: "C", isActive: model.isCropping) {
+                    model.isCropping ? model.applyCrop() : model.beginCrop()
+                }
+                IconButton(
+                    l10n[.actionBeautify], systemImage: "sparkles.rectangle.stack", isActive: model.observer.session?.presentation.beautify ?? false
+                ) { model.toggleBeautify() }
                 if model.services.pipeline != nil {
                     IconButton(l10n[.actionSmartMosaic], systemImage: "eye.trianglebadge.exclamationmark") { model.smartMosaic() }
                     IconButton(l10n[.actionRecognize], systemImage: "text.viewfinder") { model.recognize() }
@@ -364,7 +379,9 @@ final class CropOverlay: NSView {
         context.setLineWidth(DS.Overlay.selectionLineWidth)
         context.stroke(view)
         let label = "\(Int(rect.width)) × \(Int(rect.height))" as NSString
-        let attributes: [NSAttributedString.Key: Any] = [.font: DS.Overlay.labelFont(), .foregroundColor: DS.Overlay.labelText, .backgroundColor: DS.Overlay.labelBackground]
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: DS.Overlay.labelFont(), .foregroundColor: DS.Overlay.labelText, .backgroundColor: DS.Overlay.labelBackground,
+        ]
         label.draw(at: CGPoint(x: view.minX + 4, y: max(view.minY - 20, 2)), withAttributes: attributes)
     }
 

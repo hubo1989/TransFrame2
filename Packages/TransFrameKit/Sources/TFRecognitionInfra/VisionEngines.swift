@@ -30,15 +30,18 @@ enum VisionOCR {
         let box: FrameRect
         let quad: [CGPoint]
         let confidence: Double
+        let findings: [SensitiveFinding]
     }
 
     /// Accurate recognition with language correction; cancelling the task cancels the Vision request.
-    static func lines(in image: CGImage, hints: [LanguageCode], fast: Bool, engine: EngineID) async throws(AppError) -> [Line] {
+    static func lines(in image: CGImage, hints: [LanguageCode], fast: Bool, engine: EngineID, detectSensitive: Bool = false) async throws(AppError) -> [Line] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = fast ? .fast : .accurate
         request.usesLanguageCorrection = !fast
         let supported = (try? request.supportedRecognitionLanguages()) ?? []
-        let wanted = hints.map(\.bcp47).compactMap { hint in supported.first { $0.lowercased().hasPrefix(hint.lowercased()) || hint.lowercased().hasPrefix($0.lowercased()) } }
+        let wanted = hints.map(\.bcp47).compactMap { hint in
+            supported.first { $0.lowercased().hasPrefix(hint.lowercased()) || hint.lowercased().hasPrefix($0.lowercased()) }
+        }
         if wanted.isEmpty {
             request.automaticallyDetectsLanguage = true
         } else {
@@ -62,7 +65,15 @@ enum VisionOCR {
                 let quad = [observation.topLeft, observation.topRight, observation.bottomRight, observation.bottomLeft].map {
                     CGPoint(x: $0.x * width, y: (1 - $0.y) * height)
                 }
-                return Line(text: candidate.string, box: box, quad: quad, confidence: Double(candidate.confidence))
+                let findings: [SensitiveFinding] = detectSensitive ? SensitiveTextClassifier.matches(in: candidate.string).map { match in
+                    let rect = (try? candidate.boundingBox(for: match.range))?.boundingBox
+                    let mask = rect.map {
+                        FrameRect(x: $0.minX * width, y: (1 - $0.maxY) * height, width: $0.width * width, height: $0.height * height)
+                    } ?? box
+                    let padded = FrameRect(mask.raw.insetBy(dx: -2, dy: -2).integral)
+                    return SensitiveFinding(category: match.category, box: padded, confidence: match.confidence)
+                } : []
+                return Line(text: candidate.string, box: box, quad: quad, confidence: Double(candidate.confidence), findings: findings)
             }
         } catch is CancellationError {
             throw .cancelled
@@ -109,8 +120,12 @@ enum DocumentRecognizer {
                         for (c, cell) in row.enumerated() {
                             let text = cell.content.text.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                             guard !text.isEmpty else { continue }
-                            let ref = TableCellRef(table: BlockID(), row: r, column: c, rowSpan: cell.rowRange.count, columnSpan: cell.columnRange.count, isHeader: r == 0)
-                            observations.append(RawObservation(text: text, box: rect(cell.content.boundingRegion.boundingBox), kind: .tableCell(ref), blockIndex: tableIndex))
+                            let ref = TableCellRef(
+                                table: BlockID(), row: r, column: c, rowSpan: cell.rowRange.count, columnSpan: cell.columnRange.count,
+                                isHeader: r == 0)
+                            observations.append(
+                                RawObservation(
+                                    text: text, box: rect(cell.content.boundingRegion.boundingBox), kind: .tableCell(ref), blockIndex: tableIndex))
                         }
                     }
                 }
@@ -165,22 +180,21 @@ public struct LocalSensitiveContentDetector: SensitiveContentDetecting {
     public init() {}
 
     public func detect(in image: PixelImage) async throws(AppError) -> [SensitiveFinding] {
-        let lines = try await VisionOCR.lines(in: image.cgImage, hints: [], fast: false, engine: .visionText)
-        var findings: [SensitiveFinding] = []
-        for line in lines {
-            let text = line.text
-            for match in SensitiveTextClassifier.matches(in: text) {
-                let total = max(Double(text.count), 1)
-                let start = Double(text.distance(from: text.startIndex, to: match.range.lowerBound)) / total
-                let end = Double(text.distance(from: text.startIndex, to: match.range.upperBound)) / total
-                let box = FrameRect(
-                    x: line.box.minX + line.box.width * start - 2, y: line.box.minY - 2,
-                    width: line.box.width * (end - start) + 4, height: line.box.height + 4
-                )
-                findings.append(SensitiveFinding(category: match.category, box: box, confidence: match.confidence * line.confidence.clamped(0.5, 1)))
+        let lines = try await VisionOCR.lines(in: image.cgImage, hints: [], fast: false, engine: .visionText, detectSensitive: true)
+        let ordered = lines.sorted { ($0.box.minY, $0.box.minX) < ($1.box.minY, $1.box.minX) }
+        let text = ordered.map(\.text).joined(separator: "\n")
+        let keyBlocks = SensitiveTextClassifier.matches(in: text)
+            .filter { $0.category == .privateKey && text[$0.range].contains("\n") }
+            .map { NSRange($0.range, in: text) }
+        var offset = 0
+        return ordered.flatMap { line -> [SensitiveFinding] in
+            let range = NSRange(location: offset, length: line.text.utf16.count)
+            offset += range.length + 1
+            if keyBlocks.contains(where: { NSIntersectionRange($0, range).length > 0 }) {
+                return [SensitiveFinding(category: .privateKey, box: FrameRect(line.box.raw.insetBy(dx: -2, dy: -2).integral), confidence: 0.99)]
             }
+            return line.findings
         }
-        return findings
     }
 }
 
@@ -240,7 +254,11 @@ enum UploadImage {
         let longest = max(image.width, image.height)
         let factor = longest > maxEdge ? Double(maxEdge) / Double(longest) : 1
         let w = max(Int(Double(image.width) * factor), 1), h = max(Int(Double(image.height) * factor), 1)
-        guard let context = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+        else { return nil }
         context.setFillColor(CGColor(gray: 1, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: w, height: h))
         context.interpolationQuality = .high

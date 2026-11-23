@@ -156,11 +156,15 @@ public final class FeedbackCenter {
         let size = panel.contentView?.fittingSize ?? NSSize(width: 240, height: 48)
         let screen = anchor.flatMap { point in NSScreen.screens.first { $0.frame.contains(point) } } ?? NSScreen.main
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
-        panel.setFrame(NSRect(x: visible.midX - size.width / 2, y: visible.maxY - size.height - DS.Space.s6, width: size.width, height: size.height), display: true)
+        panel.setFrame(
+            NSRect(x: visible.midX - size.width / 2, y: visible.maxY - size.height - DS.Space.s6, width: size.width, height: size.height),
+            display: true)
         panel.ignoresMouseEvents = action == nil
         panel.alphaValue = 1
         panel.orderFrontRegardless()
-        NSAccessibility.post(element: panel, notification: .announcementRequested, userInfo: [.announcement: model.message, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
+        NSAccessibility.post(
+            element: panel, notification: .announcementRequested,
+            userInfo: [.announcement: model.message, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
         dismissTask = Task { [weak self] in
             try? await Task.sleep(for: duration)
             guard !Task.isCancelled else { return }

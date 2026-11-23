@@ -25,7 +25,8 @@ struct AppleTranslationEngine: TranslationEngine {
                 throw status == .unsupported ? .translation(.unsupportedPair) : .engine(.assetsMissing(descriptor.id))
             }
             do {
-                let session = TranslationSession(installedSource: Locale.Language(identifier: source.bcp47), target: Locale.Language(identifier: batch.to.bcp47))
+                let session = TranslationSession(
+                    installedSource: Locale.Language(identifier: source.bcp47), target: Locale.Language(identifier: batch.to.bcp47))
                 let requests = units.map { TranslationSession.Request(sourceText: $0.text, clientIdentifier: $0.id.description) }
                 for response in try await session.translations(from: requests) {
                     if let unit = units.first(where: { $0.id.description == response.clientIdentifier }) {
@@ -97,13 +98,15 @@ public struct TranslationEngineFactory: TranslationEngineProviding, ModelDiscove
     func descriptor(_ id: EngineID, settings: SettingsSnapshot) -> EngineDescriptor {
         let config = settings.engines.config(for: id)
         let locality = EngineLocality.classify(host: config.host)
-        let name: EngineName = settings.engines.compatibleInstances.first { $0.engineID == id }.map { .userDefined($0.name) } ?? .localized("engine.name.\(id.raw)")
+        let name: EngineName =
+            settings.engines.compatibleInstances.first { $0.engineID == id }.map { .userDefined($0.name) } ?? .localized("engine.name.\(id.raw)")
         let digest = "\(id.raw)|\(config.host ?? "")|\(config.model)|\(config.apiMode.rawValue)"
         switch id {
         case .appleTranslation:
             return EngineDescriptor(
                 id: id, roles: [.translation], name: name, locality: .onDevice, capabilities: [.batch, .segmentIDs],
-                requirements: EngineRequirements(minimumOS: OSVersion(26), needsModelAssets: true), limits: EngineLimits(timeout: .seconds(30), maxConcurrent: 1),
+                requirements: EngineRequirements(minimumOS: OSVersion(26), needsModelAssets: true),
+                limits: EngineLimits(timeout: .seconds(30), maxConcurrent: 1),
                 billing: .free, probe: .alwaysAvailable, configDigest: digest
             )
         case .mtran:
@@ -153,7 +156,10 @@ public struct TranslationEngineFactory: TranslationEngineProviding, ModelDiscove
         case .gemini: .gemini
         default: config.apiMode == .responses ? .openAIResponses : .openAIChat
         }
-        return LLMClient(wire: wire, endpoint: config.endpoint, model: config.model, engine: id, transport: transport, apiKey: key)
+        return LLMClient(
+            wire: wire, endpoint: config.endpoint, model: config.model, engine: id, transport: transport,
+            authentication: .modelEndpoint(config.endpoint, local: config.preset == .ollama ? .none : .optional), apiKey: key
+        )
     }
 
     /// Why an engine cannot run now (TRN-09, TRN-01): unconfigured, wrong OS, or deleted instance.
@@ -175,7 +181,9 @@ public struct TranslationEngineFactory: TranslationEngineProviding, ModelDiscove
     public func models(endpoint: String, credential: CredentialRef?, engine: EngineID) async throws(AppError) -> [String] {
         let secrets = secrets
         let wire: LLMWire = engine == .claude ? .anthropic : (engine == .gemini ? .gemini : .openAIChat)
-        let client = LLMClient(wire: wire, endpoint: endpoint, model: "", engine: engine, transport: transport) { () throws(AppError) in
+        let client = LLMClient(
+            wire: wire, endpoint: endpoint, model: "", engine: engine, transport: transport, authentication: .modelEndpoint(endpoint)
+        ) { () throws(AppError) in
             guard let credential else { return nil }
             return try await secrets(credential)
         }

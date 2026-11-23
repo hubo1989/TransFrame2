@@ -186,7 +186,15 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
             let layer: RenderLayer = draft.role == .redaction
                 ? .redactions([PlacedRedaction(
                     id: draft.id, frame: CanvasRect(draft.bounds.raw.offsetBy(dx: offset.x, dy: offset.y)), source: draft.bounds,
-                    style: { if case .mosaic(let m) = draft { .mosaic(blockSize: m.blockSize) } else if case .redaction(let r) = draft { .solid(r.fill) } else { .solid(.black) } }()
+                        style: {
+                            if case .mosaic(let m) = draft {
+                                .mosaic(blockSize: m.blockSize)
+                            } else if case .redaction(let r) = draft {
+                                .solid(r.fill)
+                            } else {
+                                .solid(.black)
+                            }
+                        }()
                 )])
                 : .decorations([PlacedAnnotation(annotation: draft, offsetX: offset.x, offsetY: offset.y)])
             let overlayPlan = RenderPlan(

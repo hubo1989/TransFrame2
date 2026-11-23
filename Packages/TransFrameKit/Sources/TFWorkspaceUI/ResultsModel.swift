@@ -225,10 +225,14 @@ public final class ResultsModel {
     // MARK: Correct and remember (AI-04)
 
     public func correct(_ segment: SegmentID, translation: String, remember: Bool) {
-        guard let glossary = services.glossary else { return }
+        guard let glossary = services.glossary, let operation = session?.translation?.operation else { return }
         let id = sessionID, errors = services.errors
         Task {
-            do { try await glossary.correct(segment, in: id, translation: translation, remember: remember) } catch { errors.present(error, near: nil) }
+            do {
+                try await glossary.correct(segment, in: id, expectedOperation: operation, translation: translation, remember: remember)
+            } catch {
+                errors.present(error, near: nil)
+            }
         }
         correcting = nil
     }

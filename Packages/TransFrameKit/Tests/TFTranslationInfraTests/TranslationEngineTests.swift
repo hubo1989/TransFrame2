@@ -19,7 +19,8 @@ struct TranslationEngineTests {
         let client = LLMClient(wire: .openAIChat, endpoint: "http://localhost:1234/v1", model: "m", engine: .openAICompatible, transport: transport) { () throws(AppError) in nil }
         let descriptor = EngineDescriptor(id: .openAICompatible, roles: [.translation], name: .userDefined("x"), locality: .onDevice, configDigest: "")
         let units = [TranslationUnit(text: "a"), TranslationUnit(text: "b")]
-        let result = try await LLMTranslationEngine(descriptor: descriptor, client: client).translate(TranslationBatch(units: units, from: .english, to: .simplifiedChinese))
+        let result = try await LLMTranslationEngine(descriptor: descriptor, client: client).translate(
+            TranslationBatch(units: units, from: .english, to: .simplifiedChinese))
         #expect(result.map(\.text) == [nil, "B"])
         #expect(result.map(\.id) == units.map(\.id))
     }
@@ -37,7 +38,9 @@ struct TranslationEngineTests {
     }
 
     @Test func promptFillsVariables() {
-        let batch = TranslationBatch(units: [], from: .english, to: .simplifiedChinese, prompt: PromptSnapshot(template: "From {source_language} to {target_language}. {glossary}", digest: ""),
+        let batch = TranslationBatch(
+            units: [], from: .english, to: .simplifiedChinese,
+            prompt: PromptSnapshot(template: "From {source_language} to {target_language}. {glossary}", digest: ""),
                                      glossary: [GlossaryEntry(source: "a", target: "b", to: .simplifiedChinese)])
         let system = LLMPrompt.system(batch: batch)
         #expect(system.contains("From English to Chinese"))

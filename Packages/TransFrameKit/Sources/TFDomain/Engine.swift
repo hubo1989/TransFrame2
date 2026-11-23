@@ -57,16 +57,23 @@ public enum EngineLocality: String, Sendable, Codable, Hashable {
     public static func classify(host: String?) -> EngineLocality {
         guard var host = host?.lowercased(), !host.isEmpty else { return .cloud }
         if host.hasPrefix("[") && host.hasSuffix("]") { host = String(host.dropFirst().dropLast()) }
-        if host == "localhost" || host == "::1" || host.hasPrefix("127.") || host == "0.0.0.0" { return .onDevice }
-        if host.hasSuffix(".local") || host.hasPrefix("10.") || host.hasPrefix("192.168.")
-            || host.hasPrefix("fd") || host.hasPrefix("fe80:") {
-            return .localNetwork
+        if host == "localhost" { return .onDevice }
+        var ipv4 = in_addr()
+        if inet_pton(AF_INET, host, &ipv4) == 1 {
+            let address = UInt32(bigEndian: ipv4.s_addr)
+            if address >> 24 == 127 { return .onDevice }
+            if address >> 24 == 10 || address >> 20 == 0xAC1 || address >> 16 == 0xC0A8 { return .localNetwork }
+            return .cloud
         }
-        if host.hasPrefix("172.") {
-            let parts = host.split(separator: ".")
-            if parts.count > 1, let second = Int(parts[1]), (16...31).contains(second) { return .localNetwork }
+        var ipv6 = in6_addr()
+        if inet_pton(AF_INET6, host, &ipv6) == 1 {
+            return withUnsafeBytes(of: ipv6) { bytes in
+                if bytes.prefix(15).allSatisfy({ $0 == 0 }) && bytes[15] == 1 { return .onDevice }
+                if bytes[0] & 0xFE == 0xFC || (bytes[0] == 0xFE && bytes[1] & 0xC0 == 0x80) { return .localNetwork }
+                return .cloud
+            }
         }
-        return .cloud
+        return host.hasSuffix(".local") ? .localNetwork : .cloud
     }
 
     public var isOnDevice: Bool { self == .onDevice }

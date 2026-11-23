@@ -5,7 +5,9 @@ import TFDomain
 import TFDomainTestSupport
 @testable import TFPipelines
 
-private func job(_ texts: [String], routing: EngineRouting, from: LanguageCode? = .english, to: LanguageCode = .simplifiedChinese, glossary: [GlossaryEntry] = []) -> TranslationJob {
+private func job(
+    _ texts: [String], routing: EngineRouting, from: LanguageCode? = .english, to: LanguageCode = .simplifiedChinese, glossary: [GlossaryEntry] = []
+) -> TranslationJob {
     TranslationJob(
         operation: OperationID(), source: .plainText(purpose: .popup), units: texts.map { TranslationUnit(text: $0) }, from: from, to: to,
         routing: routing, glossary: glossary.isEmpty ? nil : GlossarySnapshot(version: 1, matched: glossary)
@@ -49,7 +51,7 @@ struct TranslationRoutingTests {
         try? await Task.sleep(for: .milliseconds(100))
         task.cancel()
         _ = await task.result
-        #expect(next.calls.count == 0)
+        #expect(next.calls.calls.isEmpty)
     }
 
     @Test func compareRunsAllAndPicksFirstSuccessInOrder() async throws {
@@ -68,7 +70,7 @@ struct TranslationRoutingTests {
         let service = TranslationService(engines: FakeTranslationEngines([a]), performance: FakePerformanceRecorder())
         let outcome = try await service.run(job(["你好"], routing: .ordered([.mtran]), from: .simplifiedChinese), settings: settings) { _ in }
         #expect(outcome.effectiveResult?.segments.first?.status == .sameLanguageSkipped)
-        #expect(a.calls.count == 0)
+        #expect(a.calls.calls.isEmpty)
     }
 
     @Test func secondRequestHitsCache() async throws {

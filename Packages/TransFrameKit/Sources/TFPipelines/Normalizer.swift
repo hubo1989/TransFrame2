@@ -55,21 +55,31 @@ public enum RecognitionNormalizer {
             var children: [[BlockChild]] = raw.blocks.map { _ in [] }
             var loose: [TextSegment] = []
             for (observation, box) in kept.sorted(by: { readingOrder($0.1, $1.1) }) {
-                let parent = observation.blockIndex.flatMap { $0 < blockIDs.count ? blockIDs[$0] : nil }
+                let parent = observation.blockIndex.flatMap { blockIDs.indices.contains($0) ? blockIDs[$0] : nil }
                 var kind = observation.kind
                 if case .tableCell(let ref) = kind, let parent {
-                    kind = .tableCell(TableCellRef(table: parent, row: ref.row, column: ref.column, rowSpan: ref.rowSpan, columnSpan: ref.columnSpan, isHeader: ref.isHeader))
+                    kind = .tableCell(
+                        TableCellRef(
+                            table: parent, row: ref.row, column: ref.column, rowSpan: ref.rowSpan, columnSpan: ref.columnSpan, isHeader: ref.isHeader)
+                    )
                 }
                 let segment = TextSegment(
-                    kind: kind, text: observation.text, box: box, confidence: observation.confidence, language: observation.language,
+                    kind: kind, text: observation.text, box: box, quad: quad(for: observation, in: box),
+                    confidence: observation.confidence, language: observation.language,
                     parent: parent, translatability: translatability(for: observation.text, kind: kind), style: observation.style
                 )
-                if let index = observation.blockIndex, index < children.count {
+                if let index = observation.blockIndex, children.indices.contains(index) {
                     children[index].append(.segment(segment.id))
                     segments.append(segment)
                 } else {
                     loose.append(segment)
                 }
+            }
+            let parents = raw.blocks.enumerated().map { index, block in
+                block.parentIndex.flatMap { raw.blocks.indices.contains($0) && $0 < index ? $0 : nil }
+            }
+            for (index, parent) in parents.enumerated() {
+                if let parent { children[parent].append(.block(blockIDs[index])) }
             }
             for (index, rawBlock) in raw.blocks.enumerated() {
                 let kind: BlockKind = switch rawBlock.kind {
@@ -83,14 +93,21 @@ public enum RecognitionNormalizer {
                 }
                 blocks.append(ContentBlock(
                     id: blockIDs[index], kind: kind, box: DocumentRect(rawBlock.box.raw.offsetBy(dx: dx, dy: dy)),
-                    parent: rawBlock.parentIndex.map { blockIDs[$0] }, children: children[index]
+                    parent: parents[index].map { blockIDs[$0] }, children: children[index]
                 ))
             }
             // Reading order must equal a depth-first walk of the tree; loose segments follow.
             let byID = Dictionary(uniqueKeysWithValues: segments.map { ($0.id, $0) })
-            segments = blocks.filter { $0.parent == nil }.flatMap { block in block.children.compactMap { child in
-                if case .segment(let id) = child { byID[id] } else { nil }
-            } } + loose
+            let blocksByID = Dictionary(uniqueKeysWithValues: blocks.map { ($0.id, $0) })
+            func orderedSegments(in block: ContentBlock) -> [TextSegment] {
+                block.children.flatMap { child -> [TextSegment] in
+                    switch child {
+                    case .segment(let id): byID[id].map { [$0] } ?? []
+                    case .block(let id): blocksByID[id].map { orderedSegments(in: $0) } ?? []
+                    }
+                }
+            }
+            segments = blocks.filter { $0.parent == nil }.flatMap { orderedSegments(in: $0) } + loose
         }
         return AnalysisResult(
             session: session, inputRevision: inputRevision, inputFingerprint: fingerprint, region: region, segments: segments,
@@ -142,22 +159,30 @@ public enum RecognitionNormalizer {
         for (observation, box) in items.sorted(by: { readingOrder($0.1, $1.1) }) {
             if let index = lines.lastIndex(where: { line in
                 let overlap = min(line.box.maxY, box.maxY) - max(line.box.minY, box.minY)
-                return overlap > 0.6 * min(line.box.height, box.height) && box.minX >= line.box.maxX - 2 && box.minX - line.box.maxX < max(line.box.height, box.height) * 1.5
+                return overlap > 0.6 * min(line.box.height, box.height) && box.minX >= line.box.maxX - 2
+                    && box.minX - line.box.maxX < max(line.box.height, box.height) * 1.5
             }), lines[index].kind == .text, observation.kind == .text {
                 lines[index].text = joinFragments(lines[index].text, observation.text)
                 lines[index].box = lines[index].box.union(box)
                 lines[index].quad = nil
                 lines[index].confidence = zip2min(lines[index].confidence, observation.confidence)
             } else {
-                let quad = observation.quad.flatMap { points -> Quad? in
-                    guard points.count == 4 else { return nil }
-                    let p = points.map { DocumentPoint(x: $0.x + box.minX - observation.box.minX, y: $0.y + box.minY - observation.box.minY) }
-                    return Quad(topLeft: p[0], topRight: p[1], bottomRight: p[2], bottomLeft: p[3])
-                }
-                lines.append(Line(text: observation.text, box: box, quad: quad, confidence: observation.confidence, language: observation.language, kind: observation.kind, style: observation.style))
+                let quad = quad(for: observation, in: box)
+                lines.append(
+                    Line(
+                        text: observation.text, box: box, quad: quad, confidence: observation.confidence, language: observation.language,
+                        kind: observation.kind, style: observation.style))
             }
         }
         return lines
+    }
+
+    private static func quad(for observation: RawObservation, in box: DocumentRect) -> Quad? {
+        guard let points = observation.quad, points.count == 4 else { return nil }
+        let offsetX = box.minX - observation.box.minX
+        let offsetY = box.minY - observation.box.minY
+        let pointsInDocument = points.map { DocumentPoint(x: $0.x + offsetX, y: $0.y + offsetY) }
+        return Quad(topLeft: pointsInDocument[0], topRight: pointsInDocument[1], bottomRight: pointsInDocument[2], bottomLeft: pointsInDocument[3])
     }
 
     private static func zip2min(_ a: Double?, _ b: Double?) -> Double? {
@@ -169,7 +194,11 @@ public enum RecognitionNormalizer {
 
     static func joinFragments(_ a: String, _ b: String) -> String {
         guard let last = a.last, let first = b.first else { return a + b }
-        func cjk(_ c: Character) -> Bool { c.unicodeScalars.contains { (0x3000...0x9FFF).contains($0.value) || (0xAC00...0xD7AF).contains($0.value) || (0xFF00...0xFFEF).contains($0.value) } }
+        func cjk(_ c: Character) -> Bool {
+            c.unicodeScalars.contains {
+                (0x3000...0x9FFF).contains($0.value) || (0xAC00...0xD7AF).contains($0.value) || (0xFF00...0xFFEF).contains($0.value)
+            }
+        }
         if cjk(last) || cjk(first) || ",.;:!?)]}%".contains(first) { return a + b }
         return a + " " + b
     }
@@ -233,16 +262,73 @@ public enum ImageTiling {
     public static func merge(_ parts: [(CGRect, RawRecognition)]) -> RawRecognition {
         var merged = RawRecognition(observations: [], sent: parts.first?.1.sent ?? .nothing)
         for (tile, raw) in parts {
-            for var observation in raw.observations {
+            let observations = raw.observations.map { source -> RawObservation in
+                var observation = source
                 observation.box = observation.box.offsetBy(dx: tile.minX, dy: tile.minY)
                 observation.quad = observation.quad?.map { CGPoint(x: $0.x + tile.minX, y: $0.y + tile.minY) }
-                let isDuplicate = merged.observations.contains { other in
-                    other.text == observation.text && (other.box.intersection(observation.box)?.area ?? 0) > 0.3 * min(other.box.area, observation.box.area)
+                observation.lines = observation.lines?.map { $0.offsetBy(dx: tile.minX, dy: tile.minY) }
+                return observation
+            }
+            var blocks: [Int: Int] = [:]
+            var cellOffsets: [Int: (row: Int, column: Int)] = [:]
+            for (index, source) in raw.blocks.enumerated() {
+                var block = source
+                block.box = block.box.offsetBy(dx: tile.minX, dy: tile.minY)
+                block.parentIndex = source.parentIndex.flatMap { blocks[$0] }
+                if case .table = block.kind,
+                   let match = tableMatch(for: index, observations: observations, merged: merged) {
+                    blocks[index] = match.index
+                    cellOffsets[index] = (match.row, match.column)
+                    merged.blocks[match.index].box = merged.blocks[match.index].box.union(block.box)
+                } else {
+                    blocks[index] = merged.blocks.count
+                    merged.blocks.append(block)
                 }
-                if !isDuplicate { merged.observations.append(observation) }
+            }
+            for var observation in observations {
+                let source = observation.blockIndex
+                observation.blockIndex = source.flatMap { blocks[$0] }
+                if let offset = source.flatMap({ cellOffsets[$0] }), let ref = observation.kind.tableCell {
+                    let shifted = TableCellRef(
+                        table: ref.table, row: ref.row + offset.row, column: ref.column + offset.column,
+                        rowSpan: ref.rowSpan, columnSpan: ref.columnSpan, isHeader: ref.isHeader
+                    )
+                    guard shifted.hasValidBounds else { continue }
+                    observation.kind = .tableCell(shifted)
+                }
+                if !merged.observations.contains(where: { overlaps($0, observation) }) { merged.observations.append(observation) }
             }
             merged.languages += raw.languages.filter { !merged.languages.contains($0) }
         }
+        for index in merged.blocks.indices {
+            guard case .table = merged.blocks[index].kind else { continue }
+            let cells = merged.observations.filter { $0.blockIndex == index }.compactMap(\.kind.tableCell).filter(\.hasValidBounds)
+            merged.blocks[index].kind = .table(
+                rows: cells.map { $0.row + $0.rowSpan }.max() ?? 0, columns: cells.map { $0.column + $0.columnSpan }.max() ?? 0
+            )
+        }
         return merged
     }
+
+    private static func overlaps(_ a: RawObservation, _ b: RawObservation) -> Bool {
+        a.text == b.text && (a.box.intersection(b.box)?.area ?? 0) > 0.3 * min(a.box.area, b.box.area)
+    }
+
+    private static func tableMatch(
+        for index: Int, observations: [RawObservation], merged: RawRecognition
+    ) -> (index: Int, row: Int, column: Int)? {
+        let cells = observations.filter { $0.blockIndex == index }
+        for cell in cells {
+            guard let ref = cell.kind.tableCell, ref.hasValidBounds else { continue }
+            if let previous = merged.observations.first(where: { $0.kind.tableCell?.hasValidBounds == true && overlaps($0, cell) }),
+               let index = previous.blockIndex, let old = previous.kind.tableCell {
+                let row = old.row - ref.row, column = old.column - ref.column
+                guard cells.allSatisfy({ ($0.kind.tableCell?.row ?? 0) + row >= 0 && ($0.kind.tableCell?.column ?? 0) + column >= 0 })
+                else { return nil }
+                return (index, row, column)
+            }
+        }
+        return nil
+    }
+
 }

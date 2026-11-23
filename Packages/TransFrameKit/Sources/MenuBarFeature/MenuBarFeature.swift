@@ -47,12 +47,14 @@ public struct MenuItemModel: Equatable {
 public enum MenuBuilder {
     /// Builds the native menu model from the current shortcuts, language and pin count.
     @MainActor
-    public static func build(shortcuts: ShortcutSettings, pinCount: Int, localizer l: Localizer) -> [MenuItemModel] {
+    public static func build(
+        shortcuts: ShortcutSettings, pinCount: Int, localizer l: Localizer, polishEnabled: Bool? = nil
+    ) -> [MenuItemModel] {
         let pins: [MenuItemModel] = [
             MenuItemModel(title: l[.menuPinsRestoreInteractions], kind: .action(.restorePinInteractions), isEnabled: pinCount > 0),
             MenuItemModel(title: l[.menuPinsShowAll], kind: .action(.showAllPins), isEnabled: pinCount > 0),
         ]
-        return [
+        var items: [MenuItemModel] = [
             MenuItemModel(title: l[.menuCaptureRegion], kind: .action(.capture(.region)), shortcut: shortcuts[.selection]),
             MenuItemModel(title: l[.menuCaptureFullScreen], kind: .action(.capture(.fullDisplay)), shortcut: shortcuts[.fullScreen]),
             MenuItemModel(title: l[.menuCaptureTranslate], kind: .action(.capture(.regionThenTranslate)), shortcut: shortcuts[.translationMode]),
@@ -73,6 +75,10 @@ public enum MenuBuilder {
             .separator,
             MenuItemModel(title: l[.menuQuit], kind: .action(.quit), keyEquivalent: ("q", [.command])),
         ]
+        if let polishEnabled, let index = items.firstIndex(where: { $0.route == .translateAndInsert }) {
+            items.insert(MenuItemModel(title: l[.menuPolishSelection], kind: .action(.polishSelection), isEnabled: polishEnabled), at: index + 1)
+        }
+        return items
     }
 }
 
@@ -93,16 +99,23 @@ public final class MenuBarCoordinator: NSObject, MenuBarCoordinating, NSMenuDele
     private let router: any AppRouting
     private let pinCount: () -> Int
     private let image: NSImage?
+    private let canPolish: ((SettingsSnapshot) async -> Bool)?
+    private var polishEnabled = false
+    private var polishTask: Task<Void, Never>?
     private var statusItem: NSStatusItem?
     private let menu = NSMenu()
     public private(set) var currentModel: [MenuItemModel] = []
 
-    public init(settings: any SettingsProviding, localizer: Localizer, router: any AppRouting, image: NSImage?, pinCount: @escaping () -> Int) {
+    public init(
+        settings: any SettingsProviding, localizer: Localizer, router: any AppRouting, image: NSImage?,
+        pinCount: @escaping () -> Int, canPolish: ((SettingsSnapshot) async -> Bool)? = nil
+    ) {
         self.settings = settings
         self.localizer = localizer
         self.router = router
         self.image = image
         self.pinCount = pinCount
+        self.canPolish = canPolish
     }
 
     public func install() {
@@ -117,10 +130,25 @@ public final class MenuBarCoordinator: NSObject, MenuBarCoordinating, NSMenuDele
         rebuild()
     }
 
-    public func menuNeedsUpdate(_ menu: NSMenu) { rebuild() }
+    public func menuNeedsUpdate(_ menu: NSMenu) {
+        rebuild()
+        guard let canPolish else { return }
+        polishTask?.cancel()
+        let snapshot = settings.snapshot
+        polishTask = Task { [weak self] in
+            let available = await canPolish(snapshot)
+            guard let self, !Task.isCancelled, self.settings.snapshot == snapshot else { return }
+            self.polishEnabled = available
+            let item = menu.items.first { ($0.representedObject as? RouteBox)?.route == .polishSelection }
+            item?.isEnabled = available
+            item?.toolTip = available ? nil : localizer[.aiUnavailable]
+        }
+    }
 
     public func rebuild() {
-        currentModel = MenuBuilder.build(shortcuts: settings.shortcuts, pinCount: pinCount(), localizer: localizer)
+        currentModel = MenuBuilder.build(
+            shortcuts: settings.shortcuts, pinCount: pinCount(), localizer: localizer, polishEnabled: canPolish.map { _ in polishEnabled }
+        )
         statusItem?.button?.setAccessibilityLabel(localizer[.appName])
         statusItem?.button?.toolTip = localizer[.appName]
         menu.removeAllItems()

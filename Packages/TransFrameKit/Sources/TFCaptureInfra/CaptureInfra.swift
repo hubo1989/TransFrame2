@@ -229,7 +229,9 @@ public actor ScreenSnapshotter: SnapshotCapturing, ScrollCapturing {
         let topology = try await topology.topology()
         guard let display = topology.display(containing: QuartzPoint(x: rect.midX, y: rect.midY)) else { throw .capture(.selectionOutOfBounds) }
         let shareable = try await shareableContent(refresh: true)
-        guard let scDisplay = shareable.displays.first(where: { $0.displayID == display.id.raw }) else { throw .capture(.displayDisconnected(display.localizedName)) }
+        guard let scDisplay = shareable.displays.first(where: { $0.displayID == display.id.raw }) else {
+            throw .capture(.displayDisconnected(display.localizedName))
+        }
         let own = shareable.applications.filter { $0.processID == ProcessInfo.processInfo.processIdentifier }
         let filter = SCContentFilter(display: scDisplay, excludingApplications: own, exceptingWindows: [])
         let configuration = SCStreamConfiguration()
@@ -247,7 +249,6 @@ public actor ScreenSnapshotter: SnapshotCapturing, ScrollCapturing {
         }
     }
 }
-
 
 /// Completion-handler capture with a hard deadline: resumes exactly once, late frames are dropped (review-1 P1-3).
 enum OneShotCapture {

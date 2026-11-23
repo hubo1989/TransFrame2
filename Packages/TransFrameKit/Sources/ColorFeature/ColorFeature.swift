@@ -35,7 +35,9 @@ public final class ColorCoordinator: ColorPickCoordinating {
             defer { picking = false }
             do {
                 guard let color = try await workflow.pickAndCopy(settings: settings.snapshot) else { return }
-                errors.toast(ToastModel(message: localizer.string(.feedbackColorCopied, color.hexString), actionTitle: localizer[.colorViewHistory]), near: nil) { [router] in
+                errors.toast(
+                    ToastModel(message: localizer.string(.feedbackColorCopied, color.hexString), actionTitle: localizer[.colorViewHistory]), near: nil
+                ) { [router] in
                     router.route(.openColorHistory)
                 }
             } catch {

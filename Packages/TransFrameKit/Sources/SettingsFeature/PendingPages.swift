@@ -13,6 +13,7 @@ public final class EnginesModel {
     @ObservationIgnored let deps: SettingsDependencies
     var health: [EngineID: EngineHealth] = [:]
     var secrets: [CredentialRef: String] = [:]
+    var analysisModels: [AnalysisProvider: [String]] = [:]
     var models: [EngineID: [String]] = [:]
     var testResult: [String: String] = [:]
     var paddle: PaddleInstallation?
@@ -142,13 +143,47 @@ public final class EnginesModel {
         }
     }
 
+    func fetchAnalysisModels(_ provider: AnalysisProvider) {
+        guard let catalog = deps.catalog, let config = settings.recognition.config(for: provider) else { return }
+        let key = "analysisModels-" + provider.rawValue
+        testResult[key] = l10n[.enginesTesting]
+        Task {
+            do {
+                let models = try await catalog.models(for: provider.engineID, endpoint: config.endpoint, credential: config.credential)
+                guard settings.recognition.config(for: provider)?.endpoint == config.endpoint else { return }
+                analysisModels[provider] = models
+                testResult[key] = models.isEmpty ? l10n[.errorEngineInvalidResponseTitle] : nil
+            } catch {
+                guard settings.recognition.config(for: provider)?.endpoint == config.endpoint else { return }
+                testResult[key] = LocalizedErrorText(AppError.from(error), localizer: l10n).title
+            }
+        }
+    }
+
+    func updateAnalysis(_ provider: AnalysisProvider, _ update: (inout ModelEndpointConfig) -> Void) {
+        guard var config = settings.recognition.config(for: provider) else { return }
+        let endpoint = config.endpoint
+        update(&config)
+        settings.recognition.analysisConfigs[provider] = config
+        if config.endpoint != endpoint {
+            analysisModels[provider] = nil
+            testResult["analysisModels-" + provider.rawValue] = nil
+        }
+        testResult["analysis"] = nil
+    }
+
     func testAnalysis() {
         guard let catalog = deps.catalog else { return }
         let provider = settings.recognition.analysisProvider, snapshot = settings.snapshot
         testResult["analysis"] = l10n[.enginesTesting]
         Task {
-            do { testResult["analysis"] = "✓ " + (try await catalog.testAnalysis(provider, settings: snapshot)) } catch {
-                testResult["analysis"] = "✗ " + LocalizedErrorText(AppError.from(error), localizer: l10n).title
+            do {
+                let result = try await catalog.testAnalysis(provider, settings: snapshot)
+                if settings.recognition == snapshot.recognition { testResult["analysis"] = "✓ " + result }
+            } catch {
+                if settings.recognition == snapshot.recognition {
+                    testResult["analysis"] = "✗ " + LocalizedErrorText(AppError.from(error), localizer: l10n).title
+                }
             }
         }
     }
@@ -174,16 +209,24 @@ public final class EnginesModel {
     func saveGlossary(_ entry: GlossaryEntry) {
         guard let glossary = deps.glossary else { return }
         Task {
-            try? await glossary.save(entry)
-            glossaryEntries = (try? await glossary.entries()) ?? glossaryEntries
+            do {
+                try await glossary.save(entry)
+                glossaryEntries = try await glossary.entries()
+            } catch {
+                deps.errors.present(error, near: nil)
+            }
         }
     }
 
     func removeGlossary(_ id: GlossaryEntryID) {
         guard let glossary = deps.glossary else { return }
         Task {
-            try? await glossary.remove(id)
-            glossaryEntries.removeAll { $0.id == id }
+            do {
+                try await glossary.remove(id)
+                glossaryEntries = try await glossary.entries()
+            } catch {
+                deps.errors.present(error, near: nil)
+            }
         }
     }
 }

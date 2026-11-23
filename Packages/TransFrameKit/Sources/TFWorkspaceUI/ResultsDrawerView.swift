@@ -197,7 +197,10 @@ private struct TargetMenu: View {
         .help(l10n[.resultsTarget])
         Menu {
             Toggle(l10n[.resultsShowOnImage], isOn: Binding(get: { model.showsOverlay }, set: { model.setShowsOverlay($0) }))
-            Picker(l10n[.resultsOverlayMode], selection: Binding(get: { model.session?.presentation.overlayMode ?? .belowOriginal }, set: { model.setOverlayMode($0) })) {
+            Picker(
+                l10n[.resultsOverlayMode],
+                selection: Binding(get: { model.session?.presentation.overlayMode ?? .belowOriginal }, set: { model.setOverlayMode($0) })
+            ) {
                 Text(l10n[.overlayBelowOriginal]).tag(OverlayMode.belowOriginal)
                 Text(l10n[.overlayReplaceOriginal]).tag(OverlayMode.replaceOriginal)
             }

@@ -108,6 +108,7 @@ public actor DocumentSessionStore: SessionManaging {
 
     private struct Entry {
         var session: DocumentSession
+        var analysisRevision = 0
         var undo: [EditTransaction] = []
         var redo: [EditTransaction] = []
         var owners: Set<SessionOwner> = []
@@ -190,6 +191,10 @@ public actor DocumentSessionStore: SessionManaging {
         let effect = try SessionReducer.apply(transaction.forward, to: &session)
         SessionReducer.commit(effect, to: &session)
         entry.session = session
+        if !effect.revisedSegments.isEmpty {
+            entry.analysisRevision += 1
+            cancelTasks(&entry, kinds: [.translation])
+        }
         if effect.invalidatesAnalysis { cancelTasks(&entry, kinds: [.recognition, .translation, .privacyScan]) }
         entry.undo.append(transaction)
         if entry.undo.count > Self.undoDepth { entry.undo.removeFirst(entry.undo.count - Self.undoDepth) }
@@ -211,6 +216,10 @@ public actor DocumentSessionStore: SessionManaging {
             var forced = effect
             forced.changesContent = true
             SessionReducer.commit(forced, to: &session)
+            if !effect.revisedSegments.isEmpty {
+                entry.analysisRevision += 1
+                cancelTasks(&entry, kinds: [.translation])
+            }
             if effect.invalidatesAnalysis { cancelTasks(&entry, kinds: [.recognition, .translation, .privacyScan]) }
         } catch {
             return false
@@ -237,7 +246,12 @@ public actor DocumentSessionStore: SessionManaging {
     /// Metadata write without undo (suggested names, presentation set by workflows).
     public func update(_ id: SessionID, _ body: @Sendable (inout DocumentSession) -> Void) {
         guard entries[id] != nil else { return }
-        body(&entries[id]!.session)
+        if var entry = entries[id] {
+            let previous = entry.session.analysis
+            body(&entry.session)
+            if previous != entry.session.analysis { entry.analysisRevision += 1 }
+            entries[id] = entry
+        }
         broadcast(id)
     }
 
@@ -262,10 +276,10 @@ public actor DocumentSessionStore: SessionManaging {
 
     // MARK: Tasks and guarded writes (ADR-0004 §4, §5)
 
-    /// Starts a new operation of `kind`; the previous one of the same kind is cancelled and its writes rejected.
+    /// Recognition and translation share the same analysis and supersede one another.
     public func beginOperation(_ kind: SessionTaskKind, on id: SessionID) throws(AppError) -> (OperationID, inputRevision: Int) {
         guard var entry = entries[id] else { throw .cancelled }
-        cancelTasks(&entry, kinds: [kind])
+        cancelTasks(&entry, kinds: kind == .recognition || kind == .translation ? [.recognition, .translation] : [kind])
         let operation = OperationID()
         entry.operations[kind] = operation
         entries[id] = entry
@@ -306,22 +320,61 @@ public actor DocumentSessionStore: SessionManaging {
 
     /// Writes a recognition result if it still belongs to the session's current input (triple check).
     public func writeAnalysis(_ result: AnalysisResult, kind: SessionTaskKind, operation: OperationID) throws(AppError) {
-        guard var entry = entries[result.session], entry.operations[kind] == operation,
+        guard !Task.isCancelled, var entry = entries[result.session], entry.operations[kind] == operation,
               entry.session.analysisInputRevision == result.inputRevision else { throw .cancelled }
         entry.session.analysis = result
+        entry.analysisRevision += 1
         entry.session.translation = nil
         entries[result.session] = entry
         broadcast(result.session)
     }
 
+    func analysisSnapshot(of id: SessionID) throws(AppError) -> (session: DocumentSession, revision: Int) {
+        guard let entry = entries[id] else { throw .cancelled }
+        return (entry.session, entry.analysisRevision)
+    }
+
     public func writeTranslation(
-        _ outcome: TranslationOutcome, to id: SessionID, inputRevision: Int, kind: SessionTaskKind, operation: OperationID
+        _ outcome: TranslationOutcome, to id: SessionID, inputRevision: Int, kind: SessionTaskKind, operation: OperationID,
+        analysisID: AnalysisResultID? = nil, analysisRevision: Int? = nil, defaultOverlay: OverlayMode? = nil
     ) throws(AppError) {
-        guard var entry = entries[id], entry.operations[kind] == operation,
-              entry.session.analysisInputRevision == inputRevision else { throw .cancelled }
+        guard !Task.isCancelled, var entry = entries[id], entry.operations[kind] == operation,
+              entry.session.analysisInputRevision == inputRevision,
+              analysisID.map({ entry.session.analysis?.id == $0 }) ?? true,
+              analysisRevision.map({ entry.analysisRevision == $0 }) ?? true else { throw .cancelled }
         entry.session.translation = outcome
+        if let defaultOverlay, !entry.session.presentation.showsTranslationOverlay {
+            entry.session.presentation.showsTranslationOverlay = true
+            entry.session.presentation.overlayMode = defaultOverlay
+        }
         entries[id] = entry
         broadcast(id)
+    }
+
+    func correctTranslation(
+        _ segment: SegmentID, in id: SessionID, expectedOperation: OperationID, text: String
+    ) throws(AppError) -> GlossaryEntry {
+        guard var entry = entries[id], let outcome = entry.session.translation, outcome.operation == expectedOperation, let engine = outcome.effective,
+              let engineIndex = outcome.results.firstIndex(where: { $0.id == engine }),
+              let source = entry.session.analysis?.segment(segment)?.effectiveText else { throw .cancelled }
+        let result = outcome.results[engineIndex]
+        var segments = result.segments
+        guard let index = segments.firstIndex(where: { $0.id == segment }) else { throw .cancelled }
+        let old = segments[index]
+        segments[index] = BilingualSegment(
+            id: segment, source: source, translated: text, status: .translated, from: old.from, to: old.to, glossaryHits: old.glossaryHits
+        )
+        var results = outcome.results
+        results[engineIndex] = EngineResult(
+            id: engine, segments: segments, error: result.error, skipped: result.skipped, duration: result.duration, fromCache: result.fromCache
+        )
+        entry.session.translation = TranslationOutcome(
+            operation: outcome.operation, routing: outcome.routing, results: results, effective: engine, target: outcome.target, privacy: outcome.privacy
+        )
+        entries[id] = entry
+        broadcast(id)
+        let scope: GlossaryScope = entry.session.context?.appBundleID.map { .app(bundleID: $0) } ?? .global
+        return GlossaryEntry(source: source, target: text, from: old.from, to: old.to, scope: scope)
     }
 
     public func setEffectiveEngine(_ engine: EngineID, in id: SessionID) throws(AppError) {
@@ -334,12 +387,15 @@ public actor DocumentSessionStore: SessionManaging {
 
     /// Restores an excluded segment into the visible list (OCR-13).
     public func restoreExcluded(_ segmentID: SegmentID, in id: SessionID) throws(AppError) {
-        guard var analysis = entries[id]?.session.analysis,
+        guard var entry = entries[id], var analysis = entry.session.analysis,
               let index = analysis.excluded.firstIndex(where: { $0.segment.id == segmentID }) else { throw .invariant("not excluded") }
         let restored = analysis.excluded.remove(at: index).segment
         let position = analysis.segments.firstIndex { ($0.box.minY, $0.box.minX) > (restored.box.minY, restored.box.minX) } ?? analysis.segments.count
         analysis.segments.insert(restored, at: position)
-        entries[id]?.session.analysis = analysis
+        entry.session.analysis = analysis
+        entry.analysisRevision += 1
+        cancelTasks(&entry, kinds: [.translation])
+        entries[id] = entry
         broadcast(id)
     }
 }

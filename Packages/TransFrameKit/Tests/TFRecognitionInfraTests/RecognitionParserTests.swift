@@ -6,7 +6,9 @@ import TFDomain
 @Suite("Recognition parsers")
 struct RecognitionParserTests {
     @Test func vlmJSONToPixels() {
-        let raw = VLMResponseParser.parse(#"{"items":[{"text":"Hi","bbox":[100,200,300,250]},{"text":"A","bbox":[0,0,100,100],"kind":"table_cell","table":0,"row":1,"col":2}]}"#, width: 1000, height: 500)
+        let raw = VLMResponseParser.parse(
+            #"{"items":[{"text":"Hi","bbox":[100,200,300,250]},{"text":"A","bbox":[0,0,100,100],"kind":"table_cell","table":0,"row":1,"col":2}]}"#,
+            width: 1000, height: 500)
         #expect(raw.observations.count == 2)
         #expect(raw.observations[0].box == FrameRect(x: 100, y: 100, width: 200, height: 25))
         #expect(raw.blocks.count == 1)
@@ -26,8 +28,29 @@ struct RecognitionParserTests {
     }
 
     @Test func clusteringGroupsNearbyLines() {
-        let clusters = TextClustering.cluster([CGRect(x: 0, y: 0, width: 100, height: 10), CGRect(x: 0, y: 14, width: 80, height: 10), CGRect(x: 0, y: 200, width: 50, height: 10)])
+        let clusters = TextClustering.cluster([
+            CGRect(x: 0, y: 0, width: 100, height: 10), CGRect(x: 0, y: 14, width: 80, height: 10), CGRect(x: 0, y: 200, width: 50, height: 10),
+        ])
         #expect(clusters.count == 2)
         #expect(clusters[0].count == 2)
+    }
+}
+
+extension RecognitionParserTests {
+    @Test func rejectsInvalidTableCoordinatesAndMalformedJSON() {
+        let reply = #"{"items":[{"text":"bad","bbox":[0,0,100,100],"kind":"table_cell","row":-1,"col":0}]}"#
+        #expect(VLMResponseParser.parse(reply, width: 100, height: 100).observations.isEmpty)
+        #expect(VLMResponseParser.parse(#"{"items":[{"text":"cut"#, width: 100, height: 100).observations.isEmpty)
+    }
+
+    @Test func subprocessDrainsOutputAndTimesOut() async throws {
+        let result = try await ProcessRunner.run(
+            "/bin/sh", ["-c", "/bin/dd if=/dev/zero bs=65536 count=4 >&2; printf ready"], timeout: .seconds(3)
+        )
+        #expect(result.status == 0)
+        #expect(result.stdout == "ready")
+        await #expect(throws: AppError.engine(.timedOut(.paddleLocal))) {
+            try await ProcessRunner.run("/bin/sleep", ["15"], timeout: .milliseconds(100))
+        }
     }
 }

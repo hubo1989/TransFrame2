@@ -79,7 +79,8 @@ final class CaptureController: OverlayViewDelegate {
     private func recordFrozenVisible(_ frames: FrozenFrameSet) {
         let elapsed = ContinuousClock.now - frames.request.triggerInstant
         let budget = frames.frames.count > 1 ? Budget.triggerToFrozenDual : Budget.triggerToFrozenSingle
-        services.performance.record(PerformanceSample(budget: budget, operation: frames.request.id.shortDescription, duration: elapsed, displays: frames.frames.count))
+        services.performance.record(
+            PerformanceSample(budget: budget, operation: frames.request.id.shortDescription, duration: elapsed, displays: frames.frames.count))
     }
 
     private func refresh() {
@@ -137,6 +138,17 @@ final class CaptureController: OverlayViewDelegate {
 
     func overlayRightMouseDown() { cancel() }
 
+    private func handleCommandKey(_ key: String, shifted: Bool) -> Bool {
+        switch key {
+        case "s": perform(.save)
+        case "c": perform(.copy)
+        case "z":
+            if shifted { observer?.redo() } else { observer?.undo() }
+        default: return false
+        }
+        return true
+    }
+
     func overlayKeyDown(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
@@ -164,14 +176,7 @@ final class CaptureController: OverlayViewDelegate {
             return true
         default: break
         }
-        if flags.contains(.command) {
-            switch key {
-            case "s": perform(.save); return true
-            case "c": perform(.copy); return true
-            case "z": flags.contains(.shift) ? observer?.redo() : observer?.undo(); return true
-            default: return false
-            }
-        }
+        if flags.contains(.command) { return handleCommandKey(key, shifted: flags.contains(.shift)) }
         guard flags.isDisjoint(with: [.control, .option]) else { return false }
         if key == "c", selection.phase != .selected || editor?.tool == nil {
             copyPixelColor()
@@ -406,7 +411,10 @@ final class CaptureController: OverlayViewDelegate {
             if x + drawerSize.width > display.frame.maxX { x = rect.minX - drawerSize.width - DS.Space.s2 }
             if x < display.frame.minX { x = display.frame.maxX - drawerSize.width - DS.Space.s1 }
             let y = min(max(rect.minY, display.frame.minY), display.frame.maxY - drawerSize.height)
-            drawer.setFrame(QuartzConversion.cocoaRect(fromQuartz: QuartzRect(x: x, y: y, width: drawerSize.width, height: drawerSize.height), primaryHeight: primaryHeight), display: true)
+            drawer.setFrame(
+                QuartzConversion.cocoaRect(
+                    fromQuartz: QuartzRect(x: x, y: y, width: drawerSize.width, height: drawerSize.height), primaryHeight: primaryHeight),
+                display: true)
         }
     }
 

@@ -34,7 +34,7 @@ public struct GlobalShortcut: Sendable, Codable, Hashable {
     }
 
     /// A global shortcut needs at least one of ⌘, ⌃ or ⌥.
-    public var isValid: Bool { !modifiers.intersection([.command, .control, .option]).isEmpty && Self.keyName(keyCode) != nil }
+    public var isValid: Bool { !modifiers.isDisjoint(with: [.command, .control, .option]) && Self.keyName(keyCode) != nil }
 
     public var displayString: String { modifiers.symbols + (Self.keyName(keyCode) ?? "?") }
 

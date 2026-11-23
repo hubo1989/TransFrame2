@@ -10,15 +10,18 @@ public struct RecognitionService: RecognitionWorkflow {
     private let render: RenderService
     private let engines: any RecognitionEngineProviding
     private let guardian: PrivacyGuard
-    private let cache: ResultCache<AnalysisResult>
+    private let cache: ResultCache<RawRecognition>
     private let performance: any PerformanceRecording
 
-    public init(sessions: DocumentSessionStore, render: RenderService, engines: any RecognitionEngineProviding, guardian: PrivacyGuard, performance: any PerformanceRecording) {
+    public init(
+        sessions: DocumentSessionStore, render: RenderService, engines: any RecognitionEngineProviding, guardian: PrivacyGuard,
+        performance: any PerformanceRecording
+    ) {
         self.sessions = sessions
         self.render = render
         self.engines = engines
         self.guardian = guardian
-        cache = ResultCache(maxCount: 64, maxBytes: 8 * 1024 * 1024) { $0.segments.reduce(512) { $0 + $1.text.utf8.count + 160 } }
+        cache = ResultCache(maxCount: 64, maxBytes: 8 * 1024 * 1024) { $0.observations.reduce(512) { $0 + $1.text.utf8.count + 160 } }
         self.performance = performance
     }
 
@@ -32,7 +35,9 @@ public struct RecognitionService: RecognitionWorkflow {
         let input: PixelImage
     }
 
-    func recognize(_ request: AnalysisRequest, settings: SettingsSnapshot, provider: AnalysisProvider?, overridePrivacy: Bool) async throws(AppError) -> Outcome {
+    func recognize(_ request: AnalysisRequest, settings: SettingsSnapshot, provider: AnalysisProvider?, overridePrivacy: Bool) async throws(AppError)
+        -> Outcome
+    {
         let session = try await sessions.snapshot(of: request.session)
         guard session.analysisInputRevision == request.inputRevision else { throw .cancelled }
         let visible = session.visibleRect
@@ -45,7 +50,7 @@ public struct RecognitionService: RecognitionWorkflow {
         let descriptor = engine.descriptor
         // Outbound requests always use the safe input (user redactions burned in, SPEC §01 §9.1).
         let policy: AnalysisInputPolicy = descriptor.locality == .onDevice ? request.input : .safe
-        var input = try await render.image(for: request.session, purpose: .analysisInput(policy))
+        var input = try await render.image(of: session, purpose: .analysisInput(policy))
         if region != visible {
             let crop = CGRect(x: region.minX - visible.minX, y: region.minY - visible.minY, width: region.width, height: region.height)
             guard let cropped = input.cgImage.cropping(to: crop) else { throw .recognition(.regionOutOfBounds) }
@@ -69,26 +74,22 @@ public struct RecognitionService: RecognitionWorkflow {
         ])
         let start = ContinuousClock.now
         let frozenInput = input
-        let frozenPrivacy = privacy
         do {
-            var (result, fromCache) = try await cache.value(for: key, force: request.cache == .forceRefresh) {
-                let raw = try await Self.run(engine, image: frozenInput, hints: request.languageHints, detail: request.detail)
-                let provenance = Provenance(
-                    engine: descriptor.id, configDigest: descriptor.configDigest, locality: descriptor.locality,
-                    duration: ContinuousClock.now - start, sent: descriptor.locality == .onDevice ? .nothing : raw.sent, privacy: frozenPrivacy
-                )
-                return RecognitionNormalizer.normalize(
-                    raw, region: region, session: request.session, inputRevision: request.inputRevision, fingerprint: fingerprint, provenance: provenance
-                )
+            let (raw, fromCache) = try await cache.value(for: key, force: request.cache == .forceRefresh) {
+                do {
+                    return try await Self.run(engine, image: frozenInput, hints: request.languageHints, detail: request.detail)
+                } catch AppError.engine(.invalidResponse(_, let detail)) where detail == "invalid OCR output" {
+                    return RawRecognition(observations: [], sent: .image)
+                }
             }
-            result = AnalysisResult(
-                id: AnalysisResultID(), session: request.session, inputRevision: request.inputRevision, inputFingerprint: result.inputFingerprint,
-                region: result.region, segments: result.segments, blocks: result.blocks, excluded: result.excluded, languages: result.languages,
-                provenance: Provenance(
-                    engine: result.provenance.engine, configDigest: result.provenance.configDigest, locality: result.provenance.locality,
-                    fromCache: fromCache, fallbackFrom: result.provenance.fallbackFrom, duration: fromCache ? ContinuousClock.now - start : result.provenance.duration,
-                    sent: fromCache ? .nothing : result.provenance.sent, privacy: privacy
-                )
+            try Task.checkCancellation()
+            let provenance = Provenance(
+                engine: descriptor.id, configDigest: descriptor.configDigest, locality: descriptor.locality,
+                fromCache: fromCache, duration: .now - start,
+                sent: fromCache || descriptor.locality == .onDevice ? .nothing : raw.sent, privacy: privacy
+            )
+            var result = RecognitionNormalizer.normalize(
+                raw, region: region, session: request.session, inputRevision: request.inputRevision, fingerprint: fingerprint, provenance: provenance
             )
             performance.record(PerformanceSample(
                 budget: fromCache ? Budget.cacheHit : (descriptor.id == .visionText ? Budget.visionRecognition : Budget.recognitionEngine),
@@ -98,9 +99,14 @@ public struct RecognitionService: RecognitionWorkflow {
             if result.segments.isEmpty, descriptor.id != .visionText, provider?.isLanguageModel == true,
                let vision = engines.engine(.visionText, settings: settings) {
                 let raw = try await Self.run(vision, image: frozenInput, hints: request.languageHints, detail: .lines)
-                let provenance = Provenance(engine: .visionText, configDigest: vision.descriptor.configDigest, locality: .onDevice, fallbackFrom: descriptor.id, duration: .now - start, sent: result.provenance.sent, privacy: privacy)
-                result = RecognitionNormalizer.normalize(raw, region: region, session: request.session, inputRevision: request.inputRevision, fingerprint: fingerprint, provenance: provenance)
+                let provenance = Provenance(
+                    engine: .visionText, configDigest: vision.descriptor.configDigest, locality: .onDevice, fallbackFrom: descriptor.id,
+                    duration: .now - start, sent: result.provenance.sent, privacy: privacy)
+                result = RecognitionNormalizer.normalize(
+                    raw, region: region, session: request.session, inputRevision: request.inputRevision, fingerprint: fingerprint,
+                    provenance: provenance)
             }
+            try Task.checkCancellation()
             return Outcome(result: result, privacy: privacy, input: frozenInput)
         } catch {
             throw AppError.from(error)
@@ -109,6 +115,7 @@ public struct RecognitionService: RecognitionWorkflow {
 
     /// Large inputs to size-limited engines are split into tiles with overlap and merged (OCR-10).
     static func run(_ engine: any RecognitionEngine, image: PixelImage, hints: [LanguageCode], detail: AnalysisDetail) async throws -> RawRecognition {
+        try Task.checkCancellation()
         let maxEdge = engine.descriptor.limits.maxImageEdge
         guard let maxEdge, max(image.cgImage.width, image.cgImage.height) > maxEdge else {
             return try await engine.recognize(image, hints: hints, detail: detail)

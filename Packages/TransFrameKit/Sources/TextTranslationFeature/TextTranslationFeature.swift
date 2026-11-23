@@ -10,6 +10,7 @@ import TFWorkspaceUI
 public protocol TextTranslationCoordinating: AnyObject {
     func translateSelection()
     func translateAndInsert()
+    func polishSelection()
 }
 
 /// Selected-text popup and translate-and-insert progress (TXT-01…TXT-16).
@@ -69,7 +70,11 @@ public final class TextTranslationCoordinator: TextTranslationCoordinating {
         }
     }
 
-    public func translateAndInsert() {
+    public func translateAndInsert() { insert(polishOnly: false) }
+
+    public func polishSelection() { insert(polishOnly: true) }
+
+    private func insert(polishOnly: Bool) {
         guard begin() else { return }
         feedback.showHUD(localizer[.textCapturing], near: nil)
         let tone = settings.ai.defaultTone
@@ -78,7 +83,8 @@ public final class TextTranslationCoordinator: TextTranslationCoordinating {
             guard await ensureAccessibility() else { feedback.hideHUD(); return }
             var anchor: CGRect?
             do {
-                for try await progress in workflow.translateAndInsert(tone: tone, polishOnly: false, settings: settings.snapshot) {
+                let snapshot = settings.snapshot
+                for try await progress in workflow.translateAndInsert(tone: tone, polishOnly: polishOnly, settings: snapshot) {
                     switch progress {
                     case .capturing: feedback.showHUD(localizer[.textCapturing], near: anchor)
                     case .captured(let rect): anchor = rect.map(Self.cocoa)
@@ -110,7 +116,9 @@ public final class TextTranslationCoordinator: TextTranslationCoordinating {
     private func showPopup(_ result: TextTranslationResult) {
         popup?.close()
         let model = PopupModel(result: result, settings: settings)
-        let panel = PopupPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 280), styleMask: [.titled, .closable, .resizable, .utilityWindow, .fullSizeContentView], backing: .buffered, defer: false)
+        let panel = PopupPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 280),
+            styleMask: [.titled, .closable, .resizable, .utilityWindow, .fullSizeContentView], backing: .buffered, defer: false)
         panel.title = localizer[.textPopupTitle]
         panel.level = .normal
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -181,7 +189,8 @@ struct PopupView: View {
             if model.result.outcome.routing.isCompare {
                 Picker(l10n[.resultsTranslation], selection: $model.selected) {
                     ForEach(model.result.outcome.results) { result in
-                        Text(verbatim: EngineNames.name(result.id, localizer: l10n, instances: model.instances) + " · " + summary(result)).tag(EngineID?.some(result.id))
+                        Text(verbatim: EngineNames.name(result.id, localizer: l10n, instances: model.instances) + " · " + summary(result)).tag(
+                            EngineID?.some(result.id))
                     }
                 }
                 .labelsHidden()

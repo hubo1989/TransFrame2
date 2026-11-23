@@ -78,12 +78,13 @@ public struct TranslationJob: Sendable {
     public let context: TranslationContext?
     public let tone: ToneStyle?
     public let cache: CachePolicy
+    public let scene: TranslationScene?
 
     public init(
         operation: OperationID = OperationID(), source: TranslationSource, units: [TranslationUnit],
         from: LanguageCode?, to: LanguageCode, routing: EngineRouting, prompt: PromptSnapshot? = nil,
         glossary: GlossarySnapshot? = nil, context: TranslationContext? = nil, tone: ToneStyle? = nil,
-        cache: CachePolicy = .normal
+        cache: CachePolicy = .normal, scene: TranslationScene? = nil
     ) {
         self.operation = operation
         self.source = source
@@ -96,6 +97,7 @@ public struct TranslationJob: Sendable {
         self.context = context
         self.tone = tone
         self.cache = cache
+        self.scene = scene
     }
 }
 

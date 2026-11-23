@@ -163,6 +163,11 @@ public struct TableCellRef: Sendable, Codable, Equatable, Hashable {
     public let columnSpan: Int
     public let isHeader: Bool
 
+    public var hasValidBounds: Bool {
+        (0..<512).contains(row) && (0..<128).contains(column) &&
+            (1...(512 - row)).contains(rowSpan) && (1...(128 - column)).contains(columnSpan)
+    }
+
     public init(table: BlockID, row: Int, column: Int, rowSpan: Int = 1, columnSpan: Int = 1, isHeader: Bool = false) {
         self.table = table
         self.row = row
@@ -309,8 +314,11 @@ public enum StructureValidation {
                 if childOwner[segment.id] != nil { issues.append(.parentMismatch(segment.id)) }
                 continue
             }
-            if blockByID[parent] == nil { issues.append(.missingParent(segment.id)) }
-            else if childOwner[segment.id] != parent { issues.append(.parentMismatch(segment.id)) }
+            if blockByID[parent] == nil {
+                issues.append(.missingParent(segment.id))
+            } else if childOwner[segment.id] != parent {
+                issues.append(.parentMismatch(segment.id))
+            }
         }
         var order: [SegmentID] = []
         func visit(_ block: ContentBlock) {

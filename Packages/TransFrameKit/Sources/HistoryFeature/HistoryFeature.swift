@@ -40,7 +40,7 @@ public final class HistoryCoordinator: HistoryCoordinating {
         let model = HistoryModel(workflow: workflow, settings: settings, errors: errors, pasteboard: pasteboard, localizer: localizer)
         if let query { model.query = query }
         let window = WindowFactory.makeWindow(title: localizer[.menuHistory], content: HistoryView(model: model).localized(localizer),
-                                              size: NSSize(width: 720, height: 560), minSize: NSSize(width: 520, height: 360), autosaveName: "TF2.HistoryWindow")
+            size: NSSize(width: 720, height: 560), minSize: NSSize(width: 520, height: 360), autosaveName: "TF2.HistoryWindow")
         historyWindow = window
         WindowFactory.present(window)
     }
@@ -49,7 +49,7 @@ public final class HistoryCoordinator: HistoryCoordinating {
         if let colorWindow { WindowFactory.present(colorWindow); return }
         let model = ColorHistoryModel(workflow: workflow, colors: colors, settings: settings, errors: errors, localizer: localizer)
         let window = WindowFactory.makeWindow(title: localizer[.menuColorHistory], content: ColorHistoryView(model: model).localized(localizer),
-                                              size: NSSize(width: 560, height: 440), minSize: NSSize(width: 420, height: 320), autosaveName: "TF2.ColorHistoryWindow")
+            size: NSSize(width: 560, height: 440), minSize: NSSize(width: 420, height: 320), autosaveName: "TF2.ColorHistoryWindow")
         colorWindow = window
         WindowFactory.present(window)
     }
@@ -73,8 +73,13 @@ final class HistoryModel {
     @ObservationIgnored let pasteboard: any PasteboardAccessing
     @ObservationIgnored let l10n: Localizer
     @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var paging: Task<Void, Never>?
+    @ObservationIgnored private var generation = 0
 
-    init(workflow: any HistoryWorkflow, settings: any SettingsProviding, errors: any ErrorPresenting, pasteboard: any PasteboardAccessing, localizer: Localizer) {
+    init(
+        workflow: any HistoryWorkflow, settings: any SettingsProviding, errors: any ErrorPresenting, pasteboard: any PasteboardAccessing,
+        localizer: Localizer
+    ) {
         self.workflow = workflow
         self.settings = settings
         self.errors = errors
@@ -84,28 +89,46 @@ final class HistoryModel {
 
     func reload() {
         task?.cancel()
+        paging?.cancel()
+        paging = nil
+        generation += 1
+        let current = generation
+        hasMore = false
+        let useSemantic = semantic && !query.text.isEmpty
         var q = query
         q.offset = 0
         task = Task {
             do {
-                let page = semantic && !q.text.isEmpty ? try await workflow.search(semantic: q.text, query: q, limit: 100) : try await workflow.page(q)
+                let page = useSemantic ? try await workflow.search(semantic: q.text, query: q, limit: 100) : try await workflow.page(q)
+                let notice = await workflow.notice()
+                guard generation == current, !Task.isCancelled else { return }
                 entries = page.entries
                 hasMore = page.hasMore
                 semanticFallback = page.semanticFallback
-                notice = await workflow.notice()
-            } catch { errors.present(error, near: nil) }
+                self.notice = notice
+            } catch {
+                if generation == current, !Task.isCancelled { errors.present(error, near: nil) }
+            }
         }
     }
 
     /// Infinite scroll (HIS-08).
     func loadMore() {
-        guard hasMore, !semantic else { return }
+        guard hasMore, paging == nil, !semantic || query.text.isEmpty || semanticFallback else { return }
         var q = query
         q.offset = entries.count
-        Task {
-            guard let page = try? await workflow.page(q) else { return }
-            entries += page.entries
-            hasMore = page.hasMore
+        let current = generation
+        paging = Task {
+            defer { if generation == current { paging = nil } }
+            do {
+                let page = try await workflow.page(q)
+                guard generation == current, !Task.isCancelled else { return }
+                let present = Set(entries.map(\.id))
+                entries += page.entries.filter { !present.contains($0.id) }
+                hasMore = page.hasMore
+            } catch {
+                if generation == current, !Task.isCancelled { errors.present(error, near: nil) }
+            }
         }
     }
 
@@ -167,7 +190,9 @@ struct HistoryView: View {
                     set: { model.query.kinds = $0.map { [$0] } ?? Set(HistoryKind.translationKinds); model.reload() }
                 )) {
                     Text(l10n[.historyAll]).tag(HistoryKind?.none)
-                    ForEach(HistoryKind.translationKinds, id: \.self) { kind in Text(l10n.string(rawKey: "history.kind.\(kind.rawValue)")).tag(HistoryKind?.some(kind)) }
+                    ForEach(HistoryKind.translationKinds, id: \.self) { kind in
+                        Text(l10n.string(rawKey: "history.kind.\(kind.rawValue)")).tag(HistoryKind?.some(kind))
+                    }
                 }
                 .frame(maxWidth: 200)
                 Toggle(l10n[.historyFavorites], isOn: Binding(get: { model.query.favoritesOnly }, set: { model.query.favoritesOnly = $0; model.reload() }))
@@ -254,6 +279,7 @@ private struct HistoryRow: View {
 @MainActor
 @Observable
 final class ColorHistoryModel {
+    @ObservationIgnored private var loadTask: Task<Void, Never>?
     var search = ""
     var favoritesOnly = false
     var entries: [HistoryEntry] = []
@@ -277,7 +303,15 @@ final class ColorHistoryModel {
         var q = HistoryQuery.colors
         q.text = search
         q.favoritesOnly = favoritesOnly
-        Task { entries = (try? await workflow.page(q).entries) ?? [] }
+        loadTask?.cancel()
+        loadTask = Task {
+            do {
+                let page = try await workflow.page(q)
+                if !Task.isCancelled { entries = page.entries }
+            } catch {
+                if !Task.isCancelled { errors.present(error, near: nil) }
+            }
+        }
     }
 
     func copy(_ entry: HistoryEntry, as format: ColorCopyFormat? = nil) {
@@ -302,7 +336,14 @@ struct ColorHistoryView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Picker(l10n[.colorFormat], selection: Binding(get: { ColorCopyFormat(rawValue: storedFormat) ?? .hex }, set: { storedFormat = $0.rawValue; model.format = $0 })) {
+                Picker(
+                    l10n[.colorFormat],
+                    selection: Binding(
+                        get: { ColorCopyFormat(rawValue: storedFormat) ?? .hex },
+                        set: {
+                            storedFormat = $0.rawValue; model.format = $0
+                        })
+                ) {
                     Text(verbatim: "HEX").tag(ColorCopyFormat.hex)
                     Text(verbatim: "RGB").tag(ColorCopyFormat.rgb)
                 }

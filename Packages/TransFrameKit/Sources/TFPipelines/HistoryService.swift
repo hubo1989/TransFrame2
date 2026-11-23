@@ -9,16 +9,18 @@ public struct HistoryService: HistoryWorkflow {
     private let files: any FileExporting
     private let embedding: (any TextEmbedding)?
     private let index: (any EmbeddingIndexStoring)?
+    private let storeOwnsIndex: Bool
     private let performance: any PerformanceRecording
 
     public init(
         store: any HistoryStoring, files: any FileExporting, embedding: (any TextEmbedding)? = nil,
-        index: (any EmbeddingIndexStoring)? = nil, performance: any PerformanceRecording
+        index: (any EmbeddingIndexStoring)? = nil, storeOwnsIndex: Bool = false, performance: any PerformanceRecording
     ) {
         self.store = store
         self.files = files
         self.embedding = embedding
         self.index = index
+        self.storeOwnsIndex = storeOwnsIndex
         self.performance = performance
     }
 
@@ -57,12 +59,12 @@ public struct HistoryService: HistoryWorkflow {
 
     public func remove(_ ids: [HistoryEntryID]) async throws(AppError) {
         try await store.remove(ids)
-        try? await index?.remove(ids)
+        if !storeOwnsIndex { try await index?.remove(ids) }
     }
 
     public func clear(_ scope: HistoryScope) async throws(AppError) {
         try await store.clear(scope)
-        if case .all = scope { try? await index?.removeAll() }
+        if !storeOwnsIndex, case .all = scope { try await index?.removeAll() }
     }
 
     public func export(_ query: HistoryQuery, as format: HistoryExportFormat, to url: URL) async throws(AppError) {
@@ -100,12 +102,15 @@ public enum HistoryExporter {
                 Row(id: $0.id.description, kind: $0.kind.rawValue, createdAt: $0.createdAt, source: $0.source, result: $0.result,
                     from: $0.from?.bcp47, to: $0.to?.bcp47, engine: $0.engine?.raw, tags: $0.tags, isFavorite: $0.isFavorite)
             }
-            return (try? encoder.encode(rows)).map { String(decoding: $0, as: UTF8.self) } ?? "[]"
+            return (try? encoder.encode(rows)).flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
         case .csv:
             let header = "createdAt,kind,from,to,engine,source,result,favorite"
             let iso = ISO8601DateFormatter()
             let lines = entries.map { e in
-                [iso.string(from: e.createdAt), e.kind.rawValue, e.from?.bcp47 ?? "", e.to?.bcp47 ?? "", e.engine?.raw ?? "", e.source, e.result, e.isFavorite ? "1" : "0"]
+                [
+                    iso.string(from: e.createdAt), e.kind.rawValue, e.from?.bcp47 ?? "", e.to?.bcp47 ?? "", e.engine?.raw ?? "", e.source, e.result,
+                    e.isFavorite ? "1" : "0",
+                ]
                     .map(csvField).joined(separator: ",")
             }
             return ([header] + lines).joined(separator: "\r\n") + "\r\n"
@@ -114,7 +119,9 @@ public enum HistoryExporter {
             return entries.map { e in
                 var block = "## \(iso.string(from: e.createdAt)) · \(e.kind.rawValue)"
                 if let from = e.from, let to = e.to { block += " · \(from.bcp47) → \(to.bcp47)" }
-                if !e.source.isEmpty { block += "\n\n" + e.source.split(separator: "\n", omittingEmptySubsequences: false).map { "> \($0)" }.joined(separator: "\n") }
+                if !e.source.isEmpty {
+                    block += "\n\n" + e.source.split(separator: "\n", omittingEmptySubsequences: false).map { "> \($0)" }.joined(separator: "\n")
+                }
                 block += "\n\n" + e.result
                 return block
             }.joined(separator: "\n\n---\n\n") + "\n"

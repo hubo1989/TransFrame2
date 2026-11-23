@@ -42,7 +42,10 @@ public struct PrivacyGuard: Sendable {
         }
         guard let masked = context.makeImage() else { throw .render(.contextUnavailable) }
         let categories = Array(Set(redact.map(\.category))).sorted { $0.rawValue < $1.rawValue }
-        return (PixelImage(cgImage: masked, scale: image.scale), PrivacyReport(applied: true, redactedCount: redact.count, categories: categories, hintedCount: hinted))
+        return (
+            PixelImage(cgImage: masked, scale: image.scale),
+            PrivacyReport(applied: true, redactedCount: redact.count, categories: categories, hintedCount: hinted)
+        )
     }
 
     /// Text channel (ADR-0010 §7).
@@ -53,6 +56,52 @@ public struct PrivacyGuard: Sendable {
         public var report: PrivacyReport
     }
 
+    static func sensitiveSpans(in text: String, settings: PrivacySettings) -> [SensitiveTextClassifier.Match] {
+        SensitiveTextClassifier.matches(in: text).filter {
+            settings.redactedCategories.contains($0.category) && $0.confidence >= settings.confidenceThreshold
+        }
+    }
+
+    static func safeMetadata(_ text: String?, guarded: Bool, settings: PrivacySettings) -> String? {
+        guard let text, guarded else { return text }
+        return sensitiveSpans(in: text, settings: settings).isEmpty ? text : nil
+    }
+
+    public static func namingInput(session: DocumentSession, settings: SettingsSnapshot, locality: EngineLocality) -> String {
+        let guarded = applies(to: locality, settings: settings.privacy, overridden: false)
+        var fields: [String] = []
+        if locality == .onDevice || settings.privacy.sendContext {
+            fields += [session.context?.appName, session.context?.windowTitle].compactMap {
+                safeMetadata($0, guarded: guarded, settings: settings.privacy)
+            }
+        }
+        if let text = session.analysis?.plainText {
+            fields += (guarded ? protect([TranslationUnit(text: text)], settings: settings.privacy).units.map(\.text) : [text])
+                .map { String($0.prefix(800)) }
+        }
+        return fields.joined(separator: "\n")
+    }
+
+    static func generate(
+        _ task: GenerationTask, input: String, using generator: any TextGenerating, settings: PrivacySettings
+    ) async throws(AppError) -> String {
+        if Task.isCancelled { throw .cancelled }
+        let unit = TranslationUnit(text: input)
+        let guarded = applies(to: generator.descriptor.locality, settings: settings, overridden: false)
+        let plan = guarded ? protect([unit], settings: settings) : nil
+        if plan?.withheld.contains(unit.id) == true { return input }
+        let output = try await generator.generate(
+            GenerationRequest(task: task, input: plan?.units.first?.text ?? input, maxOutputCharacters: max(input.count * 3, 200))
+        )
+        if Task.isCancelled { throw .cancelled }
+        let placeholders = plan?.placeholders[unit.id] ?? [:]
+        guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              placeholders.keys.allSatisfy({ output.components(separatedBy: $0).count == 2 }) else {
+            throw .engine(.invalidResponse(generator.descriptor.id, detail: "incomplete generation"))
+        }
+        return restore(output, placeholders)
+    }
+
     public static func protect(_ units: [TranslationUnit], settings: PrivacySettings) -> TextPlan {
         var output: [TranslationUnit] = []
         var withheld = Set<SegmentID>()
@@ -60,8 +109,7 @@ public struct PrivacyGuard: Sendable {
         var categories = Set<SensitiveCategory>()
         var count = 0
         for unit in units {
-            let matches = SensitiveTextClassifier.matches(in: unit.text)
-                .filter { settings.redactedCategories.contains($0.category) && $0.confidence >= settings.confidenceThreshold }
+            let matches = sensitiveSpans(in: unit.text, settings: settings)
             guard !matches.isEmpty else { output.append(unit); continue }
             count += matches.count
             matches.forEach { categories.insert($0.category) }
@@ -73,7 +121,9 @@ public struct PrivacyGuard: Sendable {
             var text = unit.text
             var map: [String: String] = [:]
             for (index, match) in matches.enumerated().reversed() {
-                let token = "⟦P\(index + 1)⟧"
+                var number = index + 1
+                while unit.text.contains("⟦P\(number)⟧") { number += matches.count }
+                let token = "⟦P\(number)⟧"
                 map[token] = String(unit.text[match.range])
                 let lower = text.index(text.startIndex, offsetBy: unit.text.distance(from: unit.text.startIndex, to: match.range.lowerBound))
                 let upper = text.index(lower, offsetBy: unit.text.distance(from: match.range.lowerBound, to: match.range.upperBound))

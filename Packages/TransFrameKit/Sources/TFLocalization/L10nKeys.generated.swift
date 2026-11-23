@@ -297,6 +297,7 @@ public extension L10nKey {
     static let menuPinsCount = L10nKey("menu.pins.count")
     static let menuPinsRestoreInteractions = L10nKey("menu.pins.restoreInteractions")
     static let menuPinsShowAll = L10nKey("menu.pins.showAll")
+    static let menuPolishSelection = L10nKey("menu.polishSelection")
     static let menuQuit = L10nKey("menu.quit")
     static let menuSelectAll = L10nKey("menu.selectAll")
     static let menuSettings = L10nKey("menu.settings")

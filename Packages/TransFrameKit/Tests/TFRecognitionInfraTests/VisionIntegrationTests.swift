@@ -21,7 +21,9 @@ struct VisionIntegrationTests {
     }
 
     @Test func recognizesRenderedText() async throws {
-        let engine = VisionTextEngine(descriptor: RecognitionEngineFactory(transport: NoTransport(), secrets: { _ throws(AppError) in nil }).descriptor(.visionText, settings: SettingsSnapshot()))
+        let engine = VisionTextEngine(
+            descriptor: RecognitionEngineFactory(transport: NoTransport(), secrets: { _ throws(AppError) in nil }).descriptor(
+                .visionText, settings: SettingsSnapshot()))
         let raw = try await engine.recognize(PixelImage(cgImage: Self.fixture("Hello TransFrame 2025"), scale: 1), hints: [.english], detail: .lines)
         let text = raw.observations.map(\.text).joined(separator: " ")
         #expect(text.contains("Hello"))
@@ -31,7 +33,8 @@ struct VisionIntegrationTests {
     }
 
     @Test func sensitiveDetectorFindsCardNumber() async throws {
-        let findings = try await LocalSensitiveContentDetector().detect(in: PixelImage(cgImage: Self.fixture("Card 4111 1111 1111 1111", size: CGSize(width: 1000, height: 200)), scale: 1))
+        let findings = try await LocalSensitiveContentDetector().detect(
+            in: PixelImage(cgImage: Self.fixture("Card 4111 1111 1111 1111", size: CGSize(width: 1000, height: 200)), scale: 1))
         #expect(findings.contains { $0.category == .paymentCard })
     }
 }

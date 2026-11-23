@@ -11,6 +11,7 @@ public struct ExportService: ExportWorkflow {
     private let files: any FileExporting
     private let sound: any SoundPlaying
     private let uploader: (any ImageUploading)?
+    private let guardian: PrivacyGuard
     private let history: (any HistoryWorkflow)?
     private let namer: FileNamer
     private let defaultDirectory: @Sendable () -> URL
@@ -19,7 +20,8 @@ public struct ExportService: ExportWorkflow {
     public init(
         sessions: DocumentSessionStore, render: RenderService, pasteboard: any PasteboardAccessing, encoder: any ImageEncoding,
         files: any FileExporting, sound: any SoundPlaying, uploader: (any ImageUploading)?, history: (any HistoryWorkflow)?,
-        namer: FileNamer, defaultDirectory: @escaping @Sendable () -> URL, now: @escaping @Sendable () -> Date = { Date() }
+        namer: FileNamer, guardian: PrivacyGuard,
+        defaultDirectory: @escaping @Sendable () -> URL, now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.sessions = sessions
         self.render = render
@@ -29,6 +31,7 @@ public struct ExportService: ExportWorkflow {
         self.sound = sound
         self.uploader = uploader
         self.history = history
+        self.guardian = guardian
         self.namer = namer
         self.defaultDirectory = defaultDirectory
         self.now = now
@@ -60,10 +63,11 @@ public struct ExportService: ExportWorkflow {
     public func upload(_ id: SessionID, settings: SettingsSnapshot) async throws(AppError) -> UploadReceipt {
         guard let uploader, settings.imageHost.provider != nil else { throw .upload(.notConfigured) }
         let session = try await sessions.snapshot(of: id)
-        let image = try await render.image(of: session, purpose: .file(.png))
+        let rendered = try await render.image(of: session, purpose: .upload)
+        let image = if settings.privacy.guardEnabled { try await guardian.protect(rendered, settings: settings.privacy).0 } else { rendered }
         let data = try encoder.encode(image, format: .png, quality: 1)
-        let base = await namer.name(for: session, settings: settings, date: now()).base
-        let receipt = try await uploader.upload(data, fileName: "\(base).png", contentType: "image/png", settings: settings.imageHost)
+        let objectName = "screenshot-\(UUID().uuidString.lowercased()).png"
+        let receipt = try await uploader.upload(data, fileName: objectName, contentType: "image/png", settings: settings.imageHost)
         try await pasteboard.write(.string(receipt.url.absoluteString))
         if settings.general.playsSound { await sound.play(.capture) }
         await history?.record(

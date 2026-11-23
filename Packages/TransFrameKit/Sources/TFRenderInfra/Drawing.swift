@@ -7,7 +7,9 @@ import TFDomain
 // MARK: - Text (CoreText). Measuring and drawing share one attribute builder so layout matches pixels.
 
 enum TextDrawing {
-    static func attributes(fontSize: Double, color: RGBA, alignment: RenderTextAlignment, rightToLeft: Bool, fontName: String? = nil, bold: Bool = false) -> [NSAttributedString.Key: Any] {
+    static func attributes(
+        fontSize: Double, color: RGBA, alignment: RenderTextAlignment, rightToLeft: Bool, fontName: String? = nil, bold: Bool = false
+    ) -> [NSAttributedString.Key: Any] {
         let font: CTFont
         if let fontName, let custom = NSFont(name: fontName, size: fontSize) {
             font = custom as CTFont
@@ -27,11 +29,14 @@ enum TextDrawing {
     }
 
     static func measure(_ text: String, fontSize: Double, maxWidth: Double, fontName: String? = nil) -> TextMetrics {
-        let string = NSAttributedString(string: text, attributes: attributes(fontSize: fontSize, color: .black, alignment: .leading, rightToLeft: false, fontName: fontName))
+        let string = NSAttributedString(
+            string: text, attributes: attributes(fontSize: fontSize, color: .black, alignment: .leading, rightToLeft: false, fontName: fontName))
         let framesetter = CTFramesetterCreateWithAttributedString(string)
         let constraint = CGSize(width: maxWidth.isFinite ? maxWidth : CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
         let size = CTFramesetterSuggestFrameSizeWithConstraints(framesetter, CFRange(location: 0, length: 0), nil, constraint, nil)
-        let path = CGPath(rect: CGRect(origin: .zero, size: CGSize(width: max(size.width.rounded(.up), 1), height: max(size.height.rounded(.up) + 2, 1))), transform: nil)
+        let path = CGPath(
+            rect: CGRect(origin: .zero, size: CGSize(width: max(size.width.rounded(.up), 1), height: max(size.height.rounded(.up) + 2, 1))),
+            transform: nil)
         let frame = CTFramesetterCreateFrame(framesetter, CFRange(location: 0, length: 0), path, nil)
         let lines = (CTFrameGetLines(frame) as? [CTLine])?.count ?? 1
         return TextMetrics(width: Double(size.width.rounded(.up)), height: Double(size.height.rounded(.up)), lineCount: max(lines, 1))
@@ -43,7 +48,9 @@ enum TextDrawing {
         fontName: String? = nil, bold: Bool = false, context: CGContext
     ) {
         guard rect.width > 0, rect.height > 0 else { return }
-        let string = NSAttributedString(string: text, attributes: attributes(fontSize: fontSize, color: color, alignment: alignment, rightToLeft: rightToLeft, fontName: fontName, bold: bold))
+        let string = NSAttributedString(
+            string: text,
+            attributes: attributes(fontSize: fontSize, color: color, alignment: alignment, rightToLeft: rightToLeft, fontName: fontName, bold: bold))
         let framesetter = CTFramesetterCreateWithAttributedString(string)
         let height = rect.height + 2
         let path = CGPath(rect: CGRect(x: 0, y: 0, width: rect.width, height: height), transform: nil)
@@ -115,7 +122,9 @@ enum AnnotationDrawing {
         case .mosaic(let a):
             guard let image = mosaic(base, a.rect.raw.standardized, a.blockSize) else { return }
             context.interpolationQuality = .none
-            Bitmap.drawImage(image, in: a.rect.raw.standardized.integral.intersection(CGRect(x: 0, y: 0, width: base.cgImage.width, height: base.cgImage.height)), context: context)
+            Bitmap.drawImage(
+                image, in: a.rect.raw.standardized.integral.intersection(CGRect(x: 0, y: 0, width: base.cgImage.width, height: base.cgImage.height)),
+                context: context)
         case .redaction(let a):
             fill(a.rect.raw.standardized, a.fill, context)
         }

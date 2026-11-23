@@ -223,7 +223,9 @@ final class OverlayView: NSView {
         guard bounds.contains(p) else { return nil }
         let scale = frame0.pixelScale
         guard let pixel = frame0.image.cgImage.cropping(to: CGRect(x: (p.x * scale).rounded(.down), y: (p.y * scale).rounded(.down), width: 1, height: 1)),
-              let context = CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            let context = CGContext(
+                data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         context.draw(pixel, in: CGRect(x: 0, y: 0, width: 1, height: 1))
         guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return nil }

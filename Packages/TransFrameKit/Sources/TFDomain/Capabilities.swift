@@ -244,7 +244,8 @@ public protocol FileExporting: Sendable {
 
 public protocol HotkeyRegistering: Sendable {
     /// Replaces every registration. Returns actions whose registration failed.
-    func register(_ bindings: [HotkeyAction: GlobalShortcut], handler: @escaping @Sendable (HotkeyAction, ContinuousClock.Instant) -> Void) async -> [HotkeyAction]
+    func register(_ bindings: [HotkeyAction: GlobalShortcut], handler: @escaping @Sendable (HotkeyAction, ContinuousClock.Instant) -> Void) async
+        -> [HotkeyAction]
     func unregisterAll() async
 }
 

@@ -81,7 +81,7 @@ private struct KeyCaptureView: NSViewRepresentable {
         override var acceptsFirstResponder: Bool { true }
 
         override func keyDown(with event: NSEvent) {
-            if event.keyCode == 53 && event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty {
+            if event.keyCode == 53 && event.modifierFlags.isDisjoint(with: .deviceIndependentFlagsMask) {
                 onCancel?()
                 return
             }

@@ -11,10 +11,12 @@ public final class URLSessionTransport: HTTPTransport {
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
         configuration.urlCache = nil
         configuration.httpCookieStorage = nil
-        session = URLSession(configuration: configuration)
+        session = URLSession(configuration: configuration, delegate: OriginBoundRedirects(), delegateQueue: nil)
     }
 
     public func send(_ request: HTTPRequest, engine: EngineID) async throws(AppError) -> HTTPResponse {
+        if Task.isCancelled { throw .cancelled }
+        guard Endpoint.origin(request.url) != nil else { throw .engine(.notConfigured(engine)) }
         var urlRequest = URLRequest(url: request.url)
         urlRequest.httpMethod = request.method.rawValue
         urlRequest.httpBody = request.body
@@ -45,6 +47,21 @@ public final class URLSessionTransport: HTTPTransport {
     }
 }
 
+final class OriginBoundRedirects: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void
+    ) {
+        let allowed = Self.allowsRedirect(from: task.originalRequest?.url, to: request.url)
+        completionHandler(allowed ? request : nil)
+    }
+
+    static func allowsRedirect(from original: URL?, to destination: URL?) -> Bool {
+        guard let origin = original.flatMap(Endpoint.origin) else { return false }
+        return origin == destination.flatMap(Endpoint.origin)
+    }
+}
+
 /// Shared HTTP status mapping (401/403 → auth, 429 → rate limit, 5xx → unreachable, other → invalid response).
 public enum HTTPStatusMapping {
     public static func check(_ response: HTTPResponse, engine: EngineID) throws(AppError) {
@@ -54,7 +71,9 @@ public enum HTTPStatusMapping {
         case 402: throw .engine(.quotaExceeded(engine))
         case 429:
             let retry = response.header("Retry-After").flatMap(Double.init).map { Duration.seconds($0) }
-            if let body = String(data: response.body, encoding: .utf8), body.localizedCaseInsensitiveContains("quota") || body.localizedCaseInsensitiveContains("insufficient") {
+            if let body = String(data: response.body, encoding: .utf8),
+                body.localizedCaseInsensitiveContains("quota") || body.localizedCaseInsensitiveContains("insufficient")
+            {
                 throw .engine(.quotaExceeded(engine))
             }
             throw .engine(.rateLimited(engine, retryAfter: retry))
@@ -75,11 +94,19 @@ public enum HTTPStatusMapping {
 /// Endpoint helpers shared by engines.
 public enum Endpoint {
     public static func url(_ base: String, appending path: String) -> URL? {
-        var trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
-        while trimmed.hasSuffix("/") { trimmed.removeLast() }
-        guard !trimmed.isEmpty else { return nil }
-        if trimmed.hasSuffix(path) { return URL(string: trimmed) }
-        return URL(string: trimmed + path)
+        let base = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard var components = URLComponents(string: base), let url = components.url, origin(url) != nil else { return nil }
+        var current = components.path
+        while current.hasSuffix("/") { current.removeLast() }
+        if !current.hasSuffix(path) { current += path }
+        components.path = current
+        return components.url
+    }
+
+    static func origin(_ url: URL) -> String? {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+              let host = url.host?.lowercased(), !host.isEmpty, url.user == nil, url.password == nil else { return nil }
+        return "\(scheme)://\(host):\(url.port ?? (scheme == "https" ? 443 : 80))"
     }
 
     /// Loopback endpoints (local models) do not require keys (TRN-17).

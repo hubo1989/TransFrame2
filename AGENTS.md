@@ -182,3 +182,4 @@
 - Codex FIX worker (resumed review session 01a2097b…, workspace-write) running: fixes all review-2 findings + swiftlint strict zero.
   Output → build/fix-2-result.md, log build/fix-2.log. DO NOT edit source files until it finishes (single writer). Then verify all gates,
   review diff, commit as "fix: review-2 findings + lint".
+- Codex fix-2 finished (77 files): claims 14 P1 + 14 P2 fixed, 19 regression tests, lint 0. Its sandbox blocked Vision/Keychain tests + xcodebuild → verify outside sandbox before commit.

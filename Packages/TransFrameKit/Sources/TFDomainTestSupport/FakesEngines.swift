@@ -45,3 +45,75 @@ public final class FakeTranslationEngines: TranslationEngineProviding, @unchecke
     public func engine(_ id: EngineID, settings: SettingsSnapshot) -> (any TranslationEngine)? { engines[id] }
     public func skipReason(_ id: EngineID, settings: SettingsSnapshot) async -> SkipReason? { skipped[id] ?? (engines[id] == nil ? .unconfigured : nil) }
 }
+
+public struct FakeTextGenerator: TextGenerating {
+    public let descriptor: EngineDescriptor
+    public let calls = CallLog<GenerationRequest>()
+    private let output: @Sendable (String) -> String
+
+    public init(locality: EngineLocality = .cloud, output: @escaping @Sendable (String) -> String) {
+        descriptor = EngineDescriptor(id: .openAICompatible, roles: [.textGeneration], name: .userDefined("Fake"), locality: locality)
+        self.output = output
+    }
+
+    public func generate(_ request: GenerationRequest) async throws(AppError) -> String {
+        calls.append(request)
+        return output(request.input)
+    }
+}
+
+public struct FakeSelectedText: SelectedTextCapturing, TextInserting {
+    public let inserted = CallLog<String>()
+    public let pasted = CallLog<String>()
+    private let selection: CapturedSelection
+
+    public init(text: String, target: TextInsertionTarget? = nil) {
+        selection = CapturedSelection(text: text, target: target, anchor: nil, appName: nil)
+    }
+
+    public func captureSelection(bindTarget: Bool) async throws(AppError) -> CapturedSelection { selection }
+
+    public func insert(_ text: String, into target: TextInsertionTarget) async throws(AppError) -> InsertionMethod {
+        inserted.append(text)
+        return .accessibility
+    }
+
+    public func pasteAnchored(_ text: String, processID: Int32?) async throws(AppError) { pasted.append(text) }
+}
+
+public struct FakeSensitiveDetector: SensitiveContentDetecting {
+    public let calls = CallLog<PixelImage>()
+    private let findings: [SensitiveFinding]
+
+    public init(_ findings: [SensitiveFinding]) { self.findings = findings }
+
+    public func detect(in image: PixelImage) async throws(AppError) -> [SensitiveFinding] {
+        calls.append(image)
+        return findings
+    }
+}
+
+public actor FakeScrollCapturer: ScrollCapturing {
+    private var pending: CheckedContinuation<PixelImage, Never>?
+    private var started: CheckedContinuation<Void, Never>?
+
+    public init() {}
+
+    public func captureStrip(_ rect: QuartzRect, excluding: Set<WindowID>) async throws(AppError) -> PixelImage {
+        await withCheckedContinuation { continuation in
+            pending = continuation
+            started?.resume()
+            started = nil
+        }
+    }
+
+    public func waitForStripRequest() async {
+        if pending != nil { return }
+        await withCheckedContinuation { started = $0 }
+    }
+
+    public func deliver(_ image: PixelImage) {
+        pending?.resume(returning: image)
+        pending = nil
+    }
+}

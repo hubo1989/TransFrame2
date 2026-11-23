@@ -92,7 +92,10 @@ struct StylePanel: View {
             Text(l10n[.toolStyle]).font(DS.Typography.section)
             HStack(spacing: DS.Space.s1) {
                 ForEach(AnnotationPalette.all, id: \.name) { entry in
-                    ColorSwatch(color: Color(rgba: entry.color), name: l10n.string(rawKey: "color.\(entry.name)"), isSelected: editor.style.color == entry.color) {
+                    ColorSwatch(
+                        color: Color(rgba: entry.color), name: l10n.string(rawKey: "color.\(entry.name)"),
+                        isSelected: editor.style.color == entry.color
+                    ) {
                         editor.style.color = entry.color
                     }
                 }

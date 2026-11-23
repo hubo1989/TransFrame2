@@ -47,20 +47,24 @@ public struct EngineCatalogService: EngineCatalogProviding {
         return text
     }
 
-    /// Connection test for the screenshot analysis engine (OCR-14): lists models for model endpoints, recognizes a blank
-    /// probe image for local engines.
+    /// Explicit image request to verify the configured model supports screenshot recognition.
     public func testAnalysis(_ provider: AnalysisProvider, settings: SettingsSnapshot) async throws(AppError) -> String {
-        if provider.isLanguageModel, let config = settings.recognition.config(for: provider) {
-            let models = try await discovery.models(endpoint: config.endpoint, credential: config.credential, engine: provider.engineID)
-            return models.contains(config.model) || models.isEmpty ? config.model : "\(config.model) (\(models.count))"
-        }
         guard let engine = recognition.analysisEngine(provider, settings: settings) else { throw .engine(.notConfigured(provider.engineID)) }
         guard let context = CGContext(data: nil, width: 64, height: 32, bitsPerComponent: 8, bytesPerRow: 0,
                                       space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
-              let image = { context.setFillColor(CGColor(gray: 1, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 64, height: 32)); return context.makeImage() }()
+            let image = {
+                context.setFillColor(CGColor(gray: 1, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 64, height: 32)); return context.makeImage()
+            }()
         else { throw .render(.contextUnavailable) }
-        _ = try await engine.recognize(PixelImage(cgImage: image, scale: 1), hints: [], detail: .lines)
-        return engine.descriptor.id.raw
+        let probe = PixelImage(cgImage: image, scale: 1)
+        do {
+            _ = try await Deadline.run(engine.descriptor.limits.timeout, engine: engine.descriptor.id) {
+                try await engine.recognize(probe, hints: [], detail: .lines)
+            }
+        } catch {
+            throw AppError.from(error)
+        }
+        return settings.recognition.config(for: provider)?.model ?? engine.descriptor.id.raw
     }
 
     public func models(for id: EngineID, endpoint: String, credential: CredentialRef?) async throws(AppError) -> [String] {
@@ -82,6 +86,7 @@ public struct EngineCatalogService: EngineCatalogProviding {
                                       space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
               let pixel = context.makeImage() else { throw .render(.contextUnavailable) }
         let data = try encoder.encode(PixelImage(cgImage: pixel, scale: 1), format: .png, quality: 1)
-        return try await uploader.upload(data, fileName: "transframe-test-\(Int(Date().timeIntervalSince1970)).png", contentType: "image/png", settings: settings.imageHost)
+        return try await uploader.upload(
+            data, fileName: "transframe-test-\(Int(Date().timeIntervalSince1970)).png", contentType: "image/png", settings: settings.imageHost)
     }
 }

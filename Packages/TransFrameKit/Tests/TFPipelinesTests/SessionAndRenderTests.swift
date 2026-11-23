@@ -28,7 +28,14 @@ struct SessionRevisionTests {
         let segment = s.analysis!.segments[0]
         s.translation = TranslationOutcome(
             operation: OperationID(), routing: .ordered([.mtran]),
-            results: [EngineResult(id: .mtran, segments: [BilingualSegment(id: segment.id, source: "Hello", translated: "你好", status: .translated, from: .english, to: .simplifiedChinese)])],
+            results: [
+                EngineResult(
+                    id: .mtran,
+                    segments: [
+                        BilingualSegment(
+                            id: segment.id, source: "Hello", translated: "你好", status: .translated, from: .english, to: .simplifiedChinese)
+                    ])
+            ],
             effective: .mtran
         )
         return s
@@ -164,7 +171,8 @@ struct SessionRevisionTests {
         let composer = FakeFrameComposer()
         let store = DocumentSessionStore(composer: composer)
         let frames = TestImages.frozen([TestImages.display(1, x: 0, y: 0, width: 100, height: 80, scale: 2)])
-        let id = try await store.create(from: frames, selection: SelectionGeometry(rect: QuartzRect(x: 10, y: 10, width: 30, height: 20), source: .freeform, topologyVersion: 1))
+        let id = try await store.create(
+            from: frames, selection: SelectionGeometry(rect: QuartzRect(x: 10, y: 10, width: 30, height: 20), source: .freeform, topologyVersion: 1))
         let session = try await store.snapshot(of: id)
         #expect(session.baseImage.pixelSize == PixelSize(width: 60, height: 40))
         #expect(composer.calls.count == 1)
@@ -255,7 +263,9 @@ struct LayoutTests {
 
     @Test func belowOriginalFitsUnderTheBox() {
         let s = TextSegment(text: "Hello", box: rect(10, 10, 100, 20), style: SegmentStyleHint(fontSize: 16))
-        let placements = layout.layout(analysis: analysis([s]), translations: [translated(s, "你好")], mode: .belowOriginal, offsetX: 0, offsetY: 0, canvas: CanvasRect(x: 0, y: 0, width: 400, height: 300), scale: 1)
+        let placements = layout.layout(
+            analysis: analysis([s]), translations: [translated(s, "你好")], mode: .belowOriginal, offsetX: 0, offsetY: 0,
+            canvas: CanvasRect(x: 0, y: 0, width: 400, height: 300), scale: 1)
         #expect(placements.count == 1)
         #expect(placements[0].fit == .fits)
         #expect(placements[0].frame.minY >= 30)
@@ -265,11 +275,15 @@ struct LayoutTests {
     @Test func wrapsThenShrinksThenOmits() {
         let canvas = CanvasRect(x: 0, y: 0, width: 400, height: 300)
         let narrow = TextSegment(text: "A", box: rect(0, 0, 40, 30), style: SegmentStyleHint(fontSize: 20))
-        let wrapped = layout.layout(analysis: analysis([narrow]), translations: [translated(narrow, "abcdef")], mode: .replaceOriginal, offsetX: 0, offsetY: 0, canvas: canvas, scale: 1)
+        let wrapped = layout.layout(
+            analysis: analysis([narrow]), translations: [translated(narrow, "abcdef")], mode: .replaceOriginal, offsetX: 0, offsetY: 0,
+            canvas: canvas, scale: 1)
         #expect(wrapped[0].fit == .shrunk || wrapped[0].fit == .wrapped)
         #expect(wrapped[0].fontSize >= 12)
         let tiny = TextSegment(text: "A", box: rect(0, 0, 20, 10), style: SegmentStyleHint(fontSize: 10))
-        let omitted = layout.layout(analysis: analysis([tiny]), translations: [translated(tiny, String(repeating: "x", count: 80))], mode: .replaceOriginal, offsetX: 0, offsetY: 0, canvas: canvas, scale: 1)
+        let omitted = layout.layout(
+            analysis: analysis([tiny]), translations: [translated(tiny, String(repeating: "x", count: 80))], mode: .replaceOriginal, offsetX: 0,
+            offsetY: 0, canvas: canvas, scale: 1)
         #expect(omitted[0].fit == .omitted)
         #expect(omitted[0].backdropFrame == nil)
     }
@@ -277,20 +291,26 @@ struct LayoutTests {
     @Test func belowOriginalStopsAtNextBlock() {
         let a = TextSegment(text: "A", box: rect(0, 0, 100, 20), style: SegmentStyleHint(fontSize: 16))
         let b = TextSegment(text: "B", box: rect(0, 24, 100, 20), style: SegmentStyleHint(fontSize: 16))
-        let placements = layout.layout(analysis: analysis([a, b]), translations: [translated(a, "long translation text here"), translated(b, "b")], mode: .belowOriginal, offsetX: 0, offsetY: 0, canvas: CanvasRect(x: 0, y: 0, width: 100, height: 300), scale: 1)
+        let placements = layout.layout(
+            analysis: analysis([a, b]), translations: [translated(a, "long translation text here"), translated(b, "b")], mode: .belowOriginal,
+            offsetX: 0, offsetY: 0, canvas: CanvasRect(x: 0, y: 0, width: 100, height: 300), scale: 1)
         #expect(placements[0].fit == .omitted)
         #expect(placements[1].fit != .omitted)
     }
 
     @Test func formulasAndCodeAreNeverPlaced() {
         let code = TextSegment(kind: .code(language: "swift"), text: "let x = 1", box: rect(0, 0, 100, 20), translatability: .keepOriginal(.code))
-        let placements = layout.layout(analysis: analysis([code]), translations: [translated(code, "x")], mode: .replaceOriginal, offsetX: 0, offsetY: 0, canvas: CanvasRect(x: 0, y: 0, width: 400, height: 300), scale: 1)
+        let placements = layout.layout(
+            analysis: analysis([code]), translations: [translated(code, "x")], mode: .replaceOriginal, offsetX: 0, offsetY: 0,
+            canvas: CanvasRect(x: 0, y: 0, width: 400, height: 300), scale: 1)
         #expect(placements.isEmpty)
     }
 
     @Test func minimumFontSizeRespected() {
         let s = TextSegment(text: "A", box: rect(0, 0, 60, 30), style: SegmentStyleHint(fontSize: 30))
-        let placements = layout.layout(analysis: analysis([s]), translations: [translated(s, "abcdefghijk")], mode: .replaceOriginal, offsetX: 0, offsetY: 0, canvas: CanvasRect(x: 0, y: 0, width: 400, height: 300), scale: 2)
+        let placements = layout.layout(
+            analysis: analysis([s]), translations: [translated(s, "abcdefghijk")], mode: .replaceOriginal, offsetX: 0, offsetY: 0,
+            canvas: CanvasRect(x: 0, y: 0, width: 400, height: 300), scale: 2)
         for p in placements where p.fit != .omitted { #expect(p.fontSize >= max(18, 18)) }
     }
 }
@@ -316,7 +336,9 @@ struct NamingTests {
 
     @Test func fallbackUsesAppAndKeywords() async {
         var session = makeSession()
-        session = DocumentSession(origin: session.origin, baseImage: session.baseImage, context: CaptureContext(appBundleID: "com.apple.Safari", appName: "Safari", windowTitle: nil))
+        session = DocumentSession(
+            origin: session.origin, baseImage: session.baseImage,
+            context: CaptureContext(appBundleID: "com.apple.Safari", appName: "Safari", windowTitle: nil))
         var settings = SettingsSnapshot()
         settings.ai.autoNaming = true
         let name = await FileNamer().name(for: session, settings: settings, date: Date(timeIntervalSince1970: 0))

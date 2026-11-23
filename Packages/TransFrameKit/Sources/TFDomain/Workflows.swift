@@ -130,9 +130,14 @@ public enum InsertProgress: Sendable, Equatable {
 }
 
 public protocol TextTranslationWorkflow: Sendable {
+    func canPolish(settings: SettingsSnapshot) async -> Bool
     func translateSelection(settings: SettingsSnapshot) async throws(AppError) -> TextTranslationResult
     func translate(text: String, anchor: QuartzRect?, settings: SettingsSnapshot) async throws(AppError) -> TextTranslationResult
     func translateAndInsert(tone: ToneStyle?, polishOnly: Bool, settings: SettingsSnapshot) -> AsyncThrowingStream<InsertProgress, any Error>
+}
+
+public extension TextTranslationWorkflow {
+    func canPolish(settings: SettingsSnapshot) async -> Bool { false }
 }
 
 // MARK: History (SPEC §02 §10.2)
@@ -168,7 +173,9 @@ public protocol GlossaryWorkflow: Sendable {
     func save(_ entry: GlossaryEntry) async throws(AppError)
     func remove(_ id: GlossaryEntryID) async throws(AppError)
     /// "Correct and remember": stores the user's correction as a fixed translation and updates the session.
-    func correct(_ segment: SegmentID, in id: SessionID, translation: String, remember: Bool) async throws(AppError)
+    func correct(
+        _ segment: SegmentID, in id: SessionID, expectedOperation: OperationID, translation: String, remember: Bool
+    ) async throws(AppError)
 }
 
 // MARK: Scroll capture (N-09)

@@ -140,7 +140,9 @@ public final class SelectionModel {
         pointer = point
         if let resizing {
             let resized = Self.resized(resizing.rect, handle: resizing.handle, to: point)
-            if let clipped = resized.intersection(bounds), clipped.width >= SelectionGeometry.minimumPointSize, clipped.height >= SelectionGeometry.minimumPointSize {
+            if let clipped = resized.intersection(bounds), clipped.width >= SelectionGeometry.minimumPointSize,
+                clipped.height >= SelectionGeometry.minimumPointSize
+            {
                 setRect(clipped, source: .freeform)
             }
         } else if let moveOrigin {
@@ -207,7 +209,9 @@ public final class SelectionModel {
     public func nudge(dx: Double, dy: Double, resize: Bool) {
         guard let rect, phase == .selected, !isLocked else { return }
         if resize {
-            let r = CGRect(x: rect.minX, y: rect.minY, width: max(rect.width + dx, SelectionGeometry.minimumPointSize), height: max(rect.height + dy, SelectionGeometry.minimumPointSize))
+            let r = CGRect(
+                x: rect.minX, y: rect.minY, width: max(rect.width + dx, SelectionGeometry.minimumPointSize),
+                height: max(rect.height + dy, SelectionGeometry.minimumPointSize))
             setRect(QuartzRect(r).intersection(bounds) ?? rect, source: .freeform)
         } else {
             setRect(clampedMove(rect, dx: dx, dy: dy), source: source)

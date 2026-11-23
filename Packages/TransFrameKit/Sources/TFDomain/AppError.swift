@@ -84,6 +84,7 @@ public enum AppError: Error, Sendable, Equatable {
     public var isRetryable: Bool {
         switch self {
         case .engine(.rateLimited), .engine(.timedOut), .engine(.unreachable): true
+        case .engine(.invalidResponse(_, let detail)): detail == PositionalResponseError.mismatch
         default: false
         }
     }
@@ -261,4 +262,9 @@ extension AppError {
         .persistence(.storeUnavailable), .persistence(.migrationFailed), .persistence(.writeFailed),
         .cancelled, .invariant("x"),
     ]
+}
+
+/// A malformed positional batch may be retried once before falling back to the next engine.
+public enum PositionalResponseError {
+    public static let mismatch = "mismatched positional translation response"
 }

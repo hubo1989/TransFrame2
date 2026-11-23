@@ -125,7 +125,10 @@ private struct EngineCard: View {
                     }
                 }
                 if id == .baidu {
-                    TextField(l10n[.enginesAppId], text: Binding(get: { config.options["appID"] ?? "" }, set: { v in model.update(id) { $0.options["appID"] = v } }))
+                    TextField(
+                        l10n[.enginesAppId],
+                        text: Binding(get: { config.options["appID"] ?? "" }, set: { v in model.update(id) { $0.options["appID"] = v } })
+                    )
                         .textFieldStyle(.roundedBorder)
                 }
                 if descriptor.requirements.needsCredential || id == .mtran || descriptor.isLanguageModel {
@@ -190,12 +193,29 @@ private struct RecognitionSection: View {
             }
             if let config = current.recognition.config(for: current.recognition.analysisProvider), current.recognition.analysisProvider.isLanguageModel {
                 let provider = current.recognition.analysisProvider
-                TextField(l10n[.enginesEndpoint], text: Binding(get: { config.endpoint }, set: { v in var c = config; c.endpoint = v; model.settings.recognition.analysisConfigs[provider] = c }))
+                TextField(
+                    l10n[.enginesEndpoint],
+                    text: Binding(get: { config.endpoint }, set: { value in model.updateAnalysis(provider) { $0.endpoint = value } })
+                )
                     .textFieldStyle(.roundedBorder).font(DS.Typography.mono)
-                TextField(l10n[.enginesModel], text: Binding(get: { config.model }, set: { v in var c = config; c.model = v; model.settings.recognition.analysisConfigs[provider] = c }))
+                TextField(l10n[.enginesModel], text: Binding(get: { config.model }, set: { value in model.updateAnalysis(provider) { $0.model = value } }))
                     .textFieldStyle(.roundedBorder).font(DS.Typography.mono)
+                HStack {
+                    Button(l10n[.enginesFetchModels]) { model.fetchAnalysisModels(provider) }
+                    if let names = model.analysisModels[provider], !names.isEmpty {
+                        Menu(l10n[.enginesModel]) {
+                            ForEach(names, id: \.self) { name in Button(name) { model.updateAnalysis(provider) { $0.model = name } } }
+                        }
+                    }
+                    if let message = model.testResult["analysisModels-" + provider.rawValue] {
+                        Text(message).font(DS.Typography.caption).foregroundStyle(.secondary)
+                    }
+                }
                 if provider == .openAI || provider == .local {
-                    Picker(l10n[.enginesApiMode], selection: Binding(get: { config.apiMode }, set: { v in var c = config; c.apiMode = v; model.settings.recognition.analysisConfigs[provider] = c })) {
+                    Picker(
+                        l10n[.enginesApiMode],
+                        selection: Binding(get: { config.apiMode }, set: { value in model.updateAnalysis(provider) { $0.apiMode = value } })
+                    ) {
                         Text(verbatim: "Chat Completions").tag(OpenAIAPIMode.chat)
                         Text(verbatim: "Responses").tag(OpenAIAPIMode.responses)
                     }
@@ -204,7 +224,7 @@ private struct RecognitionSection: View {
                     SecretField(l10n[.enginesApiKey], text: model.secretBinding(config.credential), showLabel: l10n[.actionShow], hideLabel: l10n[.actionHide])
                     Button(l10n[.actionSave]) { model.saveSecret(config.credential) }
                 }
-                .onAppear { model.loadSecret(config.credential) }
+                .task(id: config.credential) { model.loadSecret(config.credential) }
             }
             HStack {
                 Button(l10n[.enginesTest]) { model.testAnalysis() }
@@ -225,11 +245,18 @@ private struct RecognitionSection: View {
                     Text(l10n[.enginesPaddleFast]).tag(PaddleMode.fast)
                     Text(l10n[.enginesPaddleAccurate]).tag(PaddleMode.accurate)
                 }
-                TextField(l10n[.enginesPaddleModels], text: Binding(get: { current.recognition.paddle.modelDirectory ?? "" }, set: { model.settings.recognition.paddle.modelDirectory = $0.isEmpty ? nil : $0 }))
+                TextField(
+                    l10n[.enginesPaddleModels],
+                    text: Binding(
+                        get: { current.recognition.paddle.modelDirectory ?? "" },
+                        set: { model.settings.recognition.paddle.modelDirectory = $0.isEmpty ? nil : $0 })
+                )
                     .textFieldStyle(.roundedBorder)
                 TextField(l10n[.enginesPaddleCloud], text: s.recognition.paddle.cloudEndpoint).textFieldStyle(.roundedBorder)
                 HStack {
-                    SecretField(l10n[.enginesApiKey], text: model.secretBinding(current.recognition.paddle.cloudCredential), showLabel: l10n[.actionShow], hideLabel: l10n[.actionHide])
+                    SecretField(
+                        l10n[.enginesApiKey], text: model.secretBinding(current.recognition.paddle.cloudCredential), showLabel: l10n[.actionShow],
+                        hideLabel: l10n[.actionHide])
                     Button(l10n[.actionSave]) { model.saveSecret(current.recognition.paddle.cloudCredential) }
                 }
             }
@@ -290,10 +317,19 @@ struct PrivacyPage: View {
                 ForEach(SensitiveCategory.allCases, id: \.self) { category in
                     Toggle(l10n.string(rawKey: "sensitive.\(category.rawValue)"), isOn: Binding(
                         get: { current.privacy.redactedCategories.contains(category) },
-                        set: { on in if on { current.privacy.redactedCategories.insert(category) } else { current.privacy.redactedCategories.remove(category) } }
+                            set: { on in
+                                if on {
+                                    current.privacy.redactedCategories.insert(category)
+                                } else {
+                                    current.privacy.redactedCategories.remove(category)
+                                }
+                            }
                     ))
                 }
-                LabeledSlider(title: l10n[.privacyThreshold], value: Binding(get: { current.privacy.confidenceThreshold * 100 }, set: { current.privacy.confidenceThreshold = $0 / 100 }), range: 50...99, step: 1)
+                LabeledSlider(
+                    title: l10n[.privacyThreshold],
+                    value: Binding(get: { current.privacy.confidenceThreshold * 100 }, set: { current.privacy.confidenceThreshold = $0 / 100 }),
+                    range: 50...99, step: 1)
                 Toggle(l10n[.privacyLocalNetwork], isOn: s.privacy.guardLocalNetwork)
             }
             Section {
@@ -330,6 +366,7 @@ struct AIPage: View {
                     Text(l10n[.aiToneNone]).tag(ToneStyle?.none)
                     ForEach(ToneStyle.allCases, id: \.self) { tone in Text(l10n.string(rawKey: "tone.\(tone.rawValue)")).tag(ToneStyle?.some(tone)) }
                 }
+                .disabled(model.generators.isEmpty)
             }
             Section {
                 Toggle(l10n[.aiAutoNaming], isOn: s.ai.autoNaming)
@@ -417,14 +454,18 @@ struct ImageHostPage: View {
                         .textFieldStyle(.roundedBorder)
                     }
                     HStack {
-                        SecretField(l10n[.imageHostSecret], text: model.secretBinding(.imageHost(provider, "secret")), showLabel: l10n[.actionShow], hideLabel: l10n[.actionHide])
+                        SecretField(
+                            l10n[.imageHostSecret], text: model.secretBinding(.imageHost(provider, "secret")), showLabel: l10n[.actionShow],
+                            hideLabel: l10n[.actionHide])
                         Button(l10n[.actionSave]) { model.saveSecret(.imageHost(provider, "secret")) }
                     }
                     .onAppear { model.loadSecret(.imageHost(provider, "secret")) }
                 }
                 HStack {
                     Button(l10n[.imageHostTest]) { model.testUpload() }
-                    if let result = model.testResult["upload"] { Text(result).font(DS.Typography.caption).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled) }
+                    if let result = model.testResult["upload"] {
+                        Text(result).font(DS.Typography.caption).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled)
+                    }
                 }
             }
         }

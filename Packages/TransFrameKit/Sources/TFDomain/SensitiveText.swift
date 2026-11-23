@@ -9,8 +9,14 @@ public enum SensitiveTextClassifier {
     }
 
     private static let rules: [(SensitiveCategory, String, Double)] = [
+        (.privateKey, #"(?s)-----BEGIN ((?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY)-----.*?-----END \1-----"#, 0.99),
         (.privateKey, #"-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----"#, 0.99),
-        (.apiKey, #"\b(?:sk-(?:proj-|ant-)?[A-Za-z0-9_\-]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9\-]{10,}|AIza[0-9A-Za-z_\-]{35}|glpat-[A-Za-z0-9_\-]{20})\b"#, 0.97),
+        (
+            .apiKey,
+            #"\b(?:sk-(?:proj-|ant-)?[A-Za-z0-9_\-]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|"# +
+                #"xox[baprs]-[A-Za-z0-9\-]{10,}|AIza[0-9A-Za-z_\-]{35}|glpat-[A-Za-z0-9_\-]{20})\b"#,
+            0.97
+        ),
         (.email, #"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b"#, 0.9),
         (.phone, #"(?<![\d])(?:\+?\d{1,3}[\s\-]?)?(?:\(?\d{2,4}\)?[\s\-]?)\d{3,4}[\s\-]?\d{4}(?![\d])"#, 0.6),
         (.password, #"(?i)(?:password|passwd|pwd|密码|口令)\s*[:：=]\s*\S+"#, 0.9),
@@ -29,7 +35,8 @@ public enum SensitiveTextClassifier {
         found += cardNumbers(in: text) + nationalIDs(in: text) + highEntropyTokens(in: text)
         // Prefer high-confidence matches when ranges overlap.
         var kept: [Match] = []
-        for match in found.sorted(by: { $0.confidence > $1.confidence }) where !kept.contains(where: { $0.range.overlaps(match.range) }) {
+        for match in found.sorted(by: { ($0.confidence, text[$0.range].count) > ($1.confidence, text[$1.range].count) })
+        where !kept.contains(where: { $0.range.overlaps(match.range) }) {
             kept.append(match)
         }
         return kept.sorted { $0.range.lowerBound < $1.range.lowerBound }

@@ -6,13 +6,18 @@ import TFDomain
 /// strict one-to-one mapping, cancellation without fallback, glossary and text privacy guard.
 public struct TranslationService: TranslationWorkflow {
     private let engines: any TranslationEngineProviding
-    private let cache: ResultCache<[BilingualSegment]>
+    private struct Reply: Sendable {
+        let text: String?
+        let detectedSource: LanguageCode?
+    }
+
+    private let cache: ResultCache<[Reply?]>
     private let limiter: EngineLimiter
     private let performance: any PerformanceRecording
 
     public init(engines: any TranslationEngineProviding, performance: any PerformanceRecording) {
         self.engines = engines
-        cache = ResultCache(maxCount: 256, maxBytes: 8 * 1024 * 1024) { $0.reduce(0) { $0 + $1.source.utf8.count + ($1.translated?.utf8.count ?? 0) + 64 } }
+        cache = ResultCache(maxCount: 256, maxBytes: 8 * 1024 * 1024) { $0.reduce(0) { $0 + ($1?.text?.utf8.count ?? 0) + 64 } }
         limiter = EngineLimiter(cloudLimit: 2)
         self.performance = performance
     }
@@ -37,12 +42,17 @@ public struct TranslationService: TranslationWorkflow {
         }
     }
 
-    func run(_ job: TranslationJob, settings: SettingsSnapshot, overridePrivacy: Bool = false, emit: @escaping @Sendable (TranslationEvent) -> Void) async throws(AppError) -> TranslationOutcome {
+    func run(_ job: TranslationJob, settings: SettingsSnapshot, overridePrivacy: Bool = false, emit: @escaping @Sendable (TranslationEvent) -> Void)
+        async throws(AppError) -> TranslationOutcome
+    {
+        if Task.isCancelled { throw .cancelled }
         guard !job.units.isEmpty else { throw .translation(.noTranslatableText) }
         if let from = job.from, from.isSameLanguage(as: job.to) {
             let segments = job.units.map { BilingualSegment(id: $0.id, source: $0.text, translated: nil, status: .sameLanguageSkipped, from: from, to: job.to) }
             let engine = job.routing.engines.first ?? .appleTranslation
-            return TranslationOutcome(operation: job.operation, routing: job.routing, results: [EngineResult(id: engine, segments: segments)], effective: engine, target: job.to)
+            return TranslationOutcome(
+                operation: job.operation, routing: job.routing, results: [EngineResult(id: engine, segments: segments)], effective: engine,
+                target: job.to)
         }
         switch job.routing {
         case .ordered(let ids):
@@ -50,21 +60,27 @@ public struct TranslationService: TranslationWorkflow {
             var failures: [EngineFailure] = []
             for id in ids.prefix(EngineRouting.maxOrdered) {
                 if Task.isCancelled { throw .cancelled }
-                if let skip = await engines.skipReason(id, settings: settings) {
+                let skip = await engines.skipReason(id, settings: settings)
+                if Task.isCancelled { throw .cancelled }
+                if let skip {
                     let result = EngineResult(id: id, skipped: skip)
                     results.append(result)
-                    failures.append(EngineFailure(engine: id, reason: .engine(skip == .unavailableOnThisOS ? .unavailableOnThisOS(id, minimum: OSVersion(26)) : .notConfigured(id))))
+                    failures.append(
+                        EngineFailure(
+                            engine: id,
+                            reason: .engine(skip == .unavailableOnThisOS ? .unavailableOnThisOS(id, minimum: OSVersion(26)) : .notConfigured(id))))
                     emit(.engineFinished(result))
                     continue
                 }
                 emit(.engineStarted(id))
                 let run = await runEngine(id, job: job, settings: settings, overridePrivacy: overridePrivacy)
+                if Task.isCancelled || run.result.error == .cancelled { throw .cancelled }
                 let result = run.result
                 emit(.engineFinished(result))
                 results.append(result)
-                if result.error == .cancelled { throw .cancelled }
                 if result.succeeded {
-                    return TranslationOutcome(operation: job.operation, routing: job.routing, results: results, effective: id, target: job.to, privacy: run.privacy)
+                    return TranslationOutcome(
+                        operation: job.operation, routing: job.routing, results: results, effective: id, target: job.to, privacy: run.privacy)
                 }
                 if let error = result.error { failures.append(EngineFailure(engine: id, reason: error)) }
             }
@@ -74,7 +90,10 @@ public struct TranslationService: TranslationWorkflow {
             let runs = await withTaskGroup(of: (Int, EngineRun).self) { group in
                 for (index, id) in configured.enumerated() {
                     group.addTask {
-                        if let skip = await engines.skipReason(id, settings: settings) { return (index, EngineRun(result: EngineResult(id: id, skipped: skip), privacy: nil)) }
+                        if let skip = await engines.skipReason(id, settings: settings) {
+                            return (index, EngineRun(result: EngineResult(id: id, skipped: skip), privacy: nil))
+                        }
+                        if Task.isCancelled { return (index, EngineRun(result: EngineResult(id: id, error: .cancelled), privacy: nil)) }
                         emit(.engineStarted(id))
                         return (index, await runEngine(id, job: job, settings: settings, overridePrivacy: overridePrivacy))
                     }
@@ -91,7 +110,8 @@ public struct TranslationService: TranslationWorkflow {
             guard let first = runs.first(where: \.result.succeeded) else {
                 throw .translation(.allEnginesFailed(results.map { EngineFailure(engine: $0.id, reason: $0.error ?? .engine(.notConfigured($0.id))) }))
             }
-            return TranslationOutcome(operation: job.operation, routing: job.routing, results: results, effective: first.result.id, target: job.to, privacy: first.privacy)
+            return TranslationOutcome(
+                operation: job.operation, routing: job.routing, results: results, effective: first.result.id, target: job.to, privacy: first.privacy)
         }
     }
 
@@ -106,7 +126,10 @@ public struct TranslationService: TranslationWorkflow {
         let descriptor = engine.descriptor
         let start = ContinuousClock.now
         let guarded = PrivacyGuard.applies(to: descriptor.locality, settings: settings.privacy, overridden: overridePrivacy)
-        let textPlan = guarded ? PrivacyGuard.protect(job.units, settings: settings.privacy) : PrivacyGuard.TextPlan(units: job.units, withheld: [], placeholders: [:], report: .notApplied)
+        let textPlan =
+            guarded
+            ? PrivacyGuard.protect(job.units, settings: settings.privacy)
+            : PrivacyGuard.TextPlan(units: job.units, withheld: [], placeholders: [:], report: .notApplied)
         let glossaryEntries = job.glossary?.matched ?? []
         let usesPromptGlossary = descriptor.capabilities.contains(.glossary)
         var glossaryMaps: [SegmentID: [String: String]] = [:]
@@ -122,31 +145,80 @@ public struct TranslationService: TranslationWorkflow {
                 sendUnits.append(TranslationUnit(id: unit.id, text: text, kind: unit.kind))
             }
         }
+        let prompt = job.scene.map { scene in
+            let template = settings.prompts.template(for: id, scene: scene)
+            return PromptSnapshot(template: template, digest: CacheKey.digest([template]))
+        } ?? job.prompt
+        let glossary = usesPromptGlossary ? glossaryEntries.filter {
+            !guarded || PrivacyGuard.sensitiveSpans(in: $0.source, settings: settings.privacy).isEmpty &&
+                PrivacyGuard.sensitiveSpans(in: $0.target, settings: settings.privacy).isEmpty
+        } : []
+        let context = settings.privacy.sendContext ? job.context.map {
+            TranslationContext(
+                appName: PrivacyGuard.safeMetadata($0.appName, guarded: guarded, settings: settings.privacy),
+                windowTitle: PrivacyGuard.safeMetadata($0.windowTitle, guarded: guarded, settings: settings.privacy)
+            )
+        } : nil
         let batch = TranslationBatch(
-            units: sendUnits, from: job.from, to: job.to, prompt: descriptor.isLanguageModel ? job.prompt : nil,
-            glossary: usesPromptGlossary ? glossaryEntries : [], context: descriptor.isLanguageModel ? job.context : nil, tone: job.tone
+            units: sendUnits, from: job.from, to: job.to, prompt: descriptor.isLanguageModel ? prompt : nil,
+            glossary: glossary, context: descriptor.isLanguageModel ? context : nil, tone: job.tone
         )
-        let key = CacheKey.digest(
-            [id.raw, descriptor.configDigest, job.from?.bcp47 ?? "auto", job.to.bcp47, job.prompt?.digest ?? "", "\(job.glossary?.version ?? 0)",
-             job.context.map { "\($0.appName ?? "")|\($0.windowTitle ?? "")" } ?? "", job.tone?.rawValue ?? "", "\(Contracts.version)", guarded ? "g" : ""]
-                + sendUnits.map(\.text)
-        )
-        let frozenGlossary = glossaryMaps, frozenHits = hits
+        let key = Self.cacheKey(batch, descriptor: descriptor, glossaryVersion: job.glossary?.version ?? 0)
         do {
-            let (segments, fromCache) = try await cache.value(for: key, force: job.cache == .forceRefresh) {
-                let translated = try await limiter.run(id, local: descriptor.locality == .onDevice) {
-                    try await withRetry { try await Deadline.run(descriptor.limits.timeout, engine: id) { try await engine.translate(batch) } }
+            try Task.checkCancellation()
+            let (replies, fromCache): ([Reply?], Bool)
+            if batch.units.isEmpty {
+                (replies, fromCache) = ([], false)
+            } else {
+                (replies, fromCache) = try await cache.value(for: key, force: job.cache == .forceRefresh) {
+                    let translated = try await limiter.run(id, local: descriptor.locality == .onDevice) {
+                        try await withRetry {
+                            try await Deadline.run(descriptor.limits.timeout, engine: id) { try await engine.translate(batch) }
+                        }
+                    }
+                    let byID = Dictionary(translated.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                    let output = batch.units.map { unit in
+                        byID[unit.id].map { Reply(text: $0.text, detectedSource: $0.detectedSource) }
+                    }
+                    if !output.contains(where: { reply in
+                        guard let reply else { return false }
+                        return reply.text.map { !TranslationCleanup.clean($0).isEmpty } == true ||
+                            reply.detectedSource?.isSameLanguage(as: batch.to) == true
+                    }) {
+                        throw AppError.engine(.invalidResponse(id, detail: "empty translation"))
+                    }
+                    return output
                 }
-                return Self.map(job.units, translated: translated, to: job.to, from: job.from, withheld: textPlan.withheld,
-                                placeholders: textPlan.placeholders, glossary: frozenGlossary, hits: frozenHits)
             }
+            try Task.checkCancellation()
+            let translated = zip(batch.units, replies).compactMap { unit, reply in
+                reply.map { TranslatedUnit(id: unit.id, text: $0.text, detectedSource: $0.detectedSource) }
+            }
+            let segments = Self.map(
+                job.units, translated: translated, to: job.to, from: job.from, withheld: textPlan.withheld,
+                placeholders: textPlan.placeholders, glossary: glossaryMaps, hits: hits
+            )
             let duration = ContinuousClock.now - start
-            performance.record(PerformanceSample(budget: fromCache ? Budget.cacheHit : Budget.translationEngine, duration: duration, engine: id.raw, fromCache: fromCache))
-            let report = guarded ? textPlan.report : (overridePrivacy ? PrivacyReport(applied: false, redactedCount: 0, categories: [], overriddenByUser: true) : nil)
+            performance.record(
+                PerformanceSample(
+                    budget: fromCache ? Budget.cacheHit : Budget.translationEngine, duration: duration, engine: id.raw, fromCache: fromCache))
+            let report =
+                guarded
+                ? textPlan.report : (overridePrivacy ? PrivacyReport(applied: false, redactedCount: 0, categories: [], overriddenByUser: true) : nil)
             return EngineRun(result: EngineResult(id: id, segments: segments, duration: duration, fromCache: fromCache), privacy: report)
         } catch {
             return EngineRun(result: EngineResult(id: id, error: AppError.from(error), duration: ContinuousClock.now - start), privacy: nil)
         }
+    }
+
+    private static func cacheKey(_ batch: TranslationBatch, descriptor: EngineDescriptor, glossaryVersion: Int) -> String {
+        let settings = [
+            descriptor.id.raw, descriptor.configDigest, batch.from?.bcp47 ?? "auto", batch.to.bcp47,
+            batch.prompt?.digest ?? "", String(glossaryVersion), batch.context?.appName ?? "",
+            batch.context?.windowTitle ?? "", batch.tone?.rawValue ?? "", String(Contracts.version)
+        ]
+        let terms = batch.glossary.flatMap { [$0.source, $0.target] }
+        return CacheKey.digest(settings + [String(terms.count)] + terms + batch.units.map(\.text))
     }
 
     /// One-to-one with the job's units; missing → missingInResponse, never the source as a translation (SPEC §02 §8).
@@ -174,7 +246,8 @@ public struct TranslationService: TranslationWorkflow {
             if let detected, detected.isSameLanguage(as: to), text == unit.text {
                 return BilingualSegment(id: unit.id, source: unit.text, translated: nil, status: .sameLanguageSkipped, from: detected, to: to)
             }
-            return BilingualSegment(id: unit.id, source: unit.text, translated: text, status: .translated, from: detected, to: to, glossaryHits: hits[unit.id] ?? [])
+            return BilingualSegment(
+                id: unit.id, source: unit.text, translated: text, status: .translated, from: detected, to: to, glossaryHits: hits[unit.id] ?? [])
         }
     }
 
@@ -182,7 +255,11 @@ public struct TranslationService: TranslationWorkflow {
         do {
             return try await body()
         } catch let error as AppError where error.isRetryable {
-            if case .engine(.rateLimited(_, let after?)) = error { try await Task.sleep(for: min(after, .seconds(5))) } else { try await Task.sleep(for: .milliseconds(400)) }
+            if case .engine(.rateLimited(_, let after?)) = error {
+                try await Task.sleep(for: min(after, .seconds(5)))
+            } else {
+                try await Task.sleep(for: .milliseconds(400))
+            }
             return try await body()
         }
     }
@@ -221,24 +298,52 @@ public enum Deadline {
 /// Per-engine concurrency: on-device backends run one at a time, cloud instances up to `cloudLimit` (SPEC §01 §6).
 public actor EngineLimiter {
     private var running: [EngineID: Int] = [:]
-    private var waiters: [EngineID: [CheckedContinuation<Void, Never>]] = [:]
+    private struct Waiter {
+        let token: UUID
+        let continuation: CheckedContinuation<Void, any Error>
+    }
+
+    private var waiters: [EngineID: [Waiter]] = [:]
     private let cloudLimit: Int
 
-    public init(cloudLimit: Int) { self.cloudLimit = cloudLimit }
+    public init(cloudLimit: Int) { self.cloudLimit = max(cloudLimit, 1) }
 
     public func run<T: Sendable>(_ id: EngineID, local: Bool, _ body: @Sendable () async throws -> T) async throws -> T {
         let limit = local ? 1 : cloudLimit
-        while running[id, default: 0] >= limit {
-            await withCheckedContinuation { waiters[id, default: []].append($0) }
-        }
-        running[id, default: 0] += 1
-        defer {
-            running[id, default: 1] -= 1
-            if var queue = waiters[id], !queue.isEmpty {
-                queue.removeFirst().resume()
-                waiters[id] = queue
+        try Task.checkCancellation()
+        if running[id, default: 0] >= limit {
+            let token = UUID()
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                    if Task.isCancelled {
+                        continuation.resume(throwing: CancellationError())
+                    } else {
+                        waiters[id, default: []].append(Waiter(token: token, continuation: continuation))
+                    }
+                }
+            } onCancel: {
+                Task { await self.cancelWaiter(token, engine: id) }
             }
+        } else {
+            running[id, default: 0] += 1
         }
+        defer { release(id) }
+        try Task.checkCancellation()
         return try await body()
+    }
+
+    private func release(_ id: EngineID) {
+        if let waiter = waiters[id]?.first {
+            waiters[id]?.removeFirst()
+            waiter.continuation.resume()
+        } else {
+            running[id, default: 1] -= 1
+        }
+    }
+
+    private func cancelWaiter(_ token: UUID, engine: EngineID) {
+        guard let index = waiters[engine]?.firstIndex(where: { $0.token == token }),
+              let waiter = waiters[engine]?.remove(at: index) else { return }
+        waiter.continuation.resume(throwing: CancellationError())
     }
 }

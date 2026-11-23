@@ -20,9 +20,11 @@ enum GenerationPrompt {
         case .polish:
             return "Fix grammar, spelling and awkward phrasing in the user's text. Keep its language and meaning. Reply with the corrected text only."
         case .suggestFileName:
-            return "Suggest a short descriptive file name (3–6 words, no extension, no punctuation other than spaces) for a screenshot whose text and context follow. Reply with the name only."
+            return "Suggest a short descriptive file name (3–6 words, no extension, no punctuation other than spaces) " +
+                "for a screenshot whose text and context follow. Reply with the name only."
         case .structureRepair:
-            return "Repair the structure of this OCR output (tables as Markdown, code fenced, formulas in LaTeX) without changing any words. Reply with the repaired text only."
+            return "Repair the structure of this OCR output (tables as Markdown, code fenced, formulas in LaTeX) " +
+                "without changing any words. Reply with the repaired text only."
         }
     }
 
@@ -94,7 +96,16 @@ public struct TextGeneratorProvider: TextGeneratorProviding {
     public func availableGenerators(settings: SettingsSnapshot) async -> [EngineDescriptor] {
         var result: [EngineDescriptor] = []
         if FoundationModelsGenerator.isAvailable { result.append(FoundationModelsGenerator().descriptor) }
-        let llms = descriptors(settings).filter { $0.isLanguageModel && settings.engines.config(for: $0.id).isEnabled && !settings.engines.config(for: $0.id).model.isEmpty }
+        var llms: [EngineDescriptor] = []
+        for descriptor in descriptors(settings) where descriptor.isLanguageModel {
+            let config = settings.engines.config(for: descriptor.id)
+            guard config.isEnabled, !config.model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  Endpoint.url(config.endpoint, appending: "") != nil else { continue }
+            if descriptor.requirements.needsCredential {
+                guard let key = try? await secrets(.engine(descriptor.id)), !key.isEmpty else { continue }
+            }
+            llms.append(descriptor)
+        }
         result += llms.filter { $0.locality == .onDevice } + llms.filter { $0.locality != .onDevice }
         return result
     }
@@ -111,7 +122,10 @@ public struct TextGeneratorProvider: TextGeneratorProviding {
         let config = settings.engines.config(for: pick.id)
         let wire: LLMWire = pick.id == .claude ? .anthropic : (pick.id == .gemini ? .gemini : (config.apiMode == .responses ? .openAIResponses : .openAIChat))
         let secrets = secrets, credential = CredentialRef.engine(pick.id)
-        let client = LLMClient(wire: wire, endpoint: config.endpoint, model: config.model, engine: pick.id, transport: transport) { () throws(AppError) in
+        let client = LLMClient(
+            wire: wire, endpoint: config.endpoint, model: config.model, engine: pick.id, transport: transport,
+            authentication: .modelEndpoint(config.endpoint)
+        ) { () throws(AppError) in
             try await secrets(credential)
         }
         return LLMGenerator(descriptor: pick, client: client)

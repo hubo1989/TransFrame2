@@ -83,7 +83,9 @@ final class PinController: NSObject, NSWindowDelegate {
         self.onClose = onClose
         canvas = DocumentCanvasView(render: services.render, sessionID: sessionID, editor: nil, purpose: .pin)
         observer = DocumentObserver(sessions: services.sessions, sessionID: sessionID)
-        window = PinWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 150), styleMask: [.borderless, .nonactivatingPanel, .resizable], backing: .buffered, defer: false)
+        window = PinWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 200, height: 150), styleMask: [.borderless, .nonactivatingPanel, .resizable], backing: .buffered,
+            defer: false)
         super.init()
         // Identifies pins as capture candidates (CAP-22); never shown.
         window.title = PinWindow.identifierTitle
@@ -155,7 +157,8 @@ final class PinController: NSObject, NSWindowDelegate {
     func edit() { services.router.route(.openEditor(sessionID, focus: nil)) }
 
     func copyImage() {
-        let export = services.export, id = sessionID, settings = services.settings.snapshot, errors = services.errors, message = services.localizer[.feedbackCopied]
+        let export = services.export, id = sessionID, settings = services.settings.snapshot, errors = services.errors,
+            message = services.localizer[.feedbackCopied]
         Task {
             do {
                 try await export.copyImage(of: id, settings: settings)
@@ -218,7 +221,9 @@ struct PinContentView: View {
                     FloatingToolbar {
                         IconButton(l10n[.pinEdit], systemImage: "pencil", shortcutHint: "E", action: actions.edit)
                         IconButton(l10n[.actionCopy], systemImage: "doc.on.doc", shortcutHint: "⌘C", action: actions.copy)
-                        IconButton(l10n[.pinClickThrough], systemImage: "cursorarrow.motionlines", isActive: state.clickThrough, action: actions.toggleClickThrough)
+                        IconButton(
+                            l10n[.pinClickThrough], systemImage: "cursorarrow.motionlines", isActive: state.clickThrough,
+                            action: actions.toggleClickThrough)
                         IconButton(l10n[.pinKeepOnTop], systemImage: "pin", isActive: state.keepsOnTop, action: actions.toggleOnTop)
                         IconButton(l10n[.actionClose], systemImage: "xmark", shortcutHint: "Esc", action: actions.close)
                     }

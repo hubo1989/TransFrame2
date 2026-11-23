@@ -150,6 +150,7 @@ public enum RenderPurpose: Sendable, Equatable, Hashable {
     case clipboard
     case file(ExportFormat)
     case pin
+    case upload
     case thumbnail
     case analysisInput(AnalysisInputPolicy)
 }

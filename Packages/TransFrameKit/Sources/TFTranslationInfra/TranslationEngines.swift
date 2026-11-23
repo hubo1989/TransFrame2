@@ -19,14 +19,16 @@ struct MTranServerEngine: TranslationEngine {
     func translate(_ batch: TranslationBatch) async throws(AppError) -> [TranslatedUnit] {
         guard let url = Endpoint.url(endpoint, appending: "/translate") else { throw .engine(.notConfigured(descriptor.id)) }
         var results: [TranslatedUnit] = []
-        let key = try await token()
+        let key = try await EndpointAuthentication.optional.credential(for: descriptor.id, read: token)
         for unit in batch.units {
             try Task.checkCancellation(engine: descriptor.id)
             var body: [String: Any] = ["text": unit.text, "to": MTranLanguage.code(batch.to)]
             body["from"] = batch.from.map(MTranLanguage.code) ?? "auto"
             var headers = ["Content-Type": "application/json"]
             if let key, !key.isEmpty { headers["Authorization"] = "Bearer \(key)" }
-            let request = HTTPRequest(url: url, method: .post, headers: headers, body: try? JSONSerialization.data(withJSONObject: body), timeout: descriptor.limits.timeout)
+            let request = HTTPRequest(
+                url: url, method: .post, headers: headers, body: try? JSONSerialization.data(withJSONObject: body), timeout: descriptor.limits.timeout
+            )
             let response = try await transport.send(request, engine: descriptor.id)
             try HTTPStatusMapping.check(response, engine: descriptor.id)
             let json = try HTTPStatusMapping.json(response, engine: descriptor.id)
@@ -56,17 +58,30 @@ struct GoogleEngine: TranslationEngine {
 
     func translate(_ batch: TranslationBatch) async throws(AppError) -> [TranslatedUnit] {
         guard let key = try await key(), !key.isEmpty else { throw .engine(.notConfigured(descriptor.id)) }
-        guard let url = URL(string: endpoint + "?key=\(key)") else { throw .engine(.notConfigured(descriptor.id)) }
-        var body: [String: Any] = ["q": batch.units.map(\.text), "target": batch.to.bcp47, "format": "text"]
+        guard var components = URLComponents(string: endpoint) else { throw .engine(.notConfigured(descriptor.id)) }
+        components.queryItems = (components.queryItems ?? []).filter { $0.name != "key" } + [URLQueryItem(name: "key", value: key)]
+        guard let url = components.url else { throw .engine(.notConfigured(descriptor.id)) }
+        var results: [TranslatedUnit] = []
+        var body: [String: Any] = ["target": batch.to.bcp47, "format": "text"]
         if let from = batch.from { body["source"] = from.bcp47 }
-        let request = HTTPRequest(url: url, method: .post, headers: ["Content-Type": "application/json"], body: try? JSONSerialization.data(withJSONObject: body), timeout: descriptor.limits.timeout)
-        let response = try await transport.send(request, engine: descriptor.id)
-        try HTTPStatusMapping.check(response, engine: descriptor.id)
-        let json = try HTTPStatusMapping.json(response, engine: descriptor.id)
-        let items = ((json["data"] as? [String: Any])?["translations"] as? [[String: Any]]) ?? []
-        return zip(batch.units, items).map { unit, item in
-            TranslatedUnit(id: unit.id, text: (item["translatedText"] as? String).map(HTMLEntities.decode), detectedSource: (item["detectedSourceLanguage"] as? String).map(LanguageCode.init))
+        for (units, data) in try PositionalBatch.plan(batch.units, key: "q", fields: body, items: 128, bytes: 100_000, engine: descriptor.id) {
+            try Task.checkCancellation(engine: descriptor.id)
+            let request = HTTPRequest(
+                url: url, method: .post, headers: ["Content-Type": "application/json"], body: data, timeout: descriptor.limits.timeout
+            )
+            let response = try await transport.send(request, engine: descriptor.id)
+            try HTTPStatusMapping.check(response, engine: descriptor.id)
+            let json = try HTTPStatusMapping.json(response, engine: descriptor.id)
+            let items = (json["data"] as? [String: Any])?["translations"] as? [[String: Any]]
+            let matched = try PositionalBatch.validate(items, units: units, engine: descriptor.id)
+            results += zip(units, matched).map { unit, item in
+                TranslatedUnit(
+                    id: unit.id, text: (item["translatedText"] as? String).map(HTMLEntities.decode),
+                    detectedSource: (item["detectedSourceLanguage"] as? String).map(LanguageCode.init)
+                )
+            }
         }
+        return results
     }
 }
 
@@ -80,19 +95,28 @@ struct DeepLEngine: TranslationEngine {
         guard let key = try await key(), !key.isEmpty else { throw .engine(.notConfigured(descriptor.id)) }
         let base = key.hasSuffix(":fx") ? "https://api-free.deepl.com/v2" : (endpoint.contains("deepl.com") ? "https://api.deepl.com/v2" : endpoint)
         guard let url = Endpoint.url(base, appending: "/translate") else { throw .engine(.notConfigured(descriptor.id)) }
-        var body: [String: Any] = ["text": batch.units.map(\.text), "target_lang": Self.code(batch.to, target: true)]
+        var body: [String: Any] = ["target_lang": Self.code(batch.to, target: true)]
         if let from = batch.from { body["source_lang"] = Self.code(from, target: false) }
-        let request = HTTPRequest(
-            url: url, method: .post, headers: ["Content-Type": "application/json", "Authorization": "DeepL-Auth-Key \(key)"],
-            body: try? JSONSerialization.data(withJSONObject: body), timeout: descriptor.limits.timeout
-        )
-        let response = try await transport.send(request, engine: descriptor.id)
-        if response.status == 456 { throw .engine(.quotaExceeded(descriptor.id)) }
-        try HTTPStatusMapping.check(response, engine: descriptor.id)
-        let items = (try HTTPStatusMapping.json(response, engine: descriptor.id)["translations"] as? [[String: Any]]) ?? []
-        return zip(batch.units, items).map { unit, item in
-            TranslatedUnit(id: unit.id, text: item["text"] as? String, detectedSource: (item["detected_source_language"] as? String).map { LanguageCode($0.lowercased()) })
+        var results: [TranslatedUnit] = []
+        for (units, data) in try PositionalBatch.plan(batch.units, key: "text", fields: body, items: 50, bytes: 128 * 1024, engine: descriptor.id) {
+            try Task.checkCancellation(engine: descriptor.id)
+            let request = HTTPRequest(
+                url: url, method: .post, headers: ["Content-Type": "application/json", "Authorization": "DeepL-Auth-Key \(key)"],
+                body: data, timeout: descriptor.limits.timeout
+            )
+            let response = try await transport.send(request, engine: descriptor.id)
+            if response.status == 456 { throw .engine(.quotaExceeded(descriptor.id)) }
+            try HTTPStatusMapping.check(response, engine: descriptor.id)
+            let items = try HTTPStatusMapping.json(response, engine: descriptor.id)["translations"] as? [[String: Any]]
+            let matched = try PositionalBatch.validate(items, units: units, engine: descriptor.id)
+            results += zip(units, matched).map { unit, item in
+                TranslatedUnit(
+                    id: unit.id, text: item["text"] as? String,
+                    detectedSource: (item["detected_source_language"] as? String).map { LanguageCode($0.lowercased()) }
+                )
+            }
         }
+        return results
     }
 
     static func code(_ language: LanguageCode, target: Bool) -> String {
@@ -127,7 +151,8 @@ struct BaiduEngine: TranslationEngine {
         ]
         guard let url = URL(string: endpoint) else { throw .engine(.notConfigured(descriptor.id)) }
         let body = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B").data(using: .utf8)
-        let request = HTTPRequest(url: url, method: .post, headers: ["Content-Type": "application/x-www-form-urlencoded"], body: body, timeout: descriptor.limits.timeout)
+        let request = HTTPRequest(
+            url: url, method: .post, headers: ["Content-Type": "application/x-www-form-urlencoded"], body: body, timeout: descriptor.limits.timeout)
         let response = try await transport.send(request, engine: descriptor.id)
         try HTTPStatusMapping.check(response, engine: descriptor.id)
         let json = try HTTPStatusMapping.json(response, engine: descriptor.id)
@@ -139,10 +164,10 @@ struct BaiduEngine: TranslationEngine {
             default: throw .engine(.invalidResponse(descriptor.id, detail: "error \(code)"))
             }
         }
-        let items = (json["trans_result"] as? [[String: Any]]) ?? []
-        // Baidu returns one item per input line; strict count check (no guessing, SPEC §02 §8).
-        guard items.count == batch.units.count else {
-            return batch.units.enumerated().map { index, unit in TranslatedUnit(id: unit.id, text: index < items.count ? items[index]["dst"] as? String : nil) }
+        let items = try PositionalBatch.validate(json["trans_result"] as? [[String: Any]], units: batch.units, engine: descriptor.id)
+        let lines = batch.units.map { $0.text.replacingOccurrences(of: "\n", with: " ") }
+        guard zip(lines, items).allSatisfy({ $0 == $1["src"] as? String }) else {
+            throw .engine(.invalidResponse(descriptor.id, detail: PositionalResponseError.mismatch))
         }
         return zip(batch.units, items).map { TranslatedUnit(id: $0.id, text: $1["dst"] as? String) }
     }
@@ -163,6 +188,41 @@ struct BaiduEngine: TranslationEngine {
         case "ro": "rom"
         default: language.primary
         }
+    }
+}
+
+enum PositionalBatch {
+    static func validate(_ response: [[String: Any]]?, units: [TranslationUnit], engine: EngineID) throws(AppError) -> [[String: Any]] {
+        guard let response, response.count == units.count else {
+            throw .engine(.invalidResponse(engine, detail: PositionalResponseError.mismatch))
+        }
+        return response
+    }
+
+    static func plan(
+        _ units: [TranslationUnit], key: String, fields: [String: Any], items: Int, bytes: Int, engine: EngineID
+    ) throws(AppError) -> [([TranslationUnit], Data)] {
+        func encode(_ units: [TranslationUnit]) -> Data? {
+            var body = fields
+            body[key] = units.map(\.text)
+            return try? JSONSerialization.data(withJSONObject: body)
+        }
+        var batches: [([TranslationUnit], Data)] = []
+        var remaining = units[...]
+        while !remaining.isEmpty {
+            var count = min(remaining.count, items)
+            var chunk = Array(remaining.prefix(count))
+            var data = encode(chunk)
+            while count > 1, (data?.count ?? .max) > bytes {
+                count /= 2
+                chunk = Array(remaining.prefix(count))
+                data = encode(chunk)
+            }
+            guard let data, data.count <= bytes else { throw .engine(.invalidResponse(engine, detail: "input exceeds provider limit")) }
+            batches.append((chunk, data))
+            remaining = remaining.dropFirst(count)
+        }
+        return batches
     }
 }
 
@@ -200,7 +260,8 @@ struct LLMTranslationEngine: TranslationEngine {
     private func translateChunk(_ units: [TranslationUnit], batch: TranslationBatch) async throws(AppError) -> [TranslatedUnit] {
         let system = LLMPrompt.system(batch: batch)
         let payload = units.enumerated().map { ["id": "\($0.offset + 1)", "text": $0.element.text] }
-        let json = String(decoding: (try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])) ?? Data(), as: UTF8.self)
+        let encoded = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+        let json = encoded.flatMap { String(bytes: $0, encoding: .utf8) } ?? ""
         let user = """
         Translate the "text" of every item. Reply with only a JSON array of objects {"id": "...", "translation": "..."} \
         in the same order and with the same ids.
@@ -237,7 +298,9 @@ enum LLMBatching {
 enum LLMPrompt {
     static func system(batch: TranslationBatch) -> String {
         let template = batch.prompt?.template ?? PromptSettings.defaultTemplate
-        let glossary = batch.glossary.isEmpty ? "" : "Always use these fixed translations:\n" + batch.glossary.map { "- \($0.source) → \($0.target)" }.joined(separator: "\n")
+        let glossary =
+            batch.glossary.isEmpty
+            ? "" : "Always use these fixed translations:\n" + batch.glossary.map { "- \($0.source) → \($0.target)" }.joined(separator: "\n")
         var context = ""
         if let c = batch.context, c.appName != nil || c.windowTitle != nil {
             context = "Context: the text comes from \([c.appName, c.windowTitle].compactMap { $0 }.joined(separator: " — "))."

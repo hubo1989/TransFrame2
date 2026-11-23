@@ -7,7 +7,7 @@ import TFDomain
 @MainActor
 public final class AccessibilityTextService: SelectedTextCapturing, TextInserting {
     private let pasteboard: SystemPasteboard
-    private var elements: [Int: AXUIElement] = [:]
+    private var binding: (token: Int, element: AXUIElement, selectedText: String)?
     private var nextToken = 1
 
     public init(pasteboard: SystemPasteboard) {
@@ -17,85 +17,119 @@ public final class AccessibilityTextService: SelectedTextCapturing, TextInsertin
     public func captureSelection(bindTarget: Bool) async throws(AppError) -> CapturedSelection {
         guard AXIsProcessTrusted() else { throw .permission(.accessibilityDenied) }
         let app = NSWorkspace.shared.frontmostApplication
-        let system = AXUIElementCreateSystemWide()
-        var focusedValue: CFTypeRef?
-        var element: AXUIElement?
-        if AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success, let value = focusedValue {
-            element = (value as! AXUIElement)
+        let pid = app?.processIdentifier
+        let element = Self.focusedElement().flatMap { element in
+            var owner: pid_t = 0
+            return AXUIElementGetPid(element, &owner) == .success && owner == pid ? element : nil
         }
-        var text = element.flatMap { Self.string($0, kAXSelectedTextAttribute) } ?? ""
+        let selectedText = element.flatMap { Self.string($0, kAXSelectedTextAttribute) } ?? ""
         let range = element.flatMap(Self.selectedRange)
         let anchor = element.flatMap { Self.bounds($0, range: range) }
-        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            text = await copyViaKeyboard() ?? ""
+        let text: String
+        if selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, let pid {
+            text = try await copyViaKeyboard(to: pid, element: element) ?? ""
+        } else {
+            text = selectedText
         }
+        if Task.isCancelled { throw .cancelled }
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw .textInput(.noSelection) }
         var target: TextInsertionTarget?
-        if bindTarget, let element, let app {
-            let token = nextToken
-            nextToken += 1
-            elements[token] = element
-            target = TextInsertionTarget(processID: app.processIdentifier, bundleID: app.bundleIdentifier, elementToken: token, selectedRange: range, canVerify: range != nil)
-        } else if bindTarget, let app {
-            target = TextInsertionTarget(processID: app.processIdentifier, bundleID: app.bundleIdentifier, elementToken: 0, selectedRange: nil, canVerify: false)
+        if bindTarget, let app, let pid {
+            try Self.verify(pid, element: element, range: range, selectedText: selectedText)
+            binding = nil
+            var token = 0
+            if let element {
+                token = nextToken
+                nextToken += 1
+                binding = (token, element, selectedText)
+            }
+            target = TextInsertionTarget(
+                processID: pid, bundleID: app.bundleIdentifier, elementToken: token, selectedRange: range, canVerify: range != nil
+            )
         }
         return CapturedSelection(text: text, target: target, anchor: anchor, appName: app?.localizedName)
     }
 
-    /// Re-verifies focus and selection, then replaces the selection (TXT-06, TXT-07); falls back to anchored paste (TXT-08).
     public func insert(_ text: String, into target: TextInsertionTarget) async throws(AppError) -> InsertionMethod {
-        guard let element = elements.removeValue(forKey: target.elementToken), target.canVerify else {
-            try await pasteAnchored(text, processID: target.processID)
-            return .paste
+        let element: AXUIElement?
+        let selectedText: String
+        if target.elementToken != 0 {
+            guard let binding, binding.token == target.elementToken else { throw .textInput(.targetChanged) }
+            element = binding.element
+            selectedText = binding.selectedText
+            self.binding = nil
+        } else {
+            element = nil
+            selectedText = ""
         }
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processID else { throw .textInput(.targetChanged) }
-        var focusedValue: CFTypeRef?
-        let system = AXUIElementCreateSystemWide()
-        guard AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
-              let value = focusedValue, CFEqual(value, element) else { throw .textInput(.targetChanged) }
-        if let expected = target.selectedRange, Self.selectedRange(element) != expected { throw .textInput(.targetChanged) }
-        if AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
+        try Self.verify(target.processID, element: element, range: target.selectedRange, selectedText: selectedText)
+        if let element, target.canVerify,
+           AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
             return .accessibility
         }
-        try await pasteAnchored(text, processID: target.processID)
+        try await paste(text, to: target.processID, element: element, range: target.selectedRange, selectedText: selectedText)
         return .paste
     }
 
     public func pasteAnchored(_ text: String, processID: Int32?) async throws(AppError) {
-        if let processID, NSWorkspace.shared.frontmostApplication?.processIdentifier != processID {
-            throw .textInput(.targetChanged)
-        }
-        let snapshot = await pasteboard.snapshot()
-        try await pasteboard.write(.string(text))
-        Self.postKey(9, flags: .maskCommand)
-        try? await Task.sleep(for: .milliseconds(250))
-        await pasteboard.restore(snapshot)
+        guard let processID else { throw .textInput(.targetChanged) }
+        try await paste(text, to: processID)
     }
 
-    private func copyViaKeyboard() async -> String? {
+    private func paste(
+        _ text: String, to pid: Int32, element: AXUIElement? = nil, range: Range<Int>? = nil, selectedText: String = ""
+    ) async throws(AppError) {
+        let snapshot = await pasteboard.snapshot()
+        try Self.verify(pid, element: element, range: range, selectedText: selectedText)
+        let generation = try pasteboard.stageString(text, restoring: snapshot)
+        defer { pasteboard.restore(snapshot, ifCurrent: generation) }
+        try Self.verify(pid, element: element, range: range, selectedText: selectedText)
+        try Self.postKey(9, to: pid)
+        do { try await Task.sleep(for: .milliseconds(250)) } catch { throw .cancelled }
+    }
+
+    private func copyViaKeyboard(to pid: Int32, element: AXUIElement?) async throws(AppError) -> String? {
         let snapshot = await pasteboard.snapshot()
         let before = await pasteboard.changeCount()
-        Self.postKey(8, flags: .maskCommand)
-        var copied: String?
+        try Self.verify(pid, element: element)
+        try Self.postKey(8, to: pid)
         for _ in 0..<20 {
-            try? await Task.sleep(for: .milliseconds(25))
-            if await pasteboard.changeCount() != before {
-                copied = await pasteboard.readString()
-                break
-            }
+            do { try await Task.sleep(for: .milliseconds(25)) } catch { throw .cancelled }
+            try Self.verify(pid, element: element)
+            if let copy = pasteboard.takeTemporaryCopy(after: before, restoring: snapshot) { return copy }
         }
-        await pasteboard.restore(snapshot)
-        return copied
+        return nil
     }
 
-    private static func postKey(_ keyCode: CGKeyCode, flags: CGEventFlags) {
+    private static func verify(
+        _ pid: Int32, element: AXUIElement?, range: Range<Int>? = nil, selectedText: String = ""
+    ) throws(AppError) {
+        if Task.isCancelled { throw .cancelled }
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { throw .textInput(.targetChanged) }
+        guard let element else { return }
+        guard let focused = focusedElement(), CFEqual(focused, element) else { throw .textInput(.targetChanged) }
+        if let range, selectedRange(element) != range { throw .textInput(.targetChanged) }
+        if !selectedText.isEmpty, string(element, kAXSelectedTextAttribute) != selectedText { throw .textInput(.targetChanged) }
+    }
+
+    private static func focusedElement() -> AXUIElement? {
+        let system = AXUIElementCreateSystemWide()
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &value) == .success, let value,
+              CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return unsafeDowncast(value, to: AXUIElement.self)
+    }
+
+    private static func postKey(_ keyCode: CGKeyCode, to pid: Int32) throws(AppError) {
         let source = CGEventSource(stateID: .combinedSessionState)
-        let down = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
-        down?.flags = flags
-        let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
-        up?.flags = flags
-        down?.post(tap: .cghidEventTap)
-        up?.post(tap: .cghidEventTap)
+        guard let down = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+              let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else {
+            throw .textInput(.targetChanged)
+        }
+        down.flags = .maskCommand
+        up.flags = .maskCommand
+        down.postToPid(pid)
+        up.postToPid(pid)
     }
 
     private static func string(_ element: AXUIElement, _ attribute: String) -> String? {
@@ -109,8 +143,10 @@ public final class AccessibilityTextService: SelectedTextCapturing, TextInsertin
         guard AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &value) == .success, let value,
               CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
         var range = CFRange()
-        guard AXValueGetValue(value as! AXValue, .cfRange, &range) else { return nil }
-        return range.location..<(range.location + range.length)
+        guard AXValueGetValue(unsafeDowncast(value, to: AXValue.self), .cfRange, &range) else { return nil }
+        let (end, overflow) = range.location.addingReportingOverflow(range.length)
+        guard range.location >= 0, range.length >= 0, !overflow else { return nil }
+        return range.location..<end
     }
 
     private static func bounds(_ element: AXUIElement, range: Range<Int>?) -> QuartzRect? {
@@ -121,7 +157,7 @@ public final class AccessibilityTextService: SelectedTextCapturing, TextInsertin
         guard AXUIElementCopyParameterizedAttributeValue(element, kAXBoundsForRangeParameterizedAttribute as CFString, parameter, &value) == .success,
               let value, CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
         var rect = CGRect.zero
-        guard AXValueGetValue(value as! AXValue, .cgRect, &rect) else { return nil }
+        guard AXValueGetValue(unsafeDowncast(value, to: AXValue.self), .cgRect, &rect) else { return nil }
         return QuartzRect(rect)
     }
 }

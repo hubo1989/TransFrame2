@@ -46,6 +46,31 @@ public final class SystemPasteboard: PasteboardAccessing {
 
     /// Restores the user's clipboard after synthetic copy/paste (TXT-16).
     public func restore(_ snapshot: PasteboardSnapshot) async {
+        restoreItems(snapshot)
+    }
+
+    func restore(_ snapshot: PasteboardSnapshot, ifCurrent generation: Int) {
+        if pasteboard.changeCount == generation { restoreItems(snapshot) }
+    }
+
+    func stageString(_ text: String, restoring snapshot: PasteboardSnapshot) throws(AppError) -> Int {
+        pasteboard.clearContents()
+        guard pasteboard.setString(text, forType: .string) else {
+            restoreItems(snapshot)
+            throw .export(.clipboardWriteFailed)
+        }
+        return pasteboard.changeCount
+    }
+
+    func takeTemporaryCopy(after baseline: Int, restoring snapshot: PasteboardSnapshot) -> String? {
+        let generation = pasteboard.changeCount
+        guard generation != baseline else { return nil }
+        let string = pasteboard.string(forType: .string)
+        restore(snapshot, ifCurrent: generation)
+        return string
+    }
+
+    private func restoreItems(_ snapshot: PasteboardSnapshot) {
         pasteboard.clearContents()
         guard !snapshot.items.isEmpty else { return }
         let items = snapshot.items.map { stored -> NSPasteboardItem in

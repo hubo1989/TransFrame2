@@ -119,7 +119,7 @@ public final class FakePasteboard: PasteboardAccessing, @unchecked Sendable {
     public func restore(_ snapshot: PasteboardSnapshot) async {
         restored.append(snapshot)
         contents.current = snapshot.items.compactMap { item in
-            if let d = item["public.utf8-plain-text"] { return .string(String(decoding: d, as: UTF8.self)) }
+            if let d = item["public.utf8-plain-text"] { return .string(String(bytes: d, encoding: .utf8) ?? "") }
             if let d = item["public.png"] { return .image(d) }
             return nil
         }

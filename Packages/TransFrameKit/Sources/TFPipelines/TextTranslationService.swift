@@ -51,23 +51,14 @@ public struct TextTranslationService: TextTranslationWorkflow {
                     continuation.yield(.translating)
                     let pair = settings.languages.insert
                     let to = pair.target.resolved(preferred: preferredLanguages())
-                    let text: String
-                    if polishOnly || tone != nil, let generator = await generators?.generator(for: settings.ai.generationEngine, settings: settings) {
-                        let task: GenerationTask = polishOnly ? .polish : .rewrite(tone ?? .formal)
-                        let input = polishOnly ? selection.text : try await translatedText(selection.text, from: pair.source, to: to, tone: tone, settings: settings)
-                        text = try await generator.generate(GenerationRequest(task: task, input: input, maxOutputCharacters: max(input.count * 3, 200)))
-                    } else {
-                        text = try await translatedText(selection.text, from: pair.source, to: to, tone: tone, settings: settings)
-                    }
+                    let text = try await replacement(
+                        selection.text, from: pair.source, to: to, tone: tone, polishOnly: polishOnly, settings: settings
+                    )
+                    if Task.isCancelled { throw AppError.cancelled }
                     translated = text
                     continuation.yield(.inserting)
-                    let method: InsertionMethod
-                    if let target = selection.target {
-                        method = try await inserter.insert(text, into: target)
-                    } else {
-                        try await inserter.pasteAnchored(text, processID: nil)
-                        method = .paste
-                    }
+                    guard let target = selection.target else { throw AppError.textInput(.targetChanged) }
+                    let method = try await inserter.insert(text, into: target)
                     await history.record(
                         HistoryEntry(kind: .insertTranslation, source: selection.text, result: text, from: pair.source, to: to), settings: settings
                     )
@@ -77,9 +68,13 @@ public struct TextTranslationService: TextTranslationWorkflow {
                     let appError = AppError.from(error)
                     // Insertion failed after translating: keep the result on the clipboard (TXT-09).
                     if let translated, appError != .cancelled {
-                        try? await pasteboard.write(.string(translated))
-                        continuation.yield(.copiedToClipboard(appError))
-                        continuation.finish()
+                        do {
+                            try await pasteboard.write(.string(translated))
+                            continuation.yield(.copiedToClipboard(appError))
+                            continuation.finish()
+                        } catch {
+                            continuation.finish(throwing: error)
+                        }
                     } else {
                         continuation.finish(throwing: appError)
                     }
@@ -89,10 +84,42 @@ public struct TextTranslationService: TextTranslationWorkflow {
         }
     }
 
-    private func translatedText(_ text: String, from: LanguageCode?, to: LanguageCode, tone: ToneStyle?, settings: SettingsSnapshot) async throws(AppError) -> String {
+    public func canPolish(settings: SettingsSnapshot) async -> Bool {
+        await generators?.generator(for: settings.ai.generationEngine, settings: settings) != nil
+    }
+
+    private func replacement(
+        _ source: String, from: LanguageCode?, to: LanguageCode, tone: ToneStyle?, polishOnly: Bool, settings: SettingsSnapshot
+    ) async throws(AppError) -> String {
+        let text = if polishOnly { source } else { try await translatedText(source, from: from, to: to, tone: tone, settings: settings) }
+        guard polishOnly || tone != nil else { return text }
+        guard let generator = await generators?.generator(for: settings.ai.generationEngine, settings: settings) else {
+            if polishOnly { throw .engine(.notConfigured(.appleFoundation)) }
+            return text
+        }
+        do {
+            return try await PrivacyGuard.generate(
+                polishOnly ? .polish : .rewrite(tone ?? .formal), input: text, using: generator, settings: settings.privacy
+            )
+        } catch {
+            if error == .cancelled || Task.isCancelled { throw .cancelled }
+            if polishOnly { throw error }
+            return text
+        }
+    }
+
+    private func translatedText(_ text: String, from: LanguageCode?, to: LanguageCode, tone: ToneStyle?, settings: SettingsSnapshot)
+        async throws(AppError) -> String
+    {
         let outcome = try await run(text, from: from, to: to, scene: .translateAndInsert, purpose: .insert, tone: tone, settings: settings)
         guard let segments = outcome.effectiveResult?.segments, !segments.isEmpty else { throw .translation(.noTranslatableText) }
-        return segments.map(\.displayText).joined(separator: "\n")
+        guard segments.allSatisfy({ segment in
+            switch segment.status {
+            case .translated, .sameLanguageSkipped, .keptOriginal, .failed(.withheldByPrivacyGuard): true
+            default: false
+            }
+        }) else { throw .translation(.noTranslatableText) }
+        return segments.map(\.displayText).joined(separator: "\n\n")
     }
 
     private func run(
@@ -119,10 +146,14 @@ public struct TextTranslationService: TextTranslationWorkflow {
         return outcome
     }
 
-    private func record(_ text: String, outcome: TranslationOutcome, from: LanguageCode?, to: LanguageCode, kind: HistoryKind, settings: SettingsSnapshot) async {
+    private func record(
+        _ text: String, outcome: TranslationOutcome, from: LanguageCode?, to: LanguageCode, kind: HistoryKind, settings: SettingsSnapshot
+    ) async {
         guard let segments = outcome.effectiveResult?.segments else { return }
         await history.record(
-            HistoryEntry(kind: kind, source: text, result: segments.map(\.displayText).joined(separator: "\n\n"), from: segments.first?.from ?? from, to: to, engine: outcome.effective),
+            HistoryEntry(
+                kind: kind, source: text, result: segments.map(\.displayText).joined(separator: "\n\n"), from: segments.first?.from ?? from, to: to,
+                engine: outcome.effective),
             settings: settings
         )
     }

@@ -99,7 +99,10 @@ final class AppCoordinator: AppRouting {
         if let first = legacy.first {
             let choice = SystemAlert.present(
                 title: l[.coexistenceTitle], message: l[.coexistenceMessage],
-                buttons: [AlertButton(l[.coexistenceQuitLegacy]), AlertButton(l[.coexistenceChangeShortcuts]), AlertButton(l[.coexistenceIgnore], role: .cancel)]
+                buttons: [
+                    AlertButton(l[.coexistenceQuitLegacy]), AlertButton(l[.coexistenceChangeShortcuts]),
+                    AlertButton(l[.coexistenceIgnore], role: .cancel),
+                ]
             )
             switch choice {
             case 0:
@@ -139,6 +142,7 @@ final class AppCoordinator: AppRouting {
         case .openColorHistory: features.history.showColorHistory()
         case .translateSelectedText: features.text.translateSelection()
         case .translateAndInsert: features.text.translateAndInsert()
+        case .polishSelection: features.text.polishSelection()
         case .openImage(let url): features.editor.openImage(url)
         case .openEditor(let id, let focus): features.editor.open(id, focus: focus)
         case .pin(let id): features.pins.pin(id)
