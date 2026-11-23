@@ -184,3 +184,4 @@
   review diff, commit as "fix: review-2 findings + lint".
 - Codex fix-2 finished (77 files): claims 14 P1 + 14 P2 fixed, 19 regression tests, lint 0. Its sandbox blocked Vision/Keychain tests + xcodebuild → verify outside sandbox before commit.
 - Review-2 fixes + lint committed and verified (153/153 tests, all gates 0, smoke OK).
+- Coverage gate fixed (merges all bundles). Actual: TFDomain 76.4%, TFPipelines 55.4% (< 90% gate → CI would FAIL). Lowest: EngineCatalog 0, GlossaryService 0, RecognitionService 7, DocumentPipeline 16.7, Services 19.3, HistoryService 34.5, ScrollCapture 39.6, Normalizer 48.4, Transactions 30.6, Annotation 43.8.
