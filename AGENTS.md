@@ -187,3 +187,8 @@
 - Coverage gate fixed (merges all bundles). Actual: TFDomain 76.4%, TFPipelines 55.4% (< 90% gate → CI would FAIL). Lowest: EngineCatalog 0, GlossaryService 0, RecognitionService 7, DocumentPipeline 16.7, Services 19.3, HistoryService 34.5, ScrollCapture 39.6, Normalizer 48.4, Transactions 30.6, Annotation 43.8.
 - Codex coverage worker launched (workspace-write) → build/coverage-3-result.md; single writer: don't touch Packages/ until done. Note: codex sandbox may block Vision/Keychain/xcodebuild; verify outside.
 - Coverage commit: TFDomain 93.9 %, TFPipelines 92.5 %, 224 tests pass (Vision/Keychain included), lint 0, deps 0.
+- GitHub: https://github.com/hubo1989/TransFrame2 (public). main = SPEC commit; PR #1 phase/1-foundation → main.
+  Sparkle: new EdDSA pair generated with `generate_keys --account transframe2` (private key in login keychain, account transframe2);
+  public key in project.yml TF_SPARKLE_PUBLIC_KEY. To set GitHub secret: `generate_keys --account transframe2 -x key.txt` then
+  `gh secret set SPARKLE_PRIVATE_KEY < key.txt && rm key.txt`; `gh variable set SPARKLE_PUBLIC_KEY --body <pub>`.
+- User answers: real-engine acceptance with OpenAI-compatible/local model; manual walkthroughs: user grants permissions, I drive GUI.
