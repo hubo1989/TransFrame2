@@ -96,9 +96,9 @@ public final class SessionUnlocker: CredentialUnlocking {
         let context = LAContext()
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
-            // No authentication available (e.g. no password set): treat the session as unlocked.
-            isUnlocked = true
-            return true
+            // Without system authentication the session stays locked (APP-06); keys remain unreadable.
+            isUnlocked = false
+            return false
         }
         do {
             isUnlocked = try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)

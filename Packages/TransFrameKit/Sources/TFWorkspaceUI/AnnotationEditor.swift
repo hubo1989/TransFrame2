@@ -101,7 +101,7 @@ public struct TextEditingState: Equatable {
 @Observable
 public final class AnnotationEditor {
     public var tool: AnnotationTool? { didSet { if tool != nil { selectedID = nil } } }
-    public var style: AnnotationStyle { didSet { if style != oldValue { applyStyleToSelection(); onStyleChange?(style) } } }
+    public var style: AnnotationStyle { didSet { if style != oldValue { styleChanged(from: oldValue); onStyleChange?(style) } } }
     public private(set) var selectedID: AnnotationID?
     public private(set) var draft: Annotation?
     /// The committed annotation hidden while being dragged (drawn as the draft instead).
@@ -116,6 +116,9 @@ public final class AnnotationEditor {
     @ObservationIgnored let labelProvider: (String) -> String
     @ObservationIgnored private var gesture: Gesture?
     @ObservationIgnored public var isReadOnly = false
+    @ObservationIgnored private var styleBase: Annotation?
+    @ObservationIgnored private var styleFields: Set<StyleField> = []
+    @ObservationIgnored private var styleCommit: Task<Void, Never>?
 
     private enum Gesture {
         case create(start: DocumentPoint)
@@ -277,9 +280,35 @@ public final class AnnotationEditor {
 
     // MARK: Style
 
-    private func applyStyleToSelection() {
-        guard let selected, let session else { return }
-        let updated = AnnotationGeometry.restyle(selected, with: style, scale: scale)
+    /// Only the changed style fields are applied; a slider drag previews live and commits one transaction (ANN-11, ANN-13).
+    private func styleChanged(from old: AnnotationStyle) {
+        guard let selected, gesture == nil else { return }
+        if styleBase == nil { styleBase = selected }
+        if old.color != style.color { styleFields.insert(.color) }
+        if old.lineWidth != style.lineWidth { styleFields.insert(.lineWidth) }
+        if old.fontSize != style.fontSize { styleFields.insert(.fontSize) }
+        if old.isFilled != style.isFilled || old.fillColor != style.fillColor { styleFields.insert(.fill) }
+        if old.mosaicBlockSize != style.mosaicBlockSize { styleFields.insert(.mosaic) }
+        guard let base = styleBase else { return }
+        hiddenID = base.id
+        draft = AnnotationGeometry.restyle(base, with: style, scale: scale, fields: styleFields)
+        styleCommit?.cancel()
+        styleCommit = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            self?.commitStyle()
+        }
+    }
+
+    private func commitStyle() {
+        defer {
+            styleBase = nil
+            styleFields = []
+            draft = nil
+            hiddenID = nil
+        }
+        guard let base = styleBase, let session else { return }
+        let updated = AnnotationGeometry.restyle(base, with: style, scale: scale, fields: styleFields)
         if let transaction = EditTransaction.replace(updated, in: session, label: labelProvider("undo.style")) { submit(transaction) }
     }
 

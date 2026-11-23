@@ -71,3 +71,21 @@
   CaptureService blocks, RecognitionService, TranslationService, DocumentPipelineService → WorkspaceServices.pipeline);
   then EngineCatalogService + settings pages (replace PendingPages.swift), GlossaryStore/GlossaryService, strings batch + agy translate,
   tests for pipeline/translation/normalizer/privacy; commit "feat: phase 4"; then phases 5–8.
+- Phase 4 core committed (5dd243a). Codex review 1 results in build/review-1-result.md (P1×10, P2×16) — FIX ALL before phase 5:
+  P1: (1) CaptureController session-creation races → single creation task + generation counter, idempotent finish, coordinator clears by identity;
+  (2) receivers (editor/pin) must `await retain` before capture releases; full-screen path always releases; (3) capture 2 s timeout must
+  not hang (one-shot continuation w/ deadline); (4) selection moves after session exists without lock → bind session to geometry/rebuild;
+  (5) canvas draft/handles drawn under imageLayer → separate overlay layer above; (6) cross-display canvas only on first overlay;
+  (7) mixed-scale slice destination rounding (Selection.resolve) → derive destination from rounded source origin; (8) FileExporter
+  race → exclusive create (O_EXCL/link) retry; (9) slider drag creates many undo steps & restyle overwrites other fields → per-field
+  update, commit once; (10) SessionUnlocker must stay locked when policy unavailable.
+  P2: shortcut dispatch by first responder, `Character(key)` crash, magnifier edge, click uses event point & snapping flag, 5×5 min on
+  resize, beautify preview mapping, stale render overwrite, pin aspect, mosaic cache key, grayscale color space, callout text clip,
+  no-op crop transaction, save snapshot consistency, revised-segment undo, ResultsModel generation, app-level ⌘O/⌘,/⌘Q + onRetry,
+  settings six base pages always visible (show unavailable state).
+- Review-1 fixes applied (uncommitted, not yet compiled): P1-5 (CanvasOverlayView above image), P1-7 (Selection.resolve destination
+  from rounded source), P1-8 (FileExporter temp+link EEXIST), P1-9 (StyleField per-field restyle, debounced single commit),
+  P1-10 (unlocker stays locked). Remaining: P1-1,2,3,4,6 and all P2.
+- Review-1 also fixed: P1-1 (single creation task, finished flag, release late sessions), P1-2 (2 s grace before capture releases;
+  full-screen path releases in defer), P1-4 (discard unlocked session on nudge/double-click retarget; locked → ignore outside double-click),
+  P2-2 (`Character(key)` crash). STILL OPEN: P1-3 (capture timeout hang), P1-6 (cross-display canvas), P2-1,3–16.

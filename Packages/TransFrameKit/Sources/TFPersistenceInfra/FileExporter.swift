@@ -7,11 +7,20 @@ public struct FileExporter: FileExporting {
 
     private var fileManager: FileManager { .default }
 
+    /// Writes to a temporary file, then links it to the first free name; `link` fails with EEXIST when another save
+    /// won the race, so concurrent saves never overwrite each other (EXP-01).
     public func write(_ data: Data, baseName: String, fileExtension: String, to directory: URL) async throws(AppError) -> URL {
         try check(directory: directory, bytes: data.count)
-        let url = uniqueURL(baseName: baseName, fileExtension: fileExtension, in: directory)
-        try write(data, url: url)
-        return url
+        let temporary = directory.appending(path: ".tf2-\(UUID().uuidString).tmp", directoryHint: .notDirectory)
+        try write(data, url: temporary)
+        defer { unlink(temporary.path(percentEncoded: false)) }
+        for counter in 0..<10_000 {
+            let name = counter == 0 ? "\(baseName).\(fileExtension)" : "\(baseName) (\(counter)).\(fileExtension)"
+            let candidate = directory.appending(path: name, directoryHint: .notDirectory)
+            if link(temporary.path(percentEncoded: false), candidate.path(percentEncoded: false)) == 0 { return candidate }
+            guard errno == EEXIST else { throw .export(errno == ENOSPC ? .diskFull : .invalidLocation) }
+        }
+        throw .export(.invalidLocation)
     }
 
     public func write(_ data: Data, to url: URL) async throws(AppError) {

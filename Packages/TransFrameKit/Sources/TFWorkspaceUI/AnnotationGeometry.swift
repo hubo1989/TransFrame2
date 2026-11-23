@@ -2,6 +2,8 @@ import CoreGraphics
 import Foundation
 import TFDomain
 
+public enum StyleField: Hashable, Sendable { case color, lineWidth, fontSize, fill, mosaic }
+
 /// Pure geometry for annotation interaction: hit testing, handles, resize, ⌘ constraints (ANN-09, ANN-12).
 public enum AnnotationGeometry {
     public static func rect(from a: DocumentPoint, to b: DocumentPoint, square: Bool) -> DocumentRect {
@@ -90,6 +92,37 @@ public enum AnnotationGeometry {
         case .callout(var a): a.bubble = rect; return .callout(a)
         default: return annotation
         }
+    }
+
+    /// Applies only the given style fields to an annotation (ANN-13).
+    public static func restyle(_ annotation: Annotation, with style: AnnotationStyle, scale: Double, fields: Set<StyleField>) -> Annotation {
+        var merged = AnnotationStyle(defaults: AnnotationDefaults())
+        let current = currentStyle(of: annotation, scale: scale, fallback: style)
+        merged.color = fields.contains(.color) ? style.color : current.color
+        merged.lineWidth = fields.contains(.lineWidth) ? style.lineWidth : current.lineWidth
+        merged.fontSize = fields.contains(.fontSize) ? style.fontSize : current.fontSize
+        merged.isFilled = fields.contains(.fill) ? style.isFilled : current.isFilled
+        merged.fillColor = fields.contains(.fill) ? style.fillColor : current.fillColor
+        merged.mosaicBlockSize = fields.contains(.mosaic) ? style.mosaicBlockSize : current.mosaicBlockSize
+        return restyle(annotation, with: merged, scale: scale)
+    }
+
+    /// Style values (points) read back from an annotation.
+    static func currentStyle(of annotation: Annotation, scale: Double, fallback: AnnotationStyle) -> AnnotationStyle {
+        var s = fallback
+        switch annotation {
+        case .rectangle(let a), .ellipse(let a):
+            s.color = a.strokeColor; s.lineWidth = a.lineWidth / scale; s.isFilled = a.isFilled; s.fillColor = a.fillColor
+        case .highlight(let a): s.color = a.strokeColor
+        case .line(let a), .arrow(let a): s.color = a.color; s.lineWidth = a.lineWidth / scale
+        case .freehand(let a): s.color = a.color; s.lineWidth = a.lineWidth / scale
+        case .text(let a): s.color = a.color; s.fontSize = a.fontSize / scale
+        case .numberLabel(let a): s.color = a.color
+        case .callout(let a): s.color = a.color; s.fontSize = a.fontSize / scale
+        case .mosaic(let a): s.mosaicBlockSize = a.blockSize / scale
+        case .redaction: break
+        }
+        return s
     }
 
     /// Applies the current style to an annotation (ANN-13).

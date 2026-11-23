@@ -63,7 +63,11 @@ public final class CaptureCoordinator: CaptureCoordinating {
                 if intent == .fullDisplay {
                     try await captureFullDisplay(frames)
                 } else {
-                    let controller = CaptureController(frames: frames, deps: deps) { [weak self] in self?.controller = nil }
+                    var created: CaptureController?
+                    let controller = CaptureController(frames: frames, deps: deps) { [weak self] in
+                        if self?.controller === created { self?.controller = nil }
+                    }
+                    created = controller
                     self.controller = controller
                     starting = false
                     controller.present()
@@ -82,8 +86,13 @@ public final class CaptureCoordinator: CaptureCoordinating {
         let id = try await services.sessions.create(from: frames, selection: geometry)
         let owner = SessionOwner.capture(frames.request.id)
         await services.sessions.retain(id, by: owner)
+        defer {
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                await services.sessions.release(id, by: owner)
+            }
+        }
         try await services.export.copyImage(of: id, settings: services.settings.snapshot)
         services.router.route(.openEditor(id, focus: nil))
-        await services.sessions.release(id, by: owner)
     }
 }

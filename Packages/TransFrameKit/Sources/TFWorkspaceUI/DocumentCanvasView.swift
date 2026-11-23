@@ -16,6 +16,8 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
     public private(set) var session: DocumentSession?
     public private(set) var plan: RenderPlan?
     private let imageLayer = CALayer()
+    /// Drafts and selection handles sit above the rendered image and never take events.
+    private lazy var overlayView = CanvasOverlayView(canvas: self)
     private var renderTask: Task<Void, Never>?
     private var renderedKey: (revision: Int, hidden: AnnotationID?, translation: Bool)?
     private var textField: NSTextField?
@@ -31,6 +33,7 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.addSublayer(imageLayer)
+        addSubview(overlayView)
         imageLayer.contentsGravity = .resize
         imageLayer.magnificationFilter = .nearest
         imageLayer.minificationFilter = .trilinear
@@ -58,6 +61,11 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
         CATransaction.setDisableActions(true)
         imageLayer.frame = bounds
         CATransaction.commit()
+        overlayView.frame = bounds
+    }
+
+    override public var needsDisplay: Bool {
+        didSet { if needsDisplay { overlayView.needsDisplay = true } }
     }
 
     // MARK: Rendering
@@ -154,8 +162,8 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
 
     // MARK: Overlay drawing (drafts, selection)
 
-    override public func draw(_ dirtyRect: NSRect) {
-        guard let context = NSGraphicsContext.current?.cgContext, let plan, let session, let editor else { return }
+    func drawOverlay(in context: CGContext) {
+        guard let plan, let session, let editor else { return }
         if let draft = editor.draft {
             context.saveGState()
             context.scaleBy(x: contentScale, y: contentScale)
@@ -303,6 +311,26 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
             return element
         }
         setAccessibilityChildren(elements)
+    }
+}
+
+/// Transparent, event-transparent layer for drafts and handles above the canvas image (ANN-09).
+@MainActor
+final class CanvasOverlayView: NSView {
+    weak var canvas: DocumentCanvasView?
+    init(canvas: DocumentCanvasView) {
+        self.canvas = canvas
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.backgroundColor = .clear
+    }
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func draw(_ dirtyRect: NSRect) {
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        canvas?.drawOverlay(in: context)
     }
 }
 

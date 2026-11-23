@@ -27,6 +27,8 @@ final class CaptureController: OverlayViewDelegate {
     private var escapeMonitor: Any?
     private let owner: SessionOwner
     let toolbarModel = ToolbarModel()
+    private var creating: Task<SessionID?, Never>?
+    private var finished = false
 
     init(frames: FrozenFrameSet, deps: CaptureDependencies, onFinish: @escaping () -> Void) {
         self.frames = frames
@@ -105,7 +107,9 @@ final class CaptureController: OverlayViewDelegate {
 
     func overlayMouseDown(_ point: QuartzPoint, clickCount: Int) {
         guard !busy else { return }
+        if clickCount >= 2, selection.isLocked, !(selection.rect?.contains(point) ?? false) { return }
         if clickCount >= 2, let target = selection.doubleClickTarget(at: point) {
+            if sessionID != nil, target.0 != selection.rect { discardSession() }
             selection.select(target.0, source: target.1)
             refresh()
             perform(.copy)
@@ -154,6 +158,7 @@ final class CaptureController: OverlayViewDelegate {
             default: (0, -step)
             }
             selection.nudge(dx: dx, dy: dy, resize: flags.contains(.option))
+            if sessionID != nil, !selection.isLocked { discardSession() }
             refresh()
             return true
         default: break
@@ -174,7 +179,7 @@ final class CaptureController: OverlayViewDelegate {
         if selection.phase == .selected {
             if key == "p" { perform(.pin); return true }
             if key == "t" { perform(.translate); return true }
-            if let tool = AnnotationTool.forKey(Character(key.isEmpty ? " " : key)) {
+            if key.count == 1, let character = key.first, let tool = AnnotationTool.forKey(character) {
                 selectTool(tool)
                 return true
             }
@@ -194,19 +199,32 @@ final class CaptureController: OverlayViewDelegate {
 
     // MARK: Session
 
+    /// One creation task per controller; results arriving after the capture ended are released (review-1 P1-1).
     private func ensureSession() async -> SessionID? {
         if let sessionID { return sessionID }
+        if let creating { return await creating.value }
         guard let frames, let geometry = selection.geometry() else { return nil }
-        do {
-            let id = try await services.sessions.create(from: frames, selection: geometry)
-            await services.sessions.retain(id, by: owner)
-            sessionID = id
-            attachCanvas(id)
-            return id
-        } catch {
-            services.errors.present(error, near: nil)
-            return nil
+        let services = services, owner = owner
+        let task = Task<SessionID?, Never> { [weak self] in
+            do {
+                let id = try await services.sessions.create(from: frames, selection: geometry)
+                await services.sessions.retain(id, by: owner)
+                guard let self, !self.finished, self.selection.geometry() == geometry else {
+                    await services.sessions.release(id, by: owner)
+                    return nil
+                }
+                self.sessionID = id
+                self.attachCanvas(id)
+                return id
+            } catch {
+                services.errors.present(error, near: nil)
+                return nil
+            }
         }
+        creating = task
+        let id = await task.value
+        creating = nil
+        return finished ? nil : id
     }
 
     private func attachCanvas(_ id: SessionID) {
@@ -447,6 +465,9 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     private func finish() {
+        guard !finished else { return }
+        finished = true
+        creating?.cancel()
         if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
         escapeMonitor = nil
         results?.cancel()
@@ -458,8 +479,12 @@ final class CaptureController: OverlayViewDelegate {
         overlays.removeAll()
         frames = nil
         if let id = sessionID {
+            // Grace period so an editor or pin opened from this capture retains the session first (review-1 P1-2).
             let sessions = services.sessions, owner = owner
-            Task { await sessions.release(id, by: owner) }
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                await sessions.release(id, by: owner)
+            }
         }
         sessionID = nil
         onFinish()

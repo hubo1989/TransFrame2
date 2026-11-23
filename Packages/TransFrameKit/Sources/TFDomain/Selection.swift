@@ -78,11 +78,19 @@ extension SelectionGeometry {
             let origin = frame.display.frame.origin
             let local = DisplayLocalRect(intersection.raw.offsetBy(dx: -origin.x, dy: -origin.y))
             let frameBounds = FrameRect(frame.image.pixelSize.bounds)
-            let destinationRaw = intersection.offsetBy(dx: -selection.minX, dy: -selection.minY)
-            guard let pixels = local.scaledOutward(by: frame.pixelScale, to: FramePixel.self).intersection(frameBounds),
-                  let destination = destinationRaw.scaledOutward(by: outputScale, to: CanvasPixel.self)
-                      .intersection(outputBounds)
-            else { continue }
+            guard let pixels = local.scaledOutward(by: frame.pixelScale, to: FramePixel.self).intersection(frameBounds) else { continue }
+            // The destination follows the rounded source pixels so slices are not squeezed and neighbours never overlap
+            // (CAP-17); parts outside the canvas are clipped when drawn.
+            let scale = frame.pixelScale
+            let sourcePoints = CGRect(
+                x: pixels.minX / scale + origin.x, y: pixels.minY / scale + origin.y,
+                width: pixels.width / scale, height: pixels.height / scale
+            )
+            let destination = CanvasRect(
+                x: (sourcePoints.minX - selection.minX) * outputScale, y: (sourcePoints.minY - selection.minY) * outputScale,
+                width: sourcePoints.width * outputScale, height: sourcePoints.height * outputScale
+            )
+            guard destination.intersects(outputBounds) else { continue }
             slices.append(.init(display: frame.display.id, local: local, pixels: pixels, destination: destination))
         }
         guard !slices.isEmpty else { throw .capture(.selectionOutOfBounds) }
