@@ -118,3 +118,10 @@
   anchored to pid), TFPipelines TextTranslationService (TextTranslationWorkflow; uses TranslationService + makeJob logic, history
   .textTranslation/.insertTranslation, tone via TextGenerating later), TextTranslationFeature (popup window TXT-02..05,14,15 HUD via
   FeedbackCenter.showHUD, insert flow TXT-06..12), App routes .translateSelectedText/.translateAndInsert, menu already has items.
+- Phase 5 started: TFSystemInfra/TextAccess.swift (AccessibilityTextService: SelectedTextCapturing+TextInserting; AX read, ⌘C fallback
+  with snapshot/restore, verify focus+range before AX write, anchored paste fallback). Not compiled yet. Remaining Phase 5:
+  TFPipelines TextTranslationService, TextTranslationFeature (popup + insert HUD), App wiring + routes, strings, tests.
+- Wrote TFPipelines/TextTranslationService.swift (translateSelection/translate/translateAndInsert with tone/polish via TextGeneratorProviding,
+  clipboard fallback TXT-09, history). Not compiled yet. Next: compile, TextTranslationFeature (popup window + insert HUD + debounce
+  0.3 s + busy guard TXT-14 + RTL TXT-05), App wiring (AccessibilityTextService(pasteboard:), TextTranslationService), routes.
+- TextTranslationService compiles. Next: TextTranslationFeature UI + App wiring (see above), then commit "feat: phase 5".
