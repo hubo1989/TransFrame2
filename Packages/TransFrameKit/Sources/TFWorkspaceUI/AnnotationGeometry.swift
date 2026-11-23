@@ -18,10 +18,10 @@ public enum AnnotationGeometry {
 
     /// Snaps a line to multiples of 45°.
     public static func snap45(_ start: DocumentPoint, _ end: DocumentPoint) -> DocumentPoint {
-        let angle = atan2(end.y - start.y, end.x - start.x)
+        let angle: Double = Foundation.atan2(end.y - start.y, end.x - start.x)
         let snapped = (angle / (.pi / 4)).rounded() * (.pi / 4)
         let length = start.distance(to: end)
-        return DocumentPoint(x: start.x + length * cos(snapped), y: start.y + length * sin(snapped))
+        return DocumentPoint(x: start.x + length * Foundation.cos(snapped), y: start.y + length * Foundation.sin(snapped))
     }
 
     static func box(of annotation: Annotation) -> DocumentRect? {

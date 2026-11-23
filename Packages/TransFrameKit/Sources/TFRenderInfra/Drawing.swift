@@ -143,13 +143,16 @@ enum AnnotationDrawing {
     }
 
     static func arrowHead(start: CGPoint, end: CGPoint, lineWidth: Double) -> (tip: CGPoint, left: CGPoint, right: CGPoint, base: CGPoint) {
-        let angle = atan2(end.y - start.y, end.x - start.x)
-        let length = hypot(end.x - start.x, end.y - start.y)
+        // Explicit Double math: CGFloat/Double overloads of cos/sin are ambiguous on Swift 6.2 (Xcode 26.2 floor).
+        let dx = Double(end.x - start.x), dy = Double(end.y - start.y)
+        let ex = Double(end.x), ey = Double(end.y)
+        let angle: Double = Foundation.atan2(dy, dx)
+        let length: Double = Foundation.hypot(dx, dy)
         let headLength = min(max(lineWidth * 4, 10), max(length * 0.6, 4))
         let spread = Double.pi / 7
-        let left = CGPoint(x: end.x - headLength * cos(angle - spread), y: end.y - headLength * sin(angle - spread))
-        let right = CGPoint(x: end.x - headLength * cos(angle + spread), y: end.y - headLength * sin(angle + spread))
-        let base = CGPoint(x: end.x - headLength * 0.8 * cos(angle), y: end.y - headLength * 0.8 * sin(angle))
+        let left = CGPoint(x: ex - headLength * Foundation.cos(angle - spread), y: ey - headLength * Foundation.sin(angle - spread))
+        let right = CGPoint(x: ex - headLength * Foundation.cos(angle + spread), y: ey - headLength * Foundation.sin(angle + spread))
+        let base = CGPoint(x: ex - headLength * 0.8 * Foundation.cos(angle), y: ey - headLength * 0.8 * Foundation.sin(angle))
         return (end, left, right, base)
     }
 
@@ -195,10 +198,11 @@ enum AnnotationDrawing {
         if !bubble.contains(a.pointer.raw) {
             let center = CGPoint(x: bubble.midX, y: bubble.midY)
             let base = max(min(bubble.width, bubble.height) * 0.25, 6)
-            let angle = atan2(a.pointer.y - center.y, a.pointer.x - center.x)
+            let angle: Double = Foundation.atan2(Double(a.pointer.y - center.y), Double(a.pointer.x - center.x))
             let perpendicular = angle + .pi / 2
-            let p1 = CGPoint(x: center.x + base / 2 * cos(perpendicular), y: center.y + base / 2 * sin(perpendicular))
-            let p2 = CGPoint(x: center.x - base / 2 * cos(perpendicular), y: center.y - base / 2 * sin(perpendicular))
+            let half = Double(base) / 2, cx = Double(center.x), cy = Double(center.y)
+            let p1 = CGPoint(x: cx + half * Foundation.cos(perpendicular), y: cy + half * Foundation.sin(perpendicular))
+            let p2 = CGPoint(x: cx - half * Foundation.cos(perpendicular), y: cy - half * Foundation.sin(perpendicular))
             path.move(to: p1)
             path.addLine(to: a.pointer.raw)
             path.addLine(to: p2)
