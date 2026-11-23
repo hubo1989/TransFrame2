@@ -166,3 +166,4 @@
   missing keys; remaining review-1 P2 items + P1-6; docs (README/user guide/CHANGELOG), release workflow + perf script; codex review 2.
 - l10n: merged agy output-2; agy input-3 (141 keys) running in background → /tmp/tf2l10n/agy/output-3.json, merge with Scripts/l10n.py merge. (agentcompass record for antigravity fails: disabled_in_magpie; agy itself not gated.)
 - Phase4Tests committed (52 pipeline tests pass). Next: infra tests (upload signing, LLM/VLM parsers, continuation merge), then full test + l10n merge output-3.
+- Infra tests committed (network/upload/translation/recognition pass).
