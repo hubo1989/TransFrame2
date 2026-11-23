@@ -340,7 +340,3 @@ struct TargetLanguagePicker: View {
         }
     }
 }
-
-extension Color {
-    init(rgba: RGBA) { self.init(.sRGB, red: rgba.red, green: rgba.green, blue: rgba.blue, opacity: rgba.alpha) }
-}

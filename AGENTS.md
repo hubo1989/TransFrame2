@@ -25,3 +25,15 @@
 - BSD `sed` has no `\b`; use `perl -pi -e` for word-boundary replacements.
 - Translations of new keys: export with `l10n.py missing`, delegate de/es/fr/it/ja/ko/pt/ru to `agy -p ... --model gemini-4-hydrogen-high`
   (prompt template in git history / `/tmp/tf2l10n/agy/PROMPT.md`), then `l10n.py merge` and `l10n.py check`.
+
+## Build status (working log, newest last)
+- Phase 1 committed on branch `phase/1-foundation` (e3fee01). l10n complete for 235 keys via agy.
+- Done since: TFPipelines (SessionStore, RenderPlanner, TranslationLayoutPlanner, RenderService, CaptureService,
+  ColorPickService, ExportService+FileNamer, PerformanceRecorder), TFRenderInfra (CoreGraphicsRenderer, Drawing, FrameComposer,
+  ImageCodec), TFCaptureInfra (DisplayTopologyService, WindowEnumerator, ScreenSnapshotter), TFPersistenceInfra FileExporter,
+  TFWorkspaceUI (AnnotationEditor, AnnotationGeometry, DocumentCanvasView, AnnotationToolbar+DocumentObserver,
+  ResultsModel+WorkspaceServices, ResultsDrawerView), CaptureFeature (SelectionModel, OverlayView).
+- Next: CaptureFeature coordinator/controller + in-place toolbar; Editor, Pin, Color features; App wiring; strings batch;
+  then Phase 4 engines (Vision/Paddle/VLM recognition, translation engines, health, DocumentPipeline, RecognitionWorkflow,
+  TranslationWorkflow, ResultCache, PrivacyGuard), settings engine pages; Phase 5 text translation; Phase 6 history (SwiftData),
+  uploads, scroll capture; Phase 7 AI; Phase 8 docs/perf/release + codex review.

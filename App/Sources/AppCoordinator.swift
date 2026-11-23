@@ -11,7 +11,7 @@ final class AppCoordinator: AppRouting {
     private let environment: AppEnvironment
     private var services: AppServices!
     private var features: AppFeatures!
-    private(set) var pinCount = 0
+    var pinCount: Int { features?.pins.count ?? 0 }
     private var registeredShortcuts: ShortcutSettings?
 
     init(environment: AppEnvironment) {
@@ -133,6 +133,13 @@ final class AppCoordinator: AppRouting {
 
     func route(_ route: AppRoute, triggeredAt instant: ContinuousClock.Instant, trigger: CaptureTrigger) {
         switch route {
+        case .capture(let intent): features.capture.start(intent, trigger: trigger, at: instant)
+        case .pickColor: features.color.pick()
+        case .openImage(let url): features.editor.openImage(url)
+        case .openEditor(let id, let focus): features.editor.open(id, focus: focus)
+        case .pin(let id): features.pins.pin(id)
+        case .restorePinInteractions: features.pins.restoreInteractions()
+        case .showAllPins: features.pins.showAll()
         case .openSettings(let page): features.settings.show(page: page)
         case .openOnboarding: features.onboarding.show {}
         case .openAbout: features.about.show()

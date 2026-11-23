@@ -10,7 +10,13 @@ import TFLocalization
 public protocol ErrorPresenting: AnyObject {
     /// Presents an error with its recovery action. `.cancelled` is silent.
     func present(_ error: AppError, near anchor: CGPoint?)
-    func toast(_ model: ToastModel, near anchor: CGPoint?)
+    func toast(_ model: ToastModel, near anchor: CGPoint?, action: (() -> Void)?)
+}
+
+public extension ErrorPresenting {
+    func toast(_ model: ToastModel, near anchor: CGPoint?) { toast(model, near: anchor, action: nil) }
+    /// Presents any thrown error, mapping it to `AppError` first.
+    func present(_ error: any Error, near anchor: CGPoint?) { present(AppError.from(error), near: anchor) }
 }
 
 /// Resolves a Domain error into localized title, suggestion and recovery button title.
@@ -95,7 +101,9 @@ public final class StandardErrorPresenter: ErrorPresenting {
         }
     }
 
-    public func toast(_ model: ToastModel, near anchor: CGPoint?) { feedback.toast(model, near: anchor) }
+    public func toast(_ model: ToastModel, near anchor: CGPoint?, action: (() -> Void)?) {
+        feedback.toast(model, near: anchor, action: action)
+    }
 
     private func perform(_ recovery: RecoveryAction?) {
         guard let recovery else { return }
