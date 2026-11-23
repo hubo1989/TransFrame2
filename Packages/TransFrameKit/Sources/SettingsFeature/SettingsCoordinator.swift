@@ -22,12 +22,14 @@ public struct SettingsDependencies {
     public let glossary: (any GlossaryWorkflow)?
     public let errors: any ErrorPresenting
     public let router: any AppRouting
+    public let pasteboard: (any PasteboardAccessing)?
     public let osVersion: OSVersion
 
     public init(
         settings: any SettingsProviding, localizer: Localizer, permissions: any PermissionChecking & PermissionGuiding,
         credentials: any CredentialStoring, unlocker: any CredentialUnlocking, catalog: (any EngineCatalogProviding)?,
-        glossary: (any GlossaryWorkflow)?, errors: any ErrorPresenting, router: any AppRouting, osVersion: OSVersion = .current
+        glossary: (any GlossaryWorkflow)?, errors: any ErrorPresenting, router: any AppRouting,
+        pasteboard: (any PasteboardAccessing)? = nil, osVersion: OSVersion = .current
     ) {
         self.settings = settings
         self.localizer = localizer
@@ -38,6 +40,7 @@ public struct SettingsDependencies {
         self.glossary = glossary
         self.errors = errors
         self.router = router
+        self.pasteboard = pasteboard
         self.osVersion = osVersion
     }
 }

@@ -94,6 +94,11 @@ final class CompositionRoot {
             sessions: sessions, render: render, export: export, pipeline: pipeline, glossary: nil, colorPick: colorPick,
             pasteboard: pasteboard, settings: settings, localizer: localizer, errors: errors, router: coordinator, performance: performance
         )
+        let catalog = EngineCatalogService(
+            translation: translationEngines, discovery: translationEngines,
+            health: EngineHealthProber(factory: translationEngines, transport: transport), recognition: recognitionEngines,
+            paddle: PaddleInstallationService(), generators: nil, uploader: nil, encoder: codec
+        )
         let sessions = sessions, codec = codec
 
         let features = AppFeatures(
@@ -104,7 +109,7 @@ final class CompositionRoot {
             ),
             settings: SettingsCoordinator(dependencies: SettingsDependencies(
                 settings: settings, localizer: localizer, permissions: permissions, credentials: credentials,
-                unlocker: unlocker, catalog: nil, glossary: nil, errors: errors, router: coordinator
+                unlocker: unlocker, catalog: catalog, glossary: nil, errors: errors, router: coordinator, pasteboard: pasteboard
             )),
             onboarding: OnboardingCoordinator(
                 permissions: permissions, settings: settings, localizer: localizer, appVersion: environment.version

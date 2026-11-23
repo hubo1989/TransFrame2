@@ -112,3 +112,9 @@
 - Merged l10n batch b6 (settings pages keys, en+zh). Other 8 languages pending → run agy translation (input-3) after phase 5/6 strings.
 - SettingsFeature compiles with real pages. NEXT: wire catalog in CompositionRoot (see note above), replace NSPasteboard in
   EnginesModel.copy with injected PasteboardAccessing, settings base six pages always visible (review P2-16), commit; then Phase 5.
+- Catalog + pasteboard wired into settings (App builds). Commit pending. NEXT: Phase 5 text translation:
+  TFSystemInfra AXSelectedTextCapturer (AX focused element kAXSelectedTextAttribute + range, fallback synthetic ⌘C via CGEvent with
+  pasteboard snapshot/restore), AXTextInserter (re-verify focused element/range then set kAXSelectedTextAttribute; fallback paste
+  anchored to pid), TFPipelines TextTranslationService (TextTranslationWorkflow; uses TranslationService + makeJob logic, history
+  .textTranslation/.insertTranslation, tone via TextGenerating later), TextTranslationFeature (popup window TXT-02..05,14,15 HUD via
+  FeedbackCenter.showHUD, insert flow TXT-06..12), App routes .translateSelectedText/.translateAndInsert, menu already has items.

@@ -165,9 +165,8 @@ public final class EnginesModel {
     }
 
     func copy(_ text: String) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        guard let pasteboard = deps.pasteboard else { return }
+        Task { try? await pasteboard.write(.string(text)) }
     }
 
     // MARK: Glossary
