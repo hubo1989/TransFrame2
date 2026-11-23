@@ -23,7 +23,7 @@ settings:
     TF_PROJECT_URL: "https://github.com/hubo1989/TransFrame2"
     TF_UPDATE_FEED_URL: "https://github.com/hubo1989/TransFrame2/releases/latest/download/appcast.xml"
     # Empty until the release key pair is generated (X5); Sparkle stays off while empty.
-    TF_SPARKLE_PUBLIC_KEY: ""
+    TF_SPARKLE_PUBLIC_KEY: "FlfSCy4FIzkXDLQpy+AWEVpVBdlr+EMawhy0TOHgmVM="
 packages:
   TransFrameKit:
     path: Packages/TransFrameKit

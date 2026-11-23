@@ -305,7 +305,7 @@
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
 				TF_PROJECT_URL = "https://github.com/hubo1989/TransFrame2";
-				TF_SPARKLE_PUBLIC_KEY = "";
+				TF_SPARKLE_PUBLIC_KEY = "FlfSCy4FIzkXDLQpy+AWEVpVBdlr+EMawhy0TOHgmVM=";
 				TF_UPDATE_FEED_URL = "https://github.com/hubo1989/TransFrame2/releases/latest/download/appcast.xml";
 			};
 			name = Debug;
@@ -452,7 +452,7 @@
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
 				TF_PROJECT_URL = "https://github.com/hubo1989/TransFrame2";
-				TF_SPARKLE_PUBLIC_KEY = "";
+				TF_SPARKLE_PUBLIC_KEY = "FlfSCy4FIzkXDLQpy+AWEVpVBdlr+EMawhy0TOHgmVM=";
 				TF_UPDATE_FEED_URL = "https://github.com/hubo1989/TransFrame2/releases/latest/download/appcast.xml";
 			};
 			name = Release;
