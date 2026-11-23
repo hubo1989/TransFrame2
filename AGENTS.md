@@ -136,3 +136,9 @@
   TFUploadInfra (PicGo/OSS/COS/Kodo signing), ScrollCaptureService (Pipelines stitching) wired to CaptureDependencies.scroll,
   App routes .openHistory/.openColorHistory; then Phase 7 TFAIInfra (NLEmbedding, FoundationModels 26+, LLM generator) and
   Phase 8 (tests, l10n agy pass for ~170 new keys, docs, release workflow, perf script, codex review 2).
+- Phase 6 started: TFPersistenceInfra/HistoryStore.swift (SwiftDataHistoryStore @ModelActor: HistoryStoring + EmbeddingIndexStoring,
+  versioned schema V1, move-aside on open failure, `SwiftDataHistoryStore.open(directory:)`, nil → in-memory). Not compiled yet.
+  Wire: `let historyStore = SwiftDataHistoryStore.open(directory: environment.supportDirectory)` replacing InMemoryHistoryStore in
+  CompositionRoot; HistoryService(store: historyStore, files:, embedding: nil (Phase 7 NLEmbedding), index: historyStore, ...).
+- SwiftDataHistoryStore compiles; committed. Next: wire it in CompositionRoot, then HistoryFeature windows (history + color history),
+  App routes .openHistory/.openColorHistory, GlossaryStore/Service, uploads, scroll capture, Phase 7, Phase 8.
