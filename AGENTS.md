@@ -154,3 +154,5 @@
   Both compile. TODO wire: `let glossaryStore = GlossaryFileStore(url: environment.supportDirectory.appending(path: "Glossary.json"))`,
   `GlossaryService(store:sessions:)` → WorkspaceServices.glossary + SettingsDependencies.glossary; pass glossaryStore to DocumentPipelineService.
 - Glossary wired in App (store+service). Verify build.
+- Glossary wiring committed. NEXT: TFUploadInfra uploader, ScrollCaptureService, Phase 7 TFAIInfra, tests, l10n agy pass, docs, release workflow, codex review 2.
+- Wrote TFUploadInfra/ImageUploader.swift (PicGo, OSS v1 sig, COS q-sign, Kodo token multipart; UploadSigning pure). Compile + wire: ImageUploader(transport:secrets:) → ExportService.uploader + EngineCatalogService.uploader.

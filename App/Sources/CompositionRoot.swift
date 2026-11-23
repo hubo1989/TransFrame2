@@ -20,6 +20,7 @@ import TFRecognitionInfra
 import TFRenderInfra
 import TFSystemInfra
 import TFTranslationInfra
+import TFUploadInfra
 import TFWorkspaceUI
 
 /// The only place that names concrete Infrastructure types (SPEC §01 §4, ADR-0003).
@@ -71,16 +72,17 @@ final class CompositionRoot {
         let render = RenderService(sessions: sessions, planner: RenderPlanner(measurer: renderer), executor: renderer, performance: performance)
         let historyStore = SwiftDataHistoryStore.open(directory: environment.isUITest ? nil : environment.supportDirectory)
         let history = HistoryService(store: historyStore, files: files, index: historyStore, performance: performance)
+        let transport = URLSessionTransport()
+        let credentials = credentials
+        let secrets: @Sendable (CredentialRef) async throws(AppError) -> String? = { ref throws(AppError) in try await credentials.secret(for: ref) }
+        let uploader = ImageUploader(transport: transport, secrets: secrets)
         let export = ExportService(
             sessions: sessions, render: render, pasteboard: pasteboard, encoder: codec, files: files, sound: sound,
-            uploader: nil, history: history, namer: FileNamer(),
+            uploader: uploader, history: history, namer: FileNamer(),
             defaultDirectory: { FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0] }
         )
         let colorPick = ColorPickService(sampler: ScreenColorSampler(), pasteboard: pasteboard, history: history)
         let capture = CaptureService(snapshotter: snapshotter, blocks: LocalContentBlockDetector(), performance: performance)
-        let transport = URLSessionTransport()
-        let credentials = credentials
-        let secrets: @Sendable (CredentialRef) async throws(AppError) -> String? = { ref throws(AppError) in try await credentials.secret(for: ref) }
         let translationEngines = TranslationEngineFactory(transport: transport, secrets: secrets)
         let recognitionEngines = RecognitionEngineFactory(transport: transport, secrets: secrets)
         let detector = LocalSensitiveContentDetector()
@@ -107,7 +109,7 @@ final class CompositionRoot {
         let catalog = EngineCatalogService(
             translation: translationEngines, discovery: translationEngines,
             health: EngineHealthProber(factory: translationEngines, transport: transport), recognition: recognitionEngines,
-            paddle: PaddleInstallationService(), generators: nil, uploader: nil, encoder: codec
+            paddle: PaddleInstallationService(), generators: nil, uploader: uploader, encoder: codec
         )
         let sessions = sessions, codec = codec
 
