@@ -135,6 +135,8 @@ final class AppCoordinator: AppRouting {
         switch route {
         case .capture(let intent): features.capture.start(intent, trigger: trigger, at: instant)
         case .pickColor: features.color.pick()
+        case .openHistory(let query): features.history.showHistory(query)
+        case .openColorHistory: features.history.showColorHistory()
         case .translateSelectedText: features.text.translateSelection()
         case .translateAndInsert: features.text.translateAndInsert()
         case .openImage(let url): features.editor.openImage(url)

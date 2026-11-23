@@ -3,6 +3,7 @@ import AppKit
 import CaptureFeature
 import ColorFeature
 import EditorFeature
+import HistoryFeature
 import MenuBarFeature
 import PinFeature
 import OnboardingFeature
@@ -68,7 +69,8 @@ final class CompositionRoot {
         // Pipelines over infrastructure.
         let snapshotter = ScreenSnapshotter(topology: topology, windows: WindowEnumerator())
         let render = RenderService(sessions: sessions, planner: RenderPlanner(measurer: renderer), executor: renderer, performance: performance)
-        let history = HistoryService(store: InMemoryHistoryStore(), files: files, performance: performance)
+        let historyStore = SwiftDataHistoryStore.open(directory: environment.isUITest ? nil : environment.supportDirectory)
+        let history = HistoryService(store: historyStore, files: files, index: historyStore, performance: performance)
         let export = ExportService(
             sessions: sessions, render: render, pasteboard: pasteboard, encoder: codec, files: files, sound: sound,
             uploader: nil, history: history, namer: FileNamer(),
@@ -133,6 +135,7 @@ final class CompositionRoot {
                 return await sessions.create(importing: image, name: url.lastPathComponent)
             },
             pins: PinCoordinator(services: workspace),
+            history: HistoryCoordinator(workflow: history, colors: colorPick, settings: settings, localizer: localizer, errors: errors, pasteboard: pasteboard),
             text: TextTranslationCoordinator(
                 workflow: textTranslation, settings: settings, localizer: localizer, feedback: feedback, errors: errors,
                 permissions: permissions, pasteboard: pasteboard
@@ -169,6 +172,7 @@ struct AppFeatures {
     let capture: CaptureCoordinator
     let editor: EditorCoordinator
     let pins: PinCoordinator
+    let history: HistoryCoordinator
     let text: TextTranslationCoordinator
     let color: ColorCoordinator
 }

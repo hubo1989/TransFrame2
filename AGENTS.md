@@ -142,3 +142,10 @@
   CompositionRoot; HistoryService(store: historyStore, files:, embedding: nil (Phase 7 NLEmbedding), index: historyStore, ...).
 - SwiftDataHistoryStore compiles; committed. Next: wire it in CompositionRoot, then HistoryFeature windows (history + color history),
   App routes .openHistory/.openColorHistory, GlossaryStore/Service, uploads, scroll capture, Phase 7, Phase 8.
+- Wrote HistoryFeature/HistoryFeature.swift (HistoryCoordinator: showHistory/showColorHistory; HistoryModel/View with filter, favorites,
+  semantic toggle, export menu, clear confirm, infinite scroll, context menu; ColorHistoryModel/View grid, HEX/RGB format via @AppStorage
+  (NOTE: @AppStorage uses UserDefaults.standard implicitly — acceptable? check-deps only greps `UserDefaults.standard`), search, clear).
+  Not compiled. Needs keys: history.* (filter, all, favorites, semantic, export, clear, clearConfirm, semanticFallback, emptyTitle,
+  noResults, emptyMessage, clearSearch, search, favorite, unfavorite, copyResult, copySource, copyBoth), history.kind.<kind>,
+  color.* (format, clear, emptyTitle, emptyMessage, search, clearConfirm, copyHex, copyRgb). Then wire coordinator + routes in App.
+- History wired in App (SwiftDataHistoryStore + HistoryCoordinator, routes). Build next.
