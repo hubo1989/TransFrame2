@@ -89,3 +89,7 @@
 - Review-1 also fixed: P1-1 (single creation task, finished flag, release late sessions), P1-2 (2 s grace before capture releases;
   full-screen path releases in defer), P1-4 (discard unlocked session on nudge/double-click retarget; locked → ignore outside double-click),
   P2-2 (`Character(key)` crash). STILL OPEN: P1-3 (capture timeout hang), P1-6 (cross-display canvas), P2-1,3–16.
+- P1-3 fixed (OneShotCapture with deadline in TFCaptureInfra; allowlisted). Open: P1-6, P2-1,3–16. Then: settings pages
+  (EnginesModel/EnginesPage etc. in SettingsFeature/PendingPages.swift are EmptyView stubs!), EngineCatalogService, Glossary store/service,
+  Phase 5 text translation (TFSystemInfra SelectedTextCapturer/TextInserter + Pipelines TextTranslationService + TextTranslationFeature),
+  Phase 6 SwiftData history + HistoryFeature windows + uploads + scroll capture, Phase 7 AI (TFAIInfra), Phase 8 docs/release/perf.

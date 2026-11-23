@@ -216,7 +216,7 @@ public actor ScreenSnapshotter: SnapshotCapturing, ScrollCapturing {
         configuration.scalesToFit = false
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         let requested = ContinuousClock.now
-        let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
+        let image = try await OneShotCapture.image(filter: filter, configuration: configuration, timeout: .seconds(2))
         let completed = ContinuousClock.now
         return CapturedFrame(
             display: display, image: PixelImage(cgImage: image, scale: Double(image.width) / max(display.frame.width, 1)),
@@ -244,6 +244,36 @@ public actor ScreenSnapshotter: SnapshotCapturing, ScrollCapturing {
             return PixelImage(cgImage: image, scale: display.scale)
         } catch {
             throw .capture(.timedOut)
+        }
+    }
+}
+
+
+/// Completion-handler capture with a hard deadline: resumes exactly once, late frames are dropped (review-1 P1-3).
+enum OneShotCapture {
+    final class Gate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<CGImage, any Error>?
+        init(_ continuation: CheckedContinuation<CGImage, any Error>) { self.continuation = continuation }
+        func resume(_ result: Result<CGImage, any Error>) {
+            lock.lock()
+            let pending = continuation
+            continuation = nil
+            lock.unlock()
+            pending?.resume(with: result)
+        }
+    }
+
+    static func image(filter: SCContentFilter, configuration: SCStreamConfiguration, timeout: Duration) async throws -> CGImage {
+        try await withCheckedThrowingContinuation { continuation in
+            let gate = Gate(continuation)
+            SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration) { image, error in
+                if let image { gate.resume(.success(image)) } else { gate.resume(.failure(error ?? AppError.capture(.timedOut))) }
+            }
+            Task {
+                try? await Task.sleep(for: timeout)
+                gate.resume(.failure(AppError.capture(.timedOut)))
+            }
         }
     }
 }
