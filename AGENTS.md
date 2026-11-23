@@ -149,3 +149,7 @@
   noResults, emptyMessage, clearSearch, search, favorite, unfavorite, copyResult, copySource, copyBoth), history.kind.<kind>,
   color.* (format, clear, emptyTitle, emptyMessage, search, clearConfirm, copyHex, copyRgb). Then wire coordinator + routes in App.
 - History wired in App (SwiftDataHistoryStore + HistoryCoordinator, routes). Build next.
+- History windows committed. Next: GlossaryStore/Service, TFUploadInfra, ScrollCaptureService, Phase 7 TFAIInfra, Phase 8.
+- Added GlossaryFileStore (TFPersistenceInfra, JSON at supportDirectory/Glossary.json) + GlossaryService (TFPipelines, correct()).
+  Both compile. TODO wire: `let glossaryStore = GlossaryFileStore(url: environment.supportDirectory.appending(path: "Glossary.json"))`,
+  `GlossaryService(store:sessions:)` → WorkspaceServices.glossary + SettingsDependencies.glossary; pass glossaryStore to DocumentPipelineService.
