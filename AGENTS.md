@@ -125,3 +125,14 @@
   clipboard fallback TXT-09, history). Not compiled yet. Next: compile, TextTranslationFeature (popup window + insert HUD + debounce
   0.3 s + busy guard TXT-14 + RTL TXT-05), App wiring (AccessibilityTextService(pasteboard:), TextTranslationService), routes.
 - TextTranslationService compiles. Next: TextTranslationFeature UI + App wiring (see above), then commit "feat: phase 5".
+- Wrote TextTranslationFeature/TextTranslationFeature.swift (coordinator w/ busy+0.3 s debounce, HUD progress, popup with compare picker,
+  RTL). Needs keys: textTranslating, textCapturing, textInserting, textInserted, textCopiedInstead, textPopupTitle. Then App wiring:
+  `let textAccess = AccessibilityTextService(pasteboard: pasteboard)`; `TextTranslationService(capturer: textAccess, inserter: textAccess,
+  pasteboard:, translation:, pipeline:, history:, generators: nil)`; feature coordinator; AppCoordinator routes
+  .translateSelectedText/.translateAndInsert; AppFeatures.text.
+- Phase 5 wired & App builds (text translation routes live). Committed below. NEXT: Phase 6 — SwiftData HistoryStore in
+  TFPersistenceInfra (versioned schema, move-aside on failure, merge/limit via HistoryRetention), HistoryFeature (history window HIS-*,
+  color history window COL-*), GlossaryStore (JSON file in support dir) + GlossaryService (GlossaryWorkflow incl. correct()),
+  TFUploadInfra (PicGo/OSS/COS/Kodo signing), ScrollCaptureService (Pipelines stitching) wired to CaptureDependencies.scroll,
+  App routes .openHistory/.openColorHistory; then Phase 7 TFAIInfra (NLEmbedding, FoundationModels 26+, LLM generator) and
+  Phase 8 (tests, l10n agy pass for ~170 new keys, docs, release workflow, perf script, codex review 2).

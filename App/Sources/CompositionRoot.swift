@@ -7,6 +7,7 @@ import MenuBarFeature
 import PinFeature
 import OnboardingFeature
 import SettingsFeature
+import TextTranslationFeature
 import TFDesignSystem
 import TFDomain
 import TFCaptureInfra
@@ -94,6 +95,11 @@ final class CompositionRoot {
             sessions: sessions, render: render, export: export, pipeline: pipeline, glossary: nil, colorPick: colorPick,
             pasteboard: pasteboard, settings: settings, localizer: localizer, errors: errors, router: coordinator, performance: performance
         )
+        let textAccess = AccessibilityTextService(pasteboard: pasteboard)
+        let textTranslation = TextTranslationService(
+            capturer: textAccess, inserter: textAccess, pasteboard: pasteboard, translation: translation, pipeline: pipeline,
+            history: history, generators: nil
+        )
         let catalog = EngineCatalogService(
             translation: translationEngines, discovery: translationEngines,
             health: EngineHealthProber(factory: translationEngines, transport: transport), recognition: recognitionEngines,
@@ -127,6 +133,10 @@ final class CompositionRoot {
                 return await sessions.create(importing: image, name: url.lastPathComponent)
             },
             pins: PinCoordinator(services: workspace),
+            text: TextTranslationCoordinator(
+                workflow: textTranslation, settings: settings, localizer: localizer, feedback: feedback, errors: errors,
+                permissions: permissions, pasteboard: pasteboard
+            ),
             color: ColorCoordinator(workflow: colorPick, settings: settings, localizer: localizer, errors: errors, router: coordinator)
         )
         errors.attach(router: coordinator)
@@ -159,5 +169,6 @@ struct AppFeatures {
     let capture: CaptureCoordinator
     let editor: EditorCoordinator
     let pins: PinCoordinator
+    let text: TextTranslationCoordinator
     let color: ColorCoordinator
 }
