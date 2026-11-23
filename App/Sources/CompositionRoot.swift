@@ -9,6 +9,7 @@ import PinFeature
 import OnboardingFeature
 import SettingsFeature
 import TextTranslationFeature
+import TFAIInfra
 import TFDesignSystem
 import TFDomain
 import TFCaptureInfra
@@ -71,19 +72,29 @@ final class CompositionRoot {
         let snapshotter = ScreenSnapshotter(topology: topology, windows: WindowEnumerator())
         let render = RenderService(sessions: sessions, planner: RenderPlanner(measurer: renderer), executor: renderer, performance: performance)
         let historyStore = SwiftDataHistoryStore.open(directory: environment.isUITest ? nil : environment.supportDirectory)
-        let history = HistoryService(store: historyStore, files: files, index: historyStore, performance: performance)
+        let history = HistoryService(store: historyStore, files: files, embedding: NaturalLanguageEmbedding(), index: historyStore, performance: performance)
         let transport = URLSessionTransport()
         let credentials = credentials
         let secrets: @Sendable (CredentialRef) async throws(AppError) -> String? = { ref throws(AppError) in try await credentials.secret(for: ref) }
         let uploader = ImageUploader(transport: transport, secrets: secrets)
+        let translationEngines = TranslationEngineFactory(transport: transport, secrets: secrets)
+        let generators = TextGeneratorProvider(transport: transport, secrets: secrets) { [translationEngines] in translationEngines.descriptors(for: $0) }
+        // AI naming (AI-07): local generators only unless cloud naming is allowed.
+        let namer = FileNamer { session, snapshot in
+            guard let generator = await generators.generator(for: snapshot.ai.generationEngine, settings: snapshot),
+                  generator.descriptor.locality == .onDevice || snapshot.ai.autoNamingAllowsCloud else { return nil }
+            let text = [session.context?.appName, session.context?.windowTitle, session.analysis.map { String($0.plainText.prefix(800)) }]
+                .compactMap { $0 }.joined(separator: "\n")
+            guard !text.isEmpty else { return nil }
+            return try? await generator.generate(GenerationRequest(task: .suggestFileName, input: text, maxOutputCharacters: 60))
+        }
         let export = ExportService(
             sessions: sessions, render: render, pasteboard: pasteboard, encoder: codec, files: files, sound: sound,
-            uploader: uploader, history: history, namer: FileNamer(),
+            uploader: uploader, history: history, namer: namer,
             defaultDirectory: { FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0] }
         )
         let colorPick = ColorPickService(sampler: ScreenColorSampler(), pasteboard: pasteboard, history: history)
         let capture = CaptureService(snapshotter: snapshotter, blocks: LocalContentBlockDetector(), performance: performance)
-        let translationEngines = TranslationEngineFactory(transport: transport, secrets: secrets)
         let recognitionEngines = RecognitionEngineFactory(transport: transport, secrets: secrets)
         let detector = LocalSensitiveContentDetector()
         let recognition = RecognitionService(
@@ -104,12 +115,12 @@ final class CompositionRoot {
         let textAccess = AccessibilityTextService(pasteboard: pasteboard)
         let textTranslation = TextTranslationService(
             capturer: textAccess, inserter: textAccess, pasteboard: pasteboard, translation: translation, pipeline: pipeline,
-            history: history, generators: nil
+            history: history, generators: generators
         )
         let catalog = EngineCatalogService(
             translation: translationEngines, discovery: translationEngines,
             health: EngineHealthProber(factory: translationEngines, transport: transport), recognition: recognitionEngines,
-            paddle: PaddleInstallationService(), generators: nil, uploader: uploader, encoder: codec
+            paddle: PaddleInstallationService(), generators: generators, uploader: uploader, encoder: codec
         )
         let sessions = sessions, codec = codec
 
