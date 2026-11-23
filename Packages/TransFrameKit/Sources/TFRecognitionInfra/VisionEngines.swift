@@ -61,14 +61,14 @@ enum VisionOCR {
             return observations.compactMap { observation in
                 guard let candidate = observation.topCandidates(1).first else { return nil }
                 let b = observation.boundingBox
-                let box = FrameRect(x: b.minX * width, y: (1 - b.maxY) * height, width: b.width * width, height: b.height * height)
+                let box = VisionGeometry.frameRect(b, width: width, height: height)
                 let quad = [observation.topLeft, observation.topRight, observation.bottomRight, observation.bottomLeft].map {
-                    CGPoint(x: $0.x * width, y: (1 - $0.y) * height)
+                    VisionGeometry.framePoint($0, width: width, height: height)
                 }
                 let findings: [SensitiveFinding] = detectSensitive ? SensitiveTextClassifier.matches(in: candidate.string).map { match in
                     let rect = (try? candidate.boundingBox(for: match.range))?.boundingBox
                     let mask = rect.map {
-                        FrameRect(x: $0.minX * width, y: (1 - $0.maxY) * height, width: $0.width * width, height: $0.height * height)
+                        VisionGeometry.frameRect($0, width: width, height: height)
                     } ?? box
                     let padded = FrameRect(mask.raw.insetBy(dx: -2, dy: -2).integral)
                     return SensitiveFinding(category: match.category, box: padded, confidence: match.confidence)
@@ -101,7 +101,7 @@ enum DocumentRecognizer {
         let width = Double(image.cgImage.width), height = Double(image.cgImage.height)
         func rect(_ region: NormalizedRect) -> FrameRect {
             let b = region.cgRect
-            return FrameRect(x: b.minX * width, y: (1 - b.maxY) * height, width: b.width * width, height: b.height * height)
+            return VisionGeometry.frameRect(b, width: width, height: height)
         }
         do {
             var request = RecognizeDocumentsRequest()
@@ -169,7 +169,7 @@ public struct VisionCodeDetector: CodeDetecting {
         return (request.results ?? []).compactMap { observation in
             guard let payload = observation.payloadStringValue else { return nil }
             let b = observation.boundingBox
-            return DetectedCode(payload: payload, box: FrameRect(x: b.minX * w, y: (1 - b.maxY) * h, width: b.width * w, height: b.height * h))
+            return DetectedCode(payload: payload, box: VisionGeometry.frameRect(b, width: w, height: h))
         }
     }
 }
@@ -268,5 +268,19 @@ enum UploadImage {
         guard let destination = CGImageDestinationCreateWithData(data, "public.jpeg" as CFString, 1, nil) else { return nil }
         CGImageDestinationAddImage(destination, scaled, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
         return CGImageDestinationFinalize(destination) ? data as Data : nil
+    }
+}
+
+
+/// Vision's normalized, bottom-left coordinates → top-left frame pixels, in explicit Double math
+/// (mixed CGFloat/Double operators are ambiguous on the Swift 6.2 compile floor).
+enum VisionGeometry {
+    static func frameRect(_ normalized: CGRect, width: Double, height: Double) -> FrameRect {
+        let x = Double(normalized.minX), maxY = Double(normalized.maxY), w = Double(normalized.width), h = Double(normalized.height)
+        return FrameRect(x: x * width, y: (1 - maxY) * height, width: w * width, height: h * height)
+    }
+
+    static func framePoint(_ normalized: CGPoint, width: Double, height: Double) -> CGPoint {
+        CGPoint(x: Double(normalized.x) * width, y: (1 - Double(normalized.y)) * height)
     }
 }

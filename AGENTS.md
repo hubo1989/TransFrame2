@@ -193,3 +193,4 @@
   `gh secret set SPARKLE_PRIVATE_KEY < key.txt && rm key.txt`; `gh variable set SPARKLE_PUBLIC_KEY --body <pub>`.
 - User answers: real-engine acceptance with OpenAI-compatible/local model; manual walkthroughs: user grants permissions, I drive GUI.
 - Dev build signed with Apple Development (team 7GT4893YFC) via Scripts/dev-sign.sh <sha1 2E13C393…>; acceptance: Scripts/acceptance.sh <endpoint> <model> [chat|responses].
+- CI on Xcode 26.2 failed: ambiguous cos/sin in Drawing.swift (fixed with explicit Double/Foundation.*). Iterate on CI (no Xcode 26.2 locally).
