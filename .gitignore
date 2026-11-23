@@ -1,0 +1,12 @@
+.DS_Store
+.build/
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+Packages/TransFrameKit/.swiftpm/
+PerfReports/*.json
+!PerfReports/.gitkeep
+*.profraw
+.design/
