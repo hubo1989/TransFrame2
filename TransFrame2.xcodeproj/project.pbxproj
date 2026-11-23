@@ -1,0 +1,507 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		32DE09D634F6422EC48F87FE /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9262D5E1DFC93903286A50 /* main.swift */; };
+		38F88F4F6A2CD5AB7489BE45 /* LaunchSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5DD84FB8386A6BDF158275 /* LaunchSmokeUITests.swift */; };
+		79F46634A315426902B13943 /* TransFrameKit in Frameworks */ = {isa = PBXBuildFile; productRef = DE90FC611BD8957C235062F2 /* TransFrameKit */; };
+		931D788409D747D57E9B8C25 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4C6D51C9122200016E9F13 /* AppDelegate.swift */; };
+		9B9AF1601A4C8D6046944417 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA0AF5635A5E6CD59DBC2C08 /* AppCoordinator.swift */; };
+		C0CF2A5E69B87CF42C775000 /* CompositionRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C923AA35C741CA529BCCDBE4 /* CompositionRoot.swift */; };
+		F0F8E182FBB77AF57E977073 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D022807664CA5A824AD0E2D1 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CBD4E5D76F143F16D67AF113 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1CF20900FB3D49C71B5CCEC2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 76ABED99A7376D5CBAF639CD;
+			remoteInfo = TransFrame2;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0D5DD84FB8386A6BDF158275 /* LaunchSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSmokeUITests.swift; sourceTree = "<group>"; };
+		22CBA04EB56BFB0BF82D7BC3 /* TransFrame2UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TransFrame2UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		54026A515CF6DD184C8DE986 /* TransFrame2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TransFrame2.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A4C6D51C9122200016E9F13 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B642958D87ECA0920E123CF9 /* TransFrameKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TransFrameKit; path = Packages/TransFrameKit; sourceTree = SOURCE_ROOT; };
+		BA0AF5635A5E6CD59DBC2C08 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
+		C923AA35C741CA529BCCDBE4 /* CompositionRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompositionRoot.swift; sourceTree = "<group>"; };
+		CA9262D5E1DFC93903286A50 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		D022807664CA5A824AD0E2D1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F281379528B9BDB02FF33ADC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				79F46634A315426902B13943 /* TransFrameKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3433A264E6D7823B672A88C0 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				8E4BA442899EBE2CCF1DEC07 /* Resources */,
+				E84AC8833E737AD59C57152A /* Sources */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		3671B88BCDAC83687A2656B5 = {
+			isa = PBXGroup;
+			children = (
+				3433A264E6D7823B672A88C0 /* App */,
+				A52F64F3D2ABC2E6D91A16C8 /* AppUITests */,
+				851F16C223D21CF62B4CAFBA /* Packages */,
+				81401F6E1DE348912B1F8479 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		81401F6E1DE348912B1F8479 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				54026A515CF6DD184C8DE986 /* TransFrame2.app */,
+				22CBA04EB56BFB0BF82D7BC3 /* TransFrame2UITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		851F16C223D21CF62B4CAFBA /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				B642958D87ECA0920E123CF9 /* TransFrameKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		8E4BA442899EBE2CCF1DEC07 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				D022807664CA5A824AD0E2D1 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A52F64F3D2ABC2E6D91A16C8 /* AppUITests */ = {
+			isa = PBXGroup;
+			children = (
+				0D5DD84FB8386A6BDF158275 /* LaunchSmokeUITests.swift */,
+			);
+			path = AppUITests;
+			sourceTree = "<group>";
+		};
+		E84AC8833E737AD59C57152A /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				BA0AF5635A5E6CD59DBC2C08 /* AppCoordinator.swift */,
+				9A4C6D51C9122200016E9F13 /* AppDelegate.swift */,
+				C923AA35C741CA529BCCDBE4 /* CompositionRoot.swift */,
+				CA9262D5E1DFC93903286A50 /* main.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3BA9FCA37FD8A7C437D78D57 /* TransFrame2UITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 73F73B1EB9CAF3848008BE83 /* Build configuration list for PBXNativeTarget "TransFrame2UITests" */;
+			buildPhases = (
+				75A7CA0D653443854E013236 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CC3BA39C8DAB4A6AE3E1DA88 /* PBXTargetDependency */,
+			);
+			name = TransFrame2UITests;
+			packageProductDependencies = (
+			);
+			productName = TransFrame2UITests;
+			productReference = 22CBA04EB56BFB0BF82D7BC3 /* TransFrame2UITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		76ABED99A7376D5CBAF639CD /* TransFrame2 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 03575E40556F9420BE4057E2 /* Build configuration list for PBXNativeTarget "TransFrame2" */;
+			buildPhases = (
+				9D6D6CEE1097013DD1107F28 /* Sources */,
+				7D68C55415C39DDD74A73C95 /* Resources */,
+				F281379528B9BDB02FF33ADC /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TransFrame2;
+			packageProductDependencies = (
+				DE90FC611BD8957C235062F2 /* TransFrameKit */,
+			);
+			productName = TransFrame2;
+			productReference = 54026A515CF6DD184C8DE986 /* TransFrame2.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1CF20900FB3D49C71B5CCEC2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					3BA9FCA37FD8A7C437D78D57 = {
+						ProvisioningStyle = Manual;
+						TestTargetID = 76ABED99A7376D5CBAF639CD;
+					};
+					76ABED99A7376D5CBAF639CD = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = CA4B47FDAAA358348201CE28 /* Build configuration list for PBXProject "TransFrame2" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 3671B88BCDAC83687A2656B5;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E85D7DB6D4A9BAEE8A310781 /* XCLocalSwiftPackageReference "Packages/TransFrameKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 81401F6E1DE348912B1F8479 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				76ABED99A7376D5CBAF639CD /* TransFrame2 */,
+				3BA9FCA37FD8A7C437D78D57 /* TransFrame2UITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7D68C55415C39DDD74A73C95 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F0F8E182FBB77AF57E977073 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		75A7CA0D653443854E013236 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38F88F4F6A2CD5AB7489BE45 /* LaunchSmokeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9D6D6CEE1097013DD1107F28 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B9AF1601A4C8D6046944417 /* AppCoordinator.swift in Sources */,
+				931D788409D747D57E9B8C25 /* AppDelegate.swift in Sources */,
+				C0CF2A5E69B87CF42C775000 /* CompositionRoot.swift in Sources */,
+				32DE09D634F6422EC48F87FE /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CC3BA39C8DAB4A6AE3E1DA88 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 76ABED99A7376D5CBAF639CD /* TransFrame2 */;
+			targetProxy = CBD4E5D76F143F16D67AF113 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1D7653A91FDC6153A23F88D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 2.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TF_PROJECT_URL = "https://github.com/hubo1989/TransFrame2";
+				TF_SPARKLE_PUBLIC_KEY = "";
+				TF_UPDATE_FEED_URL = "https://github.com/hubo1989/TransFrame2/releases/latest/download/appcast.xml";
+			};
+			name = Debug;
+		};
+		5681FFD10CF1F7B40772C1EF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.transframe.v2.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = TransFrame2;
+			};
+			name = Release;
+		};
+		7CBDF8651857DE1B8E947124 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/TransFrame2.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.transframe.v2.dev;
+				PRODUCT_MODULE_NAME = TransFrame2;
+				PRODUCT_NAME = "TransFrame 2";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A55E42D22F9BF6B61D25BB12 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/TransFrame2.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.transframe.v2;
+				PRODUCT_MODULE_NAME = TransFrame2;
+				PRODUCT_NAME = "TransFrame 2";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		B3983762F1BE92670E5FF058 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.transframe.v2.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = TransFrame2;
+			};
+			name = Debug;
+		};
+		E2023DFA78EE944C8BAB2E56 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 2.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TF_PROJECT_URL = "https://github.com/hubo1989/TransFrame2";
+				TF_SPARKLE_PUBLIC_KEY = "";
+				TF_UPDATE_FEED_URL = "https://github.com/hubo1989/TransFrame2/releases/latest/download/appcast.xml";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		03575E40556F9420BE4057E2 /* Build configuration list for PBXNativeTarget "TransFrame2" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7CBDF8651857DE1B8E947124 /* Debug */,
+				A55E42D22F9BF6B61D25BB12 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		73F73B1EB9CAF3848008BE83 /* Build configuration list for PBXNativeTarget "TransFrame2UITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B3983762F1BE92670E5FF058 /* Debug */,
+				5681FFD10CF1F7B40772C1EF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CA4B47FDAAA358348201CE28 /* Build configuration list for PBXProject "TransFrame2" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D7653A91FDC6153A23F88D8 /* Debug */,
+				E2023DFA78EE944C8BAB2E56 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		E85D7DB6D4A9BAEE8A310781 /* XCLocalSwiftPackageReference "Packages/TransFrameKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TransFrameKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DE90FC611BD8957C235062F2 /* TransFrameKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TransFrameKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 1CF20900FB3D49C71B5CCEC2 /* Project object */;
+}

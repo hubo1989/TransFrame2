@@ -1,0 +1,59 @@
+# CI gate for TransFrame 2 (SPEC §06 §6). macOS 15 + Xcode 26.2 is the compile floor.
+name: macos-ci
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: macos-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26.2
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app
+      - name: Install tools
+        run: brew install xcodegen swiftlint
+      - name: Structure checks
+        run: |
+          Scripts/check-deps.sh --self-test
+          Scripts/check-deps.sh
+          Scripts/check-l10n.sh --self-test
+          Scripts/check-l10n.sh
+          Scripts/check-design.sh --self-test
+          Scripts/check-design.sh
+          swiftlint lint --strict --quiet
+      - name: Project is up to date
+        run: |
+          xcodegen generate
+          git diff --exit-code -- TransFrame2.xcodeproj
+      - name: Package tests (U, C, I) with coverage gate
+        run: Scripts/test.sh package
+      - name: App tests and launch smoke (macOS 15, also proves no macOS 26 symbol leaks)
+        run: Scripts/test.sh app
+      - name: Universal Release build
+        run: Scripts/build.sh Release ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO
+      - name: Pipeline performance trend (non-blocking)
+        continue-on-error: true
+        run: Scripts/perf.sh pipeline
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports
+          path: |
+            PerfReports/*.json
+            build/coverage.txt
+  intel:
+    # x86_64 runtime check (SPEC §06 §6). If the runner is unavailable the Intel slice is compile-only.
+    runs-on: macos-15-intel
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo xcode-select -s /Applications/Xcode_26.2.app
+      - run: brew install xcodegen
+      - run: Scripts/test.sh package
+      - run: Scripts/test.sh smoke

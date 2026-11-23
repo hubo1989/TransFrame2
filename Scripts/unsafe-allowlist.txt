@@ -1,0 +1,1 @@
+Packages/TransFrameKit/Sources/TFDomainTestSupport/* # test doubles: mutable fake state is guarded by NSLock (Locked/CallLog); test-only target
