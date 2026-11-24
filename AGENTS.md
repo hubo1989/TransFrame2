@@ -199,3 +199,4 @@
 - CI: package tests + coverage PASS on Xcode 26.2; app target hit Swift 6.2 SILGen crash in AppCoordinator withObservationTracking closures → read via local let (fixed).
 - CI smoke failed: runners lack coreutils timeout → perl alarm + exec {$ARGV[0]} (path has a space).
 - CI GREEN on PR #1 (run 45296774144): checks (macOS 15 + Xcode 26.2: gates, package tests + coverage, UI tests, smoke, universal Release) and intel (x86_64 tests + smoke).
+- Installed Release build to /Applications/TransFrame 2.app (com.transframe.v2, 2.0.0, Developer ID 27LU47J28S signed, hardened runtime, NOT notarized — runs because locally built/no quarantine). Running pid 56270, onboarding shown. Dev instance stopped.
