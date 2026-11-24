@@ -220,3 +220,4 @@
 - Layout planner updated (monospaced, opaque sampled backdrop, 15% single-line tolerance, centred, dy 0). Next: StyleSampler.swift + hook in RecognitionService, translatability + JSON value templates, tests.
 - StyleSampler.swift (+CodeLines) added; RecognitionService annotates styles from unmasked input; Normalizer translatability uses CodeLines; DocumentPipeline value-only JSON translation + reassemble. All compile. Next: tests + IntegrationTests render + reinstall.
 - Overlay styling implemented + IntegrationTests/OverlayRenderTests (real Vision OCR on dark terminal fixture → build/overlay/overlay-after.png looks right). OCR quote folding in CodeLines.normalizedQuotes; coverFrame grows 18% clamped to neighbours. Next: full tests/lint, Release reinstall, commit.
+- Overlay styling committed & pushed; /Applications reinstalled (pid 17027). Items 4/5 (auto display mode, overflow→below) still pending.
