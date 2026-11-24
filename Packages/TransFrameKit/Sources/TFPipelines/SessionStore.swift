@@ -199,8 +199,22 @@ public actor DocumentSessionStore: SessionManaging {
         entry.undo.append(transaction)
         if entry.undo.count > Self.undoDepth { entry.undo.removeFirst(entry.undo.count - Self.undoDepth) }
         entry.redo.removeAll()
+        Self.pruneStaleRevisions(&entry)
         entries[id] = entry
         broadcast(id)
+    }
+
+    /// Text revisions belong to one analysis. Once it is gone (crop, new recognition), undoing or redoing them can only fail
+    /// and would block every older step, so they leave both stacks.
+    private static func pruneStaleRevisions(_ entry: inout Entry) {
+        let live = Set(entry.session.analysis?.segments.map(\.id) ?? [])
+        func isStale(_ transaction: EditTransaction) -> Bool {
+            (transaction.forward + transaction.inverse).contains { edit in
+                if case .reviseSegment(let segment, _) = edit { !live.contains(segment) } else { false }
+            }
+        }
+        entry.undo.removeAll(where: isStale)
+        entry.redo.removeAll(where: isStale)
     }
 
     public func undo(_ id: SessionID) async -> Bool { step(id, undo: true) }
@@ -211,6 +225,7 @@ public actor DocumentSessionStore: SessionManaging {
     private func step(_ id: SessionID, undo: Bool) -> Bool {
         guard var entry = entries[id], let transaction = undo ? entry.undo.last : entry.redo.last else { return false }
         var session = entry.session
+        defer { if var current = entries[id] { Self.pruneStaleRevisions(&current); entries[id] = current } }
         do {
             let effect = try SessionReducer.apply(undo ? transaction.inverse : transaction.forward, to: &session)
             var forced = effect
@@ -222,7 +237,10 @@ public actor DocumentSessionStore: SessionManaging {
             }
             if effect.invalidatesAnalysis { cancelTasks(&entry, kinds: [.recognition, .translation, .privacyScan]) }
         } catch {
-            return false
+            // A step that can no longer apply is dropped instead of jamming the stack; the next one runs.
+            if undo { entry.undo.removeLast() } else { entry.redo.removeLast() }
+            entries[id] = entry
+            return step(id, undo: undo)
         }
         entry.session = session
         if undo {
@@ -249,7 +267,10 @@ public actor DocumentSessionStore: SessionManaging {
         if var entry = entries[id] {
             let previous = entry.session.analysis
             body(&entry.session)
-            if previous != entry.session.analysis { entry.analysisRevision += 1 }
+            if previous != entry.session.analysis {
+                entry.analysisRevision += 1
+                Self.pruneStaleRevisions(&entry)
+            }
             entries[id] = entry
         }
         broadcast(id)
@@ -325,6 +346,7 @@ public actor DocumentSessionStore: SessionManaging {
         entry.session.analysis = result
         entry.analysisRevision += 1
         entry.session.translation = nil
+        Self.pruneStaleRevisions(&entry)
         entries[result.session] = entry
         broadcast(result.session)
     }

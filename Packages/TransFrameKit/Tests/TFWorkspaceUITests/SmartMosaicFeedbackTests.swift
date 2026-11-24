@@ -52,7 +52,7 @@ private struct UnusedColorPick: ColorPickWorkflow {
 private final class RecordingErrors: ErrorPresenting {
     var toasts: [ToastModel] = []
     var errors: [AppError] = []
-    func present(_ error: AppError, near anchor: CGPoint?) { errors.append(error) }
+    func present(_ error: AppError, near anchor: CGPoint?, retry: (() -> Void)?) { errors.append(error) }
     func toast(_ model: ToastModel, near anchor: CGPoint?, action: (() -> Void)?) { toasts.append(model) }
 }
 

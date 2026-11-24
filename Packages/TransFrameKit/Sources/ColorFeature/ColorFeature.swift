@@ -41,7 +41,7 @@ public final class ColorCoordinator: ColorPickCoordinating {
                     router.route(.openColorHistory)
                 }
             } catch {
-                errors.present(error, near: nil)
+                errors.present(error, near: nil) { [weak self] in self?.pick() }
             }
         }
     }

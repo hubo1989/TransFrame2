@@ -13,6 +13,9 @@ public final class EnginesModel {
     @ObservationIgnored let deps: SettingsDependencies
     var health: [EngineID: EngineHealth] = [:]
     var secrets: [CredentialRef: String] = [:]
+    /// Secrets the keychain would not hand out (locked): never shown as empty and never saved over with an empty value.
+    var unreadableSecrets: Set<CredentialRef> = []
+    @ObservationIgnored private var requestedSecrets: Set<CredentialRef> = []
     var analysisModels: [AnalysisProvider: [String]] = [:]
     var models: [EngineID: [String]] = [:]
     var fetchingModels: Set<EngineID> = []
@@ -52,6 +55,12 @@ public final class EnginesModel {
 
     func unlock() async {
         locked = !(await deps.unlocker.unlock(reason: l10n[.unlockReason]))
+        guard !locked else { return }
+        // Fields loaded while locked are read again now that the keychain answers.
+        let reload = requestedSecrets
+        secrets = [:]
+        unreadableSecrets = []
+        for ref in reload { loadSecret(ref) }
     }
 
     // MARK: Secrets (never stored in settings)
@@ -62,6 +71,8 @@ public final class EnginesModel {
 
     func saveSecret(_ ref: CredentialRef) {
         let value = secrets[ref] ?? ""
+        // An empty field means "remove"; when the stored value could not even be read, an empty field means nothing.
+        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, unreadableSecrets.contains(ref) || secrets[ref] == nil { return }
         let credentials = deps.credentials, errors = deps.errors
         Task {
             do { try await credentials.store(value, for: ref); await refreshHealth(force: true) } catch { errors.present(error, near: nil) }
@@ -69,9 +80,19 @@ public final class EnginesModel {
     }
 
     func loadSecret(_ ref: CredentialRef) {
+        requestedSecrets.insert(ref)
         guard secrets[ref] == nil else { return }
         let credentials = deps.credentials
-        Task { secrets[ref] = (try? await credentials.secret(for: ref)) ?? "" }
+        Task {
+            do {
+                let value = try await credentials.secret(for: ref)
+                secrets[ref] = value ?? ""
+                unreadableSecrets.remove(ref)
+            } catch {
+                unreadableSecrets.insert(ref)
+                if !deps.unlocker.isUnlocked { locked = true }
+            }
+        }
     }
 
     // MARK: Engine configuration

@@ -64,7 +64,9 @@ public struct ExportService: ExportWorkflow {
         guard let uploader, settings.imageHost.provider != nil else { throw .upload(.notConfigured) }
         let session = try await sessions.snapshot(of: id)
         let rendered = try await render.image(of: session, purpose: .upload)
-        let image = if settings.privacy.guardEnabled { try await guardian.protect(rendered, settings: settings.privacy).0 } else { rendered }
+        // The image guard follows the destination like engines do: loopback never, the local network only when asked.
+        let guarded = PrivacyGuard.applies(to: settings.imageHost.locality, settings: settings.privacy, overridden: false)
+        let image = if guarded { try await guardian.protect(rendered, settings: settings.privacy).0 } else { rendered }
         let data = try encoder.encode(image, format: .png, quality: 1)
         let objectName = "screenshot-\(UUID().uuidString.lowercased()).png"
         let receipt = try await uploader.upload(data, fileName: objectName, contentType: "image/png", settings: settings.imageHost)

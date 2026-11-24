@@ -65,7 +65,7 @@ public final class TextTranslationCoordinator: TextTranslationCoordinating {
                 feedback.hideHUD()
                 showPopup(result)
             } catch {
-                errors.present(error, near: nil)
+                errors.present(error, near: nil) { [weak self] in self?.translateSelection() }
             }
         }
     }
@@ -100,7 +100,7 @@ public final class TextTranslationCoordinator: TextTranslationCoordinating {
                     }
                 }
             } catch {
-                errors.present(error, near: nil)
+                errors.present(error, near: nil) { [weak self] in self?.insert(polishOnly: polishOnly) }
             }
             feedback.hideHUD()
         }

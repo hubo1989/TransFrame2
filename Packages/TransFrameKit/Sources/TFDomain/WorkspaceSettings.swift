@@ -106,6 +106,11 @@ public struct ImageHostSettings: Sendable, Codable, Equatable {
     public init() {}
 
     public func field(_ name: String, for provider: EngineID) -> String { fields[provider.raw]?[name] ?? "" }
+
+    /// Where uploads go: PicGo by its endpoint host (loopback by default), the object stores are cloud services.
+    public var locality: EngineLocality {
+        provider == .hostPicGo ? EngineLocality.classify(host: URL(string: picgoEndpoint)?.host) : .cloud
+    }
     public mutating func setField(_ name: String, _ value: String, for provider: EngineID) {
         fields[provider.raw, default: [:]][name] = value
     }

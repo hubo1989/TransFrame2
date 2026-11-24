@@ -136,12 +136,17 @@ final class EditorModel {
         Task { do { try await sessions.apply(transaction, to: id) } catch { errors.present(error, near: nil) } }
     }
 
+    /// Runs one editor action; a retryable failure offers Retry, which runs the same action again.
     private func act(_ body: @escaping () async throws -> Void) {
         guard !busy else { return }
         busy = true
         Task {
             defer { busy = false }
-            do { try await body() } catch { services.errors.present(error, near: nil) }
+            do {
+                try await body()
+            } catch {
+                services.errors.present(error, near: nil) { [weak self] in self?.act(body) }
+            }
         }
     }
 

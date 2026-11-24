@@ -249,4 +249,29 @@ extension ReviewRegressionTests {
         #expect(Set(names).count == 2)
         #expect(names.allSatisfy { $0.hasPrefix("screenshot-") && $0.hasSuffix(".png") })
     }
+
+    @Test func uploadGuardFollowsTheDestinationLocality() async throws {
+        let sessions = DocumentSessionStore(composer: FakeFrameComposer())
+        let id = await sessions.insert(DocumentSession(origin: .importedFile(name: "test"), baseImage: TestImages.pattern(width: 20, height: 20)))
+        let render = RenderService(
+            sessions: sessions, planner: RenderPlanner(measurer: FakeTextMeasurer()), executor: FakeRenderExecutor(), performance: FakePerformanceRecorder())
+        let detector = FakeSensitiveDetector([SensitiveFinding(category: .password, box: FrameRect(x: 0, y: 0, width: 4, height: 4), confidence: 1)])
+        let export = ExportService(
+            sessions: sessions, render: render, pasteboard: FakePasteboard(), encoder: FakeImageCodec(), files: FakeFileExporter(),
+            sound: FakeSound(), uploader: FakeImageUploader(), history: nil, namer: FileNamer { _, _ in nil },
+            guardian: PrivacyGuard(detector: detector), defaultDirectory: { URL(fileURLWithPath: "/tmp") })
+        var settings = SettingsSnapshot()
+        settings.imageHost.provider = .hostPicGo
+        _ = try await export.upload(id, settings: settings)
+        #expect(detector.calls.calls.isEmpty, "PicGo on 127.0.0.1 is this Mac")
+        settings.imageHost.picgoEndpoint = "http://192.168.1.20:36677/upload"
+        _ = try await export.upload(id, settings: settings)
+        #expect(detector.calls.calls.isEmpty, "local network is not guarded unless asked")
+        settings.privacy.guardLocalNetwork = true
+        _ = try await export.upload(id, settings: settings)
+        #expect(detector.calls.count == 1)
+        settings.imageHost.picgoEndpoint = "https://picgo.example.com/upload"
+        _ = try await export.upload(id, settings: settings)
+        #expect(detector.calls.count == 2)
+    }
 }

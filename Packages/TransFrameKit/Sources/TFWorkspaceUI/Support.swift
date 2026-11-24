@@ -8,12 +8,15 @@ import TFLocalization
 
 @MainActor
 public protocol ErrorPresenting: AnyObject {
-    /// Presents an error with its recovery action. `.cancelled` is silent.
-    func present(_ error: AppError, near anchor: CGPoint?)
+    /// Presents an error with its recovery action. `.cancelled` is silent. `retry` reruns the failed operation; without it a
+    /// retryable error shows no Retry button (a button that does nothing is worse than none).
+    func present(_ error: AppError, near anchor: CGPoint?, retry: (() -> Void)?)
     func toast(_ model: ToastModel, near anchor: CGPoint?, action: (() -> Void)?)
 }
 
 public extension ErrorPresenting {
+    func present(_ error: AppError, near anchor: CGPoint?) { present(error, near: anchor, retry: nil) }
+    func present(_ error: any Error, near anchor: CGPoint?, retry: (() -> Void)?) { present(AppError.from(error), near: anchor, retry: retry) }
     func toast(_ model: ToastModel, near anchor: CGPoint?) { toast(model, near: anchor, action: nil) }
     /// Presents any thrown error, mapping it to `AppError` first.
     func present(_ error: any Error, near anchor: CGPoint?) { present(AppError.from(error), near: anchor) }
@@ -51,6 +54,15 @@ public struct LocalizedErrorText: Equatable {
         recoveryTitle = message.recovery.flatMap { Self.title(for: $0, localizer: localizer) }
     }
 
+    private init(title: String, suggestion: String) {
+        self.title = title
+        self.suggestion = suggestion
+        recoveryTitle = nil
+    }
+
+    /// The same text without a recovery button.
+    var withoutRecovery: LocalizedErrorText { LocalizedErrorText(title: title, suggestion: suggestion) }
+
     @MainActor
     static func title(for recovery: RecoveryAction, localizer: Localizer) -> String? {
         switch recovery {
@@ -70,7 +82,6 @@ public final class StandardErrorPresenter: ErrorPresenting {
     private let feedback: FeedbackCenter
     private let permissions: any PermissionGuiding
     private weak var router: (any AppRouting)?
-    public var onRetry: (() -> Void)?
 
     public init(localizer: Localizer, feedback: FeedbackCenter, permissions: any PermissionGuiding, router: (any AppRouting)?) {
         self.localizer = localizer
@@ -81,20 +92,21 @@ public final class StandardErrorPresenter: ErrorPresenting {
 
     public func attach(router: any AppRouting) { self.router = router }
 
-    public func present(_ error: AppError, near anchor: CGPoint?) {
+    public func present(_ error: AppError, near anchor: CGPoint?, retry: (() -> Void)?) {
         let message = error.userMessage
         guard message.presentation != .silent else { return }
-        let text = LocalizedErrorText(error, localizer: localizer)
+        let localized = LocalizedErrorText(error, localizer: localizer)
+        let text = message.recovery == .retry && retry == nil ? localized.withoutRecovery : localized
         switch message.presentation {
         case .alert:
             var buttons = [AlertButton(localizer[.actionOk], role: .cancel)]
             if let recoveryTitle = text.recoveryTitle { buttons.insert(AlertButton(recoveryTitle), at: 0) }
             let choice = SystemAlert.present(title: text.title, message: text.suggestion, buttons: buttons)
-            if text.recoveryTitle != nil, choice == 0 { perform(message.recovery) }
+            if text.recoveryTitle != nil, choice == 0 { perform(message.recovery, retry: retry) }
         case .banner:
             let model = ToastModel(.error, message: "\(text.title) — \(text.suggestion)", actionTitle: text.recoveryTitle)
             feedback.toast(model, near: anchor, duration: .seconds(5), action: text.recoveryTitle == nil ? nil : { [weak self] in
-                self?.perform(message.recovery)
+                self?.perform(message.recovery, retry: retry)
             })
         case .silent:
             break
@@ -105,12 +117,12 @@ public final class StandardErrorPresenter: ErrorPresenting {
         feedback.toast(model, near: anchor, action: action)
     }
 
-    private func perform(_ recovery: RecoveryAction?) {
+    private func perform(_ recovery: RecoveryAction?, retry: (() -> Void)?) {
         guard let recovery else { return }
         switch recovery {
         case .openSystemSettings(let pane): permissions.openSystemSettings(pane)
         case .route(let route): router?.route(route)
-        case .retry: onRetry?()
+        case .retry: retry?()
         case .none: break
         }
     }

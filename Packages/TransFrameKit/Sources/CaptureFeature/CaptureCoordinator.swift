@@ -73,7 +73,9 @@ public final class CaptureCoordinator: CaptureCoordinating {
                     controller.present()
                 }
             } catch {
-                deps.workspace.errors.present(error, near: nil)
+                deps.workspace.errors.present(error, near: nil) { [weak self] in
+                    self?.start(intent, trigger: trigger, at: .now)
+                }
             }
         }
     }

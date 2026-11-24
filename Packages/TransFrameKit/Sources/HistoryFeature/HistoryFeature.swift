@@ -280,9 +280,12 @@ private struct HistoryRow: View {
 @Observable
 final class ColorHistoryModel {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+    @ObservationIgnored private var pageTask: Task<Void, Never>?
+    @ObservationIgnored private var generation = 0
     var search = ""
     var favoritesOnly = false
     var entries: [HistoryEntry] = []
+    var hasMore = false
     var format: ColorCopyFormat = .hex
     var confirmingClear = false
     @ObservationIgnored let workflow: any HistoryWorkflow
@@ -299,17 +302,47 @@ final class ColorHistoryModel {
         l10n = localizer
     }
 
-    func reload() {
+    private var query: HistoryQuery {
         var q = HistoryQuery.colors
         q.text = search
         q.favoritesOnly = favoritesOnly
+        return q
+    }
+
+    func reload() {
+        generation += 1
+        let current = generation, q = query
         loadTask?.cancel()
+        pageTask?.cancel()
+        pageTask = nil
         loadTask = Task {
             do {
                 let page = try await workflow.page(q)
-                if !Task.isCancelled { entries = page.entries }
+                guard generation == current, !Task.isCancelled else { return }
+                entries = page.entries
+                hasMore = page.hasMore
             } catch {
-                if !Task.isCancelled { errors.present(error, near: nil) }
+                if generation == current, !Task.isCancelled { errors.present(error, near: nil) }
+            }
+        }
+    }
+
+    /// Older colors load as the grid scrolls to its end, whatever the history limit is (COL-05).
+    func loadMore() {
+        guard hasMore, pageTask == nil else { return }
+        var q = query
+        q.offset = entries.count
+        let current = generation
+        pageTask = Task {
+            defer { if generation == current { pageTask = nil } }
+            do {
+                let page = try await workflow.page(q)
+                guard generation == current, !Task.isCancelled else { return }
+                let present = Set(entries.map(\.id))
+                entries += page.entries.filter { !present.contains($0.id) }
+                hasMore = page.hasMore
+            } catch {
+                if generation == current, !Task.isCancelled { errors.present(error, near: nil) }
             }
         }
     }
@@ -358,7 +391,10 @@ struct ColorHistoryView: View {
             } else {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: DS.Size.gridSwatch + DS.Space.s4))], spacing: DS.Space.s3) {
-                        ForEach(model.entries) { entry in ColorCell(entry: entry, model: model) }
+                        ForEach(model.entries) { entry in
+                            ColorCell(entry: entry, model: model)
+                                .onAppear { if entry.id == model.entries.last?.id { model.loadMore() } }
+                        }
                     }
                     .padding(DS.Space.s3)
                 }

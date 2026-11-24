@@ -12,14 +12,16 @@ mkdir -p "$ROOT/build"
 package_tests() {
   local log="$ROOT/build/package-tests.log" status=0
   # Watchdog: a hung test must not eat the CI job. On timeout the tests that started but never finished are listed.
+  # script(1) gives the run a pseudo-terminal, so output reaches the log line by line (a plain file is block-buffered and
+  # loses the tail when the watchdog fires); it exits with the command's status.
   (cd "$PKG" && perl -e 'alarm shift; exec { $ARGV[0] } @ARGV or die "exec: $!"' "${TF_TEST_TIMEOUT:-1500}" \
-    swift test --enable-code-coverage --parallel) > "$log" 2>&1 || status=$?
+    script -q "$log" swift test --enable-code-coverage --parallel) > /dev/null 2>&1 || status=$?
   grep -E "✘|error:|Test run|passed after|failed after" "$log" | tail -40
   if [[ $status -eq 142 ]]; then
     echo "--- package tests timed out after ${TF_TEST_TIMEOUT:-1500} s; started but never finished: ---"
     python3 - "$log" <<'PY'
 import re, sys
-text = open(sys.argv[1], errors="replace").read()
+text = re.sub(r"\x1b\[[0-9;]*m", "", open(sys.argv[1], errors="replace").read())
 clean = lambda name: re.sub(r" with \d+ test cases?$", "", name)
 started = {clean(n) for n in re.findall(r"◇ (?:Test|Suite) (.+?) started\.", text)}
 finished = {clean(n) for n in re.findall(r"[✔✘] (?:Test|Suite) (.+?) (?:passed|failed)", text)}

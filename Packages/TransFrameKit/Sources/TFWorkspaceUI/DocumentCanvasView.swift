@@ -30,6 +30,9 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
     public var onEscapeUnhandled: (() -> Void)?
     /// Host shortcuts get the first look at keys (capture overlay actions), then the annotation editor.
     public var keyHandler: ((NSEvent) -> Bool)?
+    /// A mirror (the same document on another display) leaves settling pending edits and inline text input to the primary
+    /// canvas, so neither happens twice.
+    public var isMirror = false
 
     public init(render: any RenderWorkflow, sessionID: SessionID, editor: AnnotationEditor?, purpose: RenderPurpose = .screen) {
         self.render = render
@@ -45,7 +48,14 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
         imageLayer.magnificationFilter = .nearest
         imageLayer.minificationFilter = .trilinear
         setAccessibilityRole(.image)
-        editor?.onDisplayChange = { [weak self] change in self?.editorChanged(change) }
+        // Several canvases can show one editor (a selection across displays): each joins the notification chain.
+        if let editor {
+            let previous = editor.onDisplayChange
+            editor.onDisplayChange = { [weak self] change in
+                previous?(change)
+                self?.editorChanged(change)
+            }
+        }
     }
 
     @available(*, unavailable)
@@ -83,7 +93,7 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
     private func editorChanged(_ change: DisplayChange) {
         if change.contains(.render) { scheduleRender() }
         if change.contains(.overlay) { invalidateOverlay() }
-        if change.contains(.text) { syncTextField() }
+        if change.contains(.text), !isMirror { syncTextField() }
         if change.contains(.cursor) { window?.invalidateCursorRects(for: self) }
     }
 
@@ -146,7 +156,7 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
         CATransaction.commit()
         if case .surface(let old)? = displayedContents { surfaces.recycle(old) }
         displayedContents = contents
-        editor?.settle(throughRevision: key.revision)
+        if !isMirror { editor?.settle(throughRevision: key.revision) }
         invalidateOverlay(all: true)
         onRender?(plan)
         scheduleRender()

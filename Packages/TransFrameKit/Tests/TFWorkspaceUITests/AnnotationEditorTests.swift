@@ -257,3 +257,37 @@ struct OverlayTrimmingTests {
         #expect(DocumentCanvasView.trimmed(stroke, to: DocumentRect(x: 0, y: 0, width: 400, height: 300)) == stroke)
     }
 }
+
+/// A selection across displays shows one document on several canvases driven by one editor (review: Codex P2).
+@Suite("Mirrored canvases")
+@MainActor
+struct MirroredCanvasTests {
+    @Test func everyCanvasDrawsTheEditsAndOnlyThePrimaryTakesText() async throws {
+        let h = await CanvasHarness()
+        defer { h.tearDown() }
+        let mirror = DocumentCanvasView(render: h.render, sessionID: h.id, editor: h.editor)
+        mirror.isMirror = true
+        mirror.frame = h.canvas.frame
+        h.window.contentView?.addSubview(mirror)
+        mirror.update(try await h.session())
+        h.observer.onChange = { [weak h, weak mirror] session in
+            h?.canvas.update(session)
+            mirror?.update(session)
+        }
+        for _ in 0..<200 where mirror.plan == nil { try await Task.sleep(for: .milliseconds(5)) }
+        mirror.overlayDidDraw()
+        h.editor.tool = .rectangle
+        h.down(CGPoint(x: 100, y: 100))
+        h.drag(CGPoint(x: 160, y: 140))
+        #expect(!mirror.pendingOverlayDirty.isNull, "the mirror redraws the live draft too")
+        h.up(CGPoint(x: 160, y: 140))
+        let s = try await h.waitForRevision(1)
+        for _ in 0..<200 where mirror.plan?.editRevision != s.editRevision { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(mirror.plan?.editRevision == s.editRevision)
+        h.editor.tool = .text
+        h.down(CGPoint(x: 300, y: 300))
+        #expect(h.canvas.subviews.contains { $0 is NSTextField })
+        #expect(!mirror.subviews.contains { $0 is NSTextField })
+        h.editor.cancelText()
+    }
+}

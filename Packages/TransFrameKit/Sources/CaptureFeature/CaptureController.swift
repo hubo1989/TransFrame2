@@ -19,7 +19,9 @@ final class CaptureController: OverlayViewDelegate {
     private var toolbarPanel: NSPanel?
     private var drawerPanel: NSPanel?
     private(set) var sessionID: SessionID?
-    private var canvas: DocumentCanvasView?
+    /// The primary canvas first, then mirrors on the other displays the selection touches.
+    private var canvases: [DocumentCanvasView] = []
+    private var canvas: DocumentCanvasView? { canvases.first }
     private(set) var editor: AnnotationEditor?
     private var observer: DocumentObserver?
     private(set) var results: ResultsModel?
@@ -250,31 +252,36 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     private func attachCanvas(_ id: SessionID) {
-        // The canvas lives on the display holding most of the selection; other displays keep showing the identical frozen
-        // pixels (known limitation: live annotations are previewed on that one display only).
-        guard let rect = selection.rect, let overlay = overlays.max(by: {
-            ($0.display.frame.intersection(rect)?.area ?? 0) < ($1.display.frame.intersection(rect)?.area ?? 0)
-        }) else { return }
+        // One canvas per display the selection touches, all driving the same editor: annotations draw and can be edited on
+        // every display. The display holding most of the selection hosts the primary canvas (text input, settling).
+        guard let rect = selection.rect else { return }
+        let touched = overlays.filter { ($0.display.frame.intersection(rect)?.area ?? 0) > 0 }
+            .sorted { ($0.display.frame.intersection(rect)?.area ?? 0) > ($1.display.frame.intersection(rect)?.area ?? 0) }
+        guard !touched.isEmpty else { return }
         let editor = services.makeEditor(for: id)
-        let canvas = DocumentCanvasView(render: services.render, sessionID: id, editor: editor)
-        canvas.frame = overlay.local(rect)
-        canvas.onEscapeUnhandled = { [weak self] in self?.cancel() }
-        canvas.keyHandler = { [weak self] event in self?.overlayKeyDown(event) ?? false }
-        let selectionFrame = canvas.frame
-        canvas.onRender = { [weak canvas] plan in
-            // Padding (beautify) extends outside the selection so the content stays aligned with the frozen pixels.
-            let scale = plan.scale
-            canvas?.frame = CGRect(
-                x: selectionFrame.minX - plan.contentFrame.minX / scale, y: selectionFrame.minY - plan.contentFrame.minY / scale,
-                width: Double(plan.canvas.width) / scale, height: Double(plan.canvas.height) / scale
-            )
+        let canvases = touched.enumerated().map { index, overlay -> DocumentCanvasView in
+            let canvas = DocumentCanvasView(render: services.render, sessionID: id, editor: editor)
+            canvas.isMirror = index > 0
+            canvas.frame = overlay.local(rect)
+            canvas.onEscapeUnhandled = { [weak self] in self?.cancel() }
+            canvas.keyHandler = { [weak self] event in self?.overlayKeyDown(event) ?? false }
+            let selectionFrame = canvas.frame
+            canvas.onRender = { [weak canvas] plan in
+                // Padding (beautify) extends outside the selection so the content stays aligned with the frozen pixels.
+                let scale = plan.scale
+                canvas?.frame = CGRect(
+                    x: selectionFrame.minX - plan.contentFrame.minX / scale, y: selectionFrame.minY - plan.contentFrame.minY / scale,
+                    width: Double(plan.canvas.width) / scale, height: Double(plan.canvas.height) / scale
+                )
+            }
+            overlay.addSubview(canvas)
+            return canvas
         }
-        overlay.addSubview(canvas)
         let observer = DocumentObserver(sessions: services.sessions, sessionID: id)
-        observer.onChange = { [weak self, weak canvas] session in
-            canvas?.update(session)
-            self?.results?.update(session)
+        observer.onChange = { [weak self] session in
             guard let self else { return }
+            for canvas in self.canvases { canvas.update(session) }
+            self.results?.update(session)
             let locked = !session.annotations.isEmpty || session.analysis != nil
             let lockChanged = self.selection.isLocked != locked
             if lockChanged { self.selection.isLocked = locked }
@@ -283,7 +290,7 @@ final class CaptureController: OverlayViewDelegate {
         }
         observer.start()
         self.editor = editor
-        self.canvas = canvas
+        self.canvases = canvases
         self.observer = observer
         toolbarModel.editor = editor
         toolbarModel.observer = observer
@@ -291,9 +298,9 @@ final class CaptureController: OverlayViewDelegate {
 
     private func discardSession() {
         guard let id = sessionID else { return }
-        canvas?.removeFromSuperview()
+        for canvas in canvases { canvas.removeFromSuperview() }
         observer?.stop()
-        canvas = nil
+        canvases = []
         editor = nil
         observer = nil
         results = nil
@@ -324,25 +331,25 @@ final class CaptureController: OverlayViewDelegate {
         case .cancel: cancel()
         case .tool(let tool): selectTool(tool)
         case .copy:
-            run { id in
+            run(retry: .copy) { id in
                 try await self.services.export.copyImage(of: id, settings: settings)
                 self.services.errors.toast(ToastModel(message: self.l10n[.feedbackCopied]), near: nil)
                 self.finish()
             }
         case .save:
-            run { id in
+            run(retry: .save) { id in
                 let receipt = try await self.services.export.save(id, as: nil, settings: settings)
                 self.services.errors.toast(ToastModel(message: self.l10n.string(.feedbackSaved, receipt.url.lastPathComponent)), near: nil)
                 self.finish()
             }
         case .pin:
-            run { id in
+            run(retry: .pin) { id in
                 if settings.general.playsSound { await self.deps.sound.play(.capture) }
                 self.services.router.route(.pin(id))
                 self.finish()
             }
         case .upload:
-            run { id in
+            run(retry: .upload) { id in
                 let receipt = try await self.services.export.upload(id, settings: settings)
                 self.services.errors.toast(ToastModel(message: self.l10n.string(.feedbackUploaded, receipt.url.absoluteString)), near: nil)
                 self.finish()
@@ -350,7 +357,7 @@ final class CaptureController: OverlayViewDelegate {
         case .recognize: openDrawer { $0.recognize() }
         case .translate: openDrawer { $0.translate() }
         case .smartMosaic:
-            run(finishes: false) { id in
+            run(finishes: false, retry: .smartMosaic) { id in
                 self.toolbarModel.scanning = true
                 defer { self.toolbarModel.scanning = false }
                 try await self.services.smartMosaic(id, on: self.canvas, near: self.selectionAnchor)
@@ -377,12 +384,16 @@ final class CaptureController: OverlayViewDelegate {
         return CGPoint(x: cocoa.midX, y: cocoa.midY)
     }
 
-    private func run(finishes: Bool = true, _ body: @escaping (SessionID) async throws -> Void) {
+    private func run(finishes: Bool = true, retry action: Action? = nil, _ body: @escaping (SessionID) async throws -> Void) {
         busy = true
         Task {
             defer { busy = false }
             guard let id = await ensureSession() else { return }
-            do { try await body(id) } catch { services.errors.present(error, near: nil) }
+            do {
+                try await body(id)
+            } catch {
+                services.errors.present(error, near: nil, retry: action.map { action in { [weak self] in self?.perform(action) } })
+            }
         }
     }
 

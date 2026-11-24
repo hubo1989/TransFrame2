@@ -93,11 +93,18 @@ public final class AccessibilityTextService: SelectedTextCapturing, TextInsertin
         let before = await pasteboard.changeCount()
         try Self.verify(pid, element: element)
         try Self.postKey(8, to: pid)
-        for _ in 0..<20 {
-            do { try await Task.sleep(for: .milliseconds(25)) } catch { throw .cancelled }
-            try Self.verify(pid, element: element)
-            if let copy = pasteboard.takeTemporaryCopy(after: before, restoring: snapshot) { return copy }
+        do throws(AppError) {
+            for _ in 0..<20 {
+                do { try await Task.sleep(for: .milliseconds(25)) } catch { throw AppError.cancelled }
+                try Self.verify(pid, element: element)
+                if let copy = pasteboard.takeTemporaryCopy(after: before, restoring: snapshot) { return copy }
+            }
+        } catch {
+            // The target may already have copied: the user's clipboard comes back on every early exit too.
+            pasteboard.discardTemporaryCopy(after: before, restoring: snapshot)
+            throw error
         }
+        pasteboard.discardTemporaryCopy(after: before, restoring: snapshot)
         return nil
     }
 

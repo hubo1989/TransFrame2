@@ -70,6 +70,13 @@ public final class SystemPasteboard: PasteboardAccessing {
         return string
     }
 
+    /// Puts the user's clipboard back when a synthetic copy changed it but its text is no longer wanted (aborted or late).
+    func discardTemporaryCopy(after baseline: Int, restoring snapshot: PasteboardSnapshot) {
+        let generation = pasteboard.changeCount
+        guard generation != baseline else { return }
+        restore(snapshot, ifCurrent: generation)
+    }
+
     private func restoreItems(_ snapshot: PasteboardSnapshot) {
         pasteboard.clearContents()
         guard !snapshot.items.isEmpty else { return }

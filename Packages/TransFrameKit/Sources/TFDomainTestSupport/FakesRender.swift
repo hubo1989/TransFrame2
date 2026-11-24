@@ -94,7 +94,8 @@ public final class FakeHistoryWorkflow: HistoryWorkflow, @unchecked Sendable {
     public init() {}
     public func page(_ query: HistoryQuery) async throws(AppError) -> HistoryPage {
         let entries = recorded.calls.filter { query.matches($0) }
-        return HistoryPage(entries: entries, totalCount: entries.count, hasMore: false)
+        let page = Array(entries.dropFirst(query.offset).prefix(query.limit))
+        return HistoryPage(entries: page, totalCount: entries.count, hasMore: query.offset + page.count < entries.count)
     }
     public func search(semantic text: String, query: HistoryQuery, limit: Int) async throws(AppError) -> HistoryPage { try await page(query) }
     public func setFavorite(_ id: HistoryEntryID, _ on: Bool) async throws(AppError) {}
