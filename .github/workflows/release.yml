@@ -158,8 +158,7 @@ jobs:
           # Notes: the CHANGELOG section for this version ("## 0.0.1 — date" up to the next "## ").
           awk -v v="$VERSION" '/^## / { if (found) exit; found = index($0, "## " v) == 1; next } found' CHANGELOG.md > build/notes.md
           [ -s build/notes.md ] || { echo "CHANGELOG.md has no section for $VERSION"; exit 1; }
-          PRERELEASE=""
-          case "$VERSION" in 0.*|*-*) PRERELEASE="--prerelease" ;; esac
+          # Always "latest": the app's feed is releases/latest/download/appcast.xml, which skips pre-releases.
           gh release create "$TAG" "build/TransFrame-2-$VERSION.dmg" build/appcast.xml --title "TransFrame 2 $VERSION" \
-            --notes-file build/notes.md --verify-tag $PRERELEASE \
+            --notes-file build/notes.md --verify-tag --latest \
             || gh release upload "$TAG" "build/TransFrame-2-$VERSION.dmg" build/appcast.xml --clobber

@@ -265,3 +265,7 @@
   CI arm64 (3 cores) wedged the parallel Swift Testing run (no test finished, root cause not isolated); test.sh now runs
   serially when CI is set, under a 25-min watchdog with script(1) line-buffered logs (lists unfinished tests) + log artifacts.
   gh API is flaky here (EOF): retry loops; job logs via curl with `gh auth token`.
+- v0.0.1 released 2026-11-24 (https://github.com/hubo1989/TransFrame2/releases/tag/v0.0.1): notarized DMG + appcast.
+  First notarization was Invalid (Sparkle helpers ad hoc + injected get-task-allow) → PR #2 signs inside out in release.yml.
+  Releases must be "latest", never pre-release (feed = releases/latest/download/appcast.xml) → PR #3.
+  Re-run a release for an existing tag: `gh workflow run release.yml --ref main -f tag=vX`.

@@ -106,7 +106,8 @@ on macOS 15, a universal Release build, and the package tests plus smoke on Inte
 
 Maintainers release by pushing a tag `v0.*` or `v2.*` on `main`. `.github/workflows/release.yml` then runs the gates, builds a
 universal app signed with the Developer ID and Hardened Runtime, packs and notarizes a DMG, signs the Sparkle appcast and
-publishes both to GitHub Releases (`0.x` versions as pre-releases). Release notes come from the matching section of
+publishes both to GitHub Releases as the latest release (never a pre-release: the app's update feed is
+`releases/latest/download/appcast.xml`, which skips pre-releases). Release notes come from the matching section of
 `CHANGELOG.md`.
 
 Repository configuration it needs (one-time; `Scripts/setup-release-secrets.sh` sets all of them with the GitHub CLI):
