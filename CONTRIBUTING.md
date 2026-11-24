@@ -117,8 +117,14 @@ repository, the equivalent command for version `0.0.002` is:
 gh release edit v0.0.002 --prerelease=false --latest
 ```
 
-The stable appcast at `releases/latest/download/appcast.xml` will then point to the same DMG that passed testing. If the
-release needs a code change, build a new version and tag so the tested assets always match the published assets.
+The stable appcast at `releases/latest/download/appcast.xml` will then point to the same DMG that passed testing. If testing
+finds an issue, tag the corrected commit on `main` with a fresh candidate tag such as `v0.0.002-rc.1`. The app and appcast
+use version `0.0.002` with the new build number. Promote the candidate that passed testing and set its release title to the
+base version. Each tag keeps its own signed assets.
+
+```bash
+gh release edit v0.0.002-rc.1 --title "TransFrame 2 0.0.002" --prerelease=false --latest
+```
 
 Repository configuration it needs (one-time; `Scripts/setup-release-secrets.sh` sets all of them with the GitHub CLI):
 
