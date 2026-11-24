@@ -74,7 +74,8 @@ final class CaptureController: OverlayViewDelegate {
         }
         NSApp.activate()
         for window in windows { window.orderFrontRegardless() }
-        let pointerWindow = zip(overlays, windows).first { $0.0.display.frame.contains(frames.request.pointer) }?.1 ?? windows.first
+        selection.pointerMoved(to: deps.topology.pointerLocation())
+        let pointerWindow = zip(overlays, windows).first { $0.0.display.frame.contains(selection.pointer) }?.1 ?? windows.first
         pointerWindow?.makeKey()
         if let pointerWindow { pointerWindow.makeFirstResponder(pointerWindow.contentView) }
         refresh()

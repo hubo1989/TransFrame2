@@ -95,6 +95,22 @@ struct WindowSnapTests {
         #expect(model.doubleClickTarget(at: pointer)?.1 == .window(WindowID(20)))
     }
 
+    @Test func aCycledWindowSurvivesLateBlocksAndSmallPointerMovement() {
+        let pointer = QuartzPoint(x: 350, y: 250)
+        let model = SelectionModel(frames: frames(pointer: pointer))
+        model.cycleCandidates()
+        let block = SelectionCandidate(kind: .paragraph, rect: QuartzRect(x: 330, y: 230, width: 40, height: 40), score: 0.9)
+        model.setBlocks([block])
+
+        let nearby = QuartzPoint(x: 351, y: 251)
+        #expect(model.hovered?.source == .window(WindowID(20)))
+        #expect(model.doubleClickTarget(at: nearby)?.1 == .window(WindowID(20)))
+        model.pointerMoved(to: nearby)
+        #expect(model.hovered?.source == .window(WindowID(20)))
+        model.cycleCandidates()
+        #expect(model.hovered?.source == .window(WindowID(10)))
+    }
+
     @Test func hoverRevealsTheWindowThroughTheScrim() throws {
         let pointer = QuartzPoint(x: 350, y: 250)
         let frozen = frames(pointer: pointer)

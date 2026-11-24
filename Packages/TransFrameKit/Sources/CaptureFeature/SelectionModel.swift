@@ -45,8 +45,7 @@ public final class SelectionModel {
     @ObservationIgnored private var dragStart: QuartzPoint?
     @ObservationIgnored private var moveOrigin: (pointer: QuartzPoint, rect: QuartzRect)?
     @ObservationIgnored private var resizing: (handle: SelectionHandle, rect: QuartzRect)?
-    @ObservationIgnored private var cycleIndex = 0
-    @ObservationIgnored private var cyclePoint: QuartzPoint?
+    @ObservationIgnored private var cycledCandidate: (point: QuartzPoint, kind: SnapCandidate.Kind)?
 
     public static let dragThreshold = 3.0
 
@@ -81,8 +80,14 @@ public final class SelectionModel {
     private func updateHover() {
         guard phase == .choosing, snapsToWindows else { hovered = nil; return }
         let list = candidates(at: pointer)
-        if cyclePoint.map({ abs($0.x - pointer.x) > 2 || abs($0.y - pointer.y) > 2 }) ?? true { cycleIndex = 0; cyclePoint = nil }
-        hovered = list.isEmpty ? nil : list[cycleIndex % list.count]
+        let index = cycledIndex(in: list, at: pointer)
+        if index == nil { cycledCandidate = nil }
+        hovered = index.map { list[$0] } ?? list.first
+    }
+
+    private func cycledIndex(in candidates: [SnapCandidate], at point: QuartzPoint) -> Int? {
+        guard let cycledCandidate, abs(cycledCandidate.point.x - point.x) <= 2, abs(cycledCandidate.point.y - point.y) <= 2 else { return nil }
+        return candidates.firstIndex { $0.kind == cycledCandidate.kind }
     }
 
     /// Tab cycles overlapping candidates under the pointer (CAP-06).
@@ -90,9 +95,10 @@ public final class SelectionModel {
         guard phase == .choosing, snapsToWindows else { return }
         let list = candidates(at: pointer)
         guard list.count > 1 else { return }
-        cycleIndex = (cycleIndex + 1) % list.count
-        cyclePoint = pointer
-        hovered = list[cycleIndex]
+        let current = cycledIndex(in: list, at: pointer) ?? 0
+        let next = list[(current + 1) % list.count]
+        cycledCandidate = (pointer, next.kind)
+        hovered = next
     }
 
     /// Space toggles window snapping and free selection (CAP-07).
@@ -202,8 +208,11 @@ public final class SelectionModel {
         if phase == .selected, let rect {
             return rect.contains(point) ? (rect, source) : nil
         }
-        if snapsToWindows, let candidate = point == pointer ? hovered : candidates(at: point).first {
-            return (candidate.rect, candidate.source)
+        if snapsToWindows {
+            let list = candidates(at: point)
+            if let candidate = cycledIndex(in: list, at: point).map({ list[$0] }) ?? list.first {
+                return (candidate.rect, candidate.source)
+            }
         }
         guard let display = topology.display(containing: point) else { return nil }
         return (display.frame, .display(display.id))
