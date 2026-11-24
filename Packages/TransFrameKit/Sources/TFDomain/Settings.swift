@@ -28,7 +28,7 @@ public struct GeneralSettings: Sendable, Codable, Equatable {
     /// nil means follow the system (L10N-02).
     public var interfaceLanguage: String?
     public var playsSound = true
-    /// Capture highlights the window under the pointer; a click selects it and a double click captures it (CAP-05, CAP-13).
+    /// Capture highlights the window under the pointer for click selection and double-click save (CAP-05, CAP-13).
     public var detectsWindows = true
 
     public init() {}

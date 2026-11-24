@@ -24,6 +24,22 @@ final class OverlayWindow: NSPanel {
     override var canBecomeMain: Bool { true }
 }
 
+/// Panels that can take keyboard focus (drawer text, toolbar menus).
+final class KeyPanel: NSPanel {
+    init(above overlayLevel: NSWindow.Level) {
+        super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+        level = NSWindow.Level(rawValue: overlayLevel.rawValue + 1)
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = false
+        isReleasedWhenClosed = false
+        hidesOnDeactivate = false
+    }
+
+    override var canBecomeKey: Bool { true }
+}
+
 /// Events from an overlay view, in Quartz global points.
 @MainActor
 protocol OverlayViewDelegate: AnyObject {

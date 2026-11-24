@@ -17,7 +17,6 @@ final class ToolbarModel {
     var uploadEnabled = false
     var pipelineEnabled = false
     var scrollEnabled = false
-    var scrollMode = false
     var scrollRunning = false
     var scrollHeight = 0
     @ObservationIgnored var onFinishScroll: (() -> Void)?

@@ -13,6 +13,7 @@ final class CaptureController: OverlayViewDelegate {
     let selection: SelectionModel
     private var frames: FrozenFrameSet?
     private let deps: CaptureDependencies
+    private let doubleClickInterval: Duration
     private let onFinish: () -> Void
     private var overlays: [OverlayView] = []
     private var windows: [OverlayWindow] = []
@@ -31,6 +32,7 @@ final class CaptureController: OverlayViewDelegate {
     private let owner: SessionOwner
     let toolbarModel = ToolbarModel()
     private var creating: Task<SessionID?, Never>?
+    private var pendingSelectionAction: Task<Void, Never>?
     private var finished = false
     /// Last toolbar placement; the panel is only moved when the selection or the toolbar size changes.
     private var toolbarPlacement: ToolbarPlacement?
@@ -42,9 +44,13 @@ final class CaptureController: OverlayViewDelegate {
         let hasDrawer: Bool
     }
 
-    init(frames: FrozenFrameSet, deps: CaptureDependencies, onFinish: @escaping () -> Void) {
+    init(
+        frames: FrozenFrameSet, deps: CaptureDependencies,
+        doubleClickInterval: Duration = .seconds(NSEvent.doubleClickInterval), onFinish: @escaping () -> Void
+    ) {
         self.frames = frames
         self.deps = deps
+        self.doubleClickInterval = doubleClickInterval
         self.onFinish = onFinish
         selection = SelectionModel(frames: frames, snapsToWindows: deps.workspace.settings.general.detectsWindows)
         owner = .capture(frames.request.id)
@@ -94,7 +100,6 @@ final class CaptureController: OverlayViewDelegate {
                 self.refresh()
             }
         }
-        if frames.request.intent == .scroll { toolbarModel.scrollMode = true }
     }
 
     private func recordFrozenVisible(_ frames: FrozenFrameSet) {
@@ -105,6 +110,7 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     private func refresh() {
+        guard !overlays.isEmpty else { return }
         let showHandles = selection.phase == .selected && !selection.isLocked
         let showMagnifier = selection.phase != .selected
         let hex = showMagnifier ? overlays.lazy.compactMap { $0.hex(at: self.selection.pointer) }.first : nil
@@ -152,11 +158,28 @@ final class CaptureController: OverlayViewDelegate {
     func overlayMouseUp(_ point: QuartzPoint) {
         guard !busy, !finished else { return }
         let outsideClick = selection.isOutsideClick(at: point)
+        let wasDragging = selection.phase == .dragging
         let created = selection.mouseUp(at: point)
         if outsideClick { cancel(); return }
         refresh()
-        if created, frames?.request.intent == .regionThenTranslate { perform(.translate) }
-        if created, toolbarModel.scrollMode { perform(.scroll) }
+        if created { performSelectionAction(waitForDoubleClick: !wasDragging) }
+    }
+
+    private func performSelectionAction(waitForDoubleClick: Bool) {
+        let action: Action
+        switch frames?.request.intent {
+        case .regionThenTranslate: action = .translate
+        case .scroll: action = .scroll
+        default: return
+        }
+        guard waitForDoubleClick else { perform(action); return }
+        pendingSelectionAction?.cancel()
+        let geometry = selection.geometry()
+        pendingSelectionAction = Task { [weak self, doubleClickInterval] in
+            do { try await Task.sleep(for: doubleClickInterval) } catch { return }
+            guard let self, !Task.isCancelled, self.selection.phase == .selected, self.selection.geometry() == geometry else { return }
+            self.perform(action)
+        }
     }
 
     func overlayRightMouseDown() { cancel() }
@@ -340,7 +363,9 @@ extension CaptureController {
     enum Action { case copy, save, pin, upload, recognize, translate, smartMosaic, beautify, cancel, scroll, tool(AnnotationTool) }
 
     func perform(_ action: Action) {
-        guard !busy else { return }
+        guard !busy, !finished else { return }
+        pendingSelectionAction?.cancel()
+        pendingSelectionAction = nil
         let settings = services.settings.snapshot
         switch action {
         case .cancel: cancel()
@@ -426,7 +451,7 @@ extension CaptureController {
     }
 
     private func showDrawerPanel(_ model: ResultsModel) {
-        let panel = drawerPanel ?? Self.makePanel(level: windows.first?.level ?? .floating)
+        let panel = drawerPanel ?? KeyPanel(above: windows.first?.level ?? .floating)
         panel.contentView = NSHostingView(rootView: ResultsDrawerView(model: model) { [weak self] in self?.closeDrawer() }.localized(l10n))
         drawerPanel = panel
         toolbarPlacement = nil
@@ -481,7 +506,7 @@ extension CaptureController {
     }
 
     private func makeToolbarPanel() -> NSPanel {
-        let panel = Self.makePanel(level: windows.first?.level ?? .floating)
+        let panel = KeyPanel(above: windows.first?.level ?? .floating)
         toolbarModel.uploadEnabled = services.settings.imageHost.provider != nil
         toolbarModel.pipelineEnabled = services.pipeline != nil
         toolbarModel.scrollEnabled = deps.scroll != nil
@@ -495,18 +520,6 @@ extension CaptureController {
         hosting.sizingOptions = [.intrinsicContentSize]
         panel.contentView = hosting
         toolbarPanel = panel
-        return panel
-    }
-
-    static func makePanel(level: NSWindow.Level) -> NSPanel {
-        let panel = KeyPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
-        panel.level = NSWindow.Level(rawValue: level.rawValue + 1)
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.isReleasedWhenClosed = false
-        panel.hidesOnDeactivate = false
         return panel
     }
 
@@ -557,6 +570,8 @@ extension CaptureController {
     private func finish() {
         guard !finished else { return }
         finished = true
+        pendingSelectionAction?.cancel()
+        pendingSelectionAction = nil
         creating?.cancel()
         if let localEscapeMonitor { NSEvent.removeMonitor(localEscapeMonitor) }
         if let globalEscapeMonitor { NSEvent.removeMonitor(globalEscapeMonitor) }
@@ -581,9 +596,4 @@ extension CaptureController {
         sessionID = nil
         onFinish()
     }
-}
-
-/// Panels that can take keyboard focus (drawer text, toolbar menus).
-final class KeyPanel: NSPanel {
-    override var canBecomeKey: Bool { true }
 }

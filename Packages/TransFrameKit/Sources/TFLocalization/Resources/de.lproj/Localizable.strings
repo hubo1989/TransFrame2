@@ -427,7 +427,7 @@
 "settings.general.capture" = "Bildschirmfoto";
 "settings.general.choose" = "Auswählen…";
 "settings.general.detectWindows" = "Fenster automatisch erkennen";
-"settings.general.detectWindowsNote" = "Beim Auswählen wird das Fenster unter dem Zeiger hervorgehoben: Klicken wählt es aus, Doppelklicken nimmt es sofort auf. Tab wechselt zwischen überlappenden Fenstern, die Leertaste schaltet auf freie Auswahl um.";
+"settings.general.detectWindowsNote" = "Beim Auswählen wird das Fenster unter dem Zeiger hervorgehoben: Ein Klick wählt es aus, ein Doppelklick speichert den Screenshot. Tab wechselt zwischen überlappenden Fenstern, die Leertaste schaltet auf freie Auswahl um.";
 "settings.general.format" = "Bildformat";
 "settings.general.history" = "Verlauf";
 "settings.general.historyLimit" = "Maximal behalten";
