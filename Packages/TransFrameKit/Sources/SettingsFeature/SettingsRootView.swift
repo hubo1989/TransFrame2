@@ -120,6 +120,20 @@ struct GeneralPage: View {
                 }
                 Text(l10n[.settingsGeneralLanguageNote]).font(DS.Typography.caption).foregroundStyle(.secondary)
             }
+            Section(l10n[.settingsGeneralOverlay]) {
+                Picker(l10n[.settingsGeneralOverlayMode], selection: Binding(
+                    get: { current.presentation.automaticOverlay ? OverlayChoice.automatic : OverlayChoice(current.presentation.overlayMode) },
+                    set: { choice in
+                        current.presentation.automaticOverlay = choice == .automatic
+                        if let mode = choice.mode { current.presentation.overlayMode = mode }
+                    }
+                )) {
+                    Text(l10n[.settingsGeneralOverlayAutomatic]).tag(OverlayChoice.automatic)
+                    Text(l10n[.overlayBelowOriginal]).tag(OverlayChoice.below)
+                    Text(l10n[.overlayReplaceOriginal]).tag(OverlayChoice.replace)
+                }
+                Text(l10n[.settingsGeneralOverlayNote]).font(DS.Typography.caption).foregroundStyle(.secondary)
+            }
             Section(l10n[.settingsGeneralHistory]) {
                 Stepper(value: settings.history.limit, in: HistorySettings.limitRange, step: 50) {
                     LabeledContent(l10n[.settingsGeneralHistoryLimit]) {
@@ -337,6 +351,21 @@ struct TargetLanguagePicker: View {
             ForEach(TranslationLanguages.all, id: \.self) { code in
                 Text(verbatim: l10n.languageName(code.bcp47)).tag(TargetLanguage.specific(code))
             }
+        }
+    }
+}
+
+/// Settings picker values for the default on-image mode.
+enum OverlayChoice: Hashable {
+    case automatic, below, replace
+
+    init(_ mode: OverlayMode) { self = mode == .replaceOriginal ? .replace : .below }
+
+    var mode: OverlayMode? {
+        switch self {
+        case .automatic: nil
+        case .below: .belowOriginal
+        case .replace: .replaceOriginal
         }
     }
 }

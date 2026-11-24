@@ -417,6 +417,10 @@
 "settings.general.language" = "界面语言";
 "settings.general.languageNote" = "文件对话框、更新窗口等系统界面仍跟随系统语言。";
 "settings.general.languageSystem" = "跟随系统";
+"settings.general.overlay" = "图上译文";
+"settings.general.overlayAutomatic" = "自动";
+"settings.general.overlayMode" = "默认显示方式";
+"settings.general.overlayNote" = "自动：行距很紧的内容（终端、代码）直接覆盖原文，行间有空隙的内容显示在原文下方。放不下的译文会自动换到另一种位置。在结果抽屉里手动选择的方式只对当前截图生效。";
 "settings.general.permissions" = "权限";
 "settings.general.quality" = "质量";
 "settings.general.resetAll" = "恢复全部默认设置…";

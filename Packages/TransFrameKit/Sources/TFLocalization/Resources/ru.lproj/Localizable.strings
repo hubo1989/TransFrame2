@@ -417,6 +417,10 @@
 "settings.general.language" = "Язык";
 "settings.general.languageNote" = "Системные панели, такие как диалоги выбора файлов и окна обновлений, используют язык системы.";
 "settings.general.languageSystem" = "Системный";
+"settings.general.overlay" = "Перевод на изображении";
+"settings.general.overlayAutomatic" = "Автоматически";
+"settings.general.overlayMode" = "Отображение по умолчанию";
+"settings.general.overlayNote" = "Автоматически: плотные строки (терминал, код) заменяются переводом, текст с интервалами показывается под оригиналом. То, что не помещается, переносится в другое положение. Выбор в панели результатов действует для этого снимка.";
 "settings.general.permissions" = "Разрешения";
 "settings.general.quality" = "Качество";
 "settings.general.resetAll" = "Восстановить настройки по умолчанию…";

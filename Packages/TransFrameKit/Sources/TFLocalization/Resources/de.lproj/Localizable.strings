@@ -417,6 +417,10 @@
 "settings.general.language" = "Sprache";
 "settings.general.languageNote" = "Systemfenster wie Dateidialoge und Update-Fenster folgen der Systemsprache.";
 "settings.general.languageSystem" = "Systemstandard";
+"settings.general.overlay" = "Übersetzung im Bild";
+"settings.general.overlayAutomatic" = "Automatisch";
+"settings.general.overlayMode" = "Standarddarstellung";
+"settings.general.overlayNote" = "Automatisch ersetzt eng gesetzte Zeilen (Terminals, Code) und zeigt Text mit Zeilenabstand unter dem Original. Was nicht passt, wechselt an die andere Position. Eine Auswahl im Ergebnisbereich gilt für diesen Screenshot.";
 "settings.general.permissions" = "Berechtigungen";
 "settings.general.quality" = "Qualität";
 "settings.general.resetAll" = "Standardeinstellungen wiederherstellen…";

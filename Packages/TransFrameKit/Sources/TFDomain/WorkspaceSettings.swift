@@ -6,15 +6,18 @@ public struct PresentationSettings: Sendable, Codable, Equatable {
     public var schemaVersion = 1
     public var defaultDisplay: ResultDisplayMode = .inPlace
     public var overlayMode: OverlayMode = .belowOriginal
+    /// Choose the on-image mode from the layout (dense lines → replace, spaced lines → below); `overlayMode` applies when off.
+    public var automaticOverlay = true
 
     public init() {}
-    private enum CodingKeys: String, CodingKey { case schemaVersion, defaultDisplay, overlayMode }
+    private enum CodingKeys: String, CodingKey { case schemaVersion, defaultDisplay, overlayMode, automaticOverlay }
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = PresentationSettings()
         schemaVersion = c.value(.schemaVersion, default: d.schemaVersion)
         defaultDisplay = c.value(.defaultDisplay, default: d.defaultDisplay)
         overlayMode = c.value(.overlayMode, default: d.overlayMode)
+        automaticOverlay = c.value(.automaticOverlay, default: d.automaticOverlay)
     }
 }
 

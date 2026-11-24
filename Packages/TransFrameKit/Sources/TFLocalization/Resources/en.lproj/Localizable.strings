@@ -417,6 +417,10 @@
 "settings.general.language" = "Language";
 "settings.general.languageNote" = "System panels such as file dialogs and update windows follow the system language.";
 "settings.general.languageSystem" = "System Default";
+"settings.general.overlay" = "Translation on Images";
+"settings.general.overlayAutomatic" = "Automatic";
+"settings.general.overlayMode" = "Default display";
+"settings.general.overlayNote" = "Automatic replaces tightly stacked lines (terminals, code) and shows spaced text below the original. Text that doesn’t fit moves to the other position. A choice made in the results drawer applies to that screenshot.";
 "settings.general.permissions" = "Permissions";
 "settings.general.quality" = "Quality";
 "settings.general.resetAll" = "Restore Default Settings…";

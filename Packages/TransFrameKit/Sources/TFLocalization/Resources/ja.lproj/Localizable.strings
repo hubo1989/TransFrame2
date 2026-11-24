@@ -417,6 +417,10 @@
 "settings.general.language" = "言語";
 "settings.general.languageNote" = "ファイルダイアログやアップデートウィンドウなどのシステムパネルはシステム言語に従います。";
 "settings.general.languageSystem" = "システムに従う";
+"settings.general.overlay" = "画像上の訳文";
+"settings.general.overlayAutomatic" = "自動";
+"settings.general.overlayMode" = "既定の表示方法";
+"settings.general.overlayNote" = "自動：行間が詰まった内容（ターミナル、コード）は原文を置き換え、行間に余裕がある内容は原文の下に表示します。収まらない訳文はもう一方の位置に移ります。結果パネルで選んだ方法はそのスクリーンショットにのみ適用されます。";
 "settings.general.permissions" = "権限";
 "settings.general.quality" = "画質";
 "settings.general.resetAll" = "デフォルト設定に戻す…";

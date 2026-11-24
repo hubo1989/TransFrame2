@@ -26753,6 +26753,262 @@
         }
       }
     },
+    "settings.general.overlay": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation on Images"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图上译文"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetzung im Bild"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traducción en la imagen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction sur l’image"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduzione sull’immagine"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像上の訳文"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 위 번역"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tradução na imagem"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перевод на изображении"
+          }
+        }
+      }
+    },
+    "settings.general.overlayAutomatic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automático"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatique"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatico"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automático"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически"
+          }
+        }
+      }
+    },
+    "settings.general.overlayMode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default display"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认显示方式"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standarddarstellung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualización predeterminada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affichage par défaut"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualizzazione predefinita"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既定の表示方法"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 표시 방식"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exibição padrão"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отображение по умолчанию"
+          }
+        }
+      }
+    },
+    "settings.general.overlayNote": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic replaces tightly stacked lines (terminals, code) and shows spaced text below the original. Text that doesn’t fit moves to the other position. A choice made in the results drawer applies to that screenshot."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动：行距很紧的内容（终端、代码）直接覆盖原文，行间有空隙的内容显示在原文下方。放不下的译文会自动换到另一种位置。在结果抽屉里手动选择的方式只对当前截图生效。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch ersetzt eng gesetzte Zeilen (Terminals, Code) und zeigt Text mit Zeilenabstand unter dem Original. Was nicht passt, wechselt an die andere Position. Eine Auswahl im Ergebnisbereich gilt für diesen Screenshot."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automático reemplaza las líneas muy juntas (terminales, código) y muestra el texto espaciado debajo del original. Lo que no cabe pasa a la otra posición. Lo que elijas en el panel de resultados se aplica a esa captura."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatique remplace les lignes serrées (terminaux, code) et affiche le texte aéré sous l’original. Ce qui ne tient pas passe à l’autre position. Un choix fait dans le panneau des résultats s’applique à cette capture."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatico sostituisce le righe molto vicine (terminali, codice) e mostra il testo spaziato sotto l’originale. Ciò che non entra passa all’altra posizione. Una scelta fatta nel pannello dei risultati vale per quello screenshot."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動：行間が詰まった内容（ターミナル、コード）は原文を置き換え、行間に余裕がある内容は原文の下に表示します。収まらない訳文はもう一方の位置に移ります。結果パネルで選んだ方法はそのスクリーンショットにのみ適用されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동: 줄 간격이 좁은 내용(터미널, 코드)은 원문을 대체하고, 줄 사이에 여백이 있는 내용은 원문 아래에 표시합니다. 들어가지 않는 번역은 다른 위치로 옮겨집니다. 결과 패널에서 직접 고른 방식은 해당 스크린샷에만 적용됩니다."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automático substitui linhas muito próximas (terminais, código) e mostra texto espaçado abaixo do original. O que não cabe passa para a outra posição. Uma escolha feita no painel de resultados vale para aquela captura."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически: плотные строки (терминал, код) заменяются переводом, текст с интервалами показывается под оригиналом. То, что не помещается, переносится в другое положение. Выбор в панели результатов действует для этого снимка."
+          }
+        }
+      }
+    },
     "settings.general.permissions": {
       "localizations": {
         "en": {

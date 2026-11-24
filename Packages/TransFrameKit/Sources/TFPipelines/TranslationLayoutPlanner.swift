@@ -11,6 +11,8 @@ public struct TranslationLayoutPlanner: Sendable {
     public static let minimumPoints = 9.0
     public static let backdropAlpha = 0.88
     public static let replaceHeightTolerance = 1.15
+    /// Replacing text never shrinks below 75 % of the original; beyond that it moves below the line instead.
+    public static let replaceMinimumScale = 0.75
 
     public init(measurer: any TextMeasuring) {
         self.measurer = measurer
@@ -36,35 +38,68 @@ public struct TranslationLayoutPlanner: Sendable {
             let rtl = bilingual.to.isRightToLeft
             let alignment: RenderTextAlignment = rtl ? .trailing : (segment.style?.alignment ?? .leading)
             let monospaced = segment.style?.monospaced ?? false
-            switch mode {
-            case .belowOriginal:
-                let gap = max(2 * scale, 1)
-                let top = box.maxY + gap
-                let limit = nextObstacleTop(below: box, index: index, boxes: boxes, canvasBottom: canvas.maxY)
-                let width = min(max(box.width, estimate * 4), max(canvas.maxX - box.minX, box.width))
-                let available = CanvasRect(x: box.minX, y: top, width: width, height: max(limit - top, 0))
-                let decision = fit(text, in: available, estimate: estimate, floor: floor, allowGrowDown: true, monospaced: monospaced)
-                let backdropColor = (background ?? .white).withAlpha(background == nil ? Self.backdropAlpha : 1)
-                placements.append(TranslationPlacement(
-                    segment: segment.id, text: text,
-                    frame: decision.frame ?? available, fontSize: decision.fontSize, color: foreground,
-                    backdrop: .fill(backdropColor), backdropFrame: decision.frame?.insetBy(dx: -2 * scale, dy: -1 * scale),
-                    alignment: alignment, fit: decision.fit, isRightToLeft: rtl, monospaced: monospaced
-                ))
-            case .replaceOriginal:
-                // The translation takes the original's place: same background (opaque when sampled), vertically centred, and a
-                // single line may use the box's leading (15 %) so it keeps the original size instead of shrinking.
-                let decision = fit(text, in: box, estimate: estimate, floor: floor, allowGrowDown: false, monospaced: monospaced,
-                                   heightTolerance: Self.replaceHeightTolerance, centred: true)
-                let backdrop: Backdrop = background.map { .sampled($0.withAlpha(1)) } ?? .fill(RGBA.white.withAlpha(Self.backdropAlpha))
-                placements.append(TranslationPlacement(
-                    segment: segment.id, text: text, frame: decision.frame ?? box, fontSize: decision.fontSize, color: foreground,
-                    backdrop: backdrop, backdropFrame: decision.fit == .omitted ? nil : coverFrame(for: box, index: index, boxes: boxes, scale: scale),
-                    alignment: alignment, fit: decision.fit, isRightToLeft: rtl, monospaced: monospaced
-                ))
+            let context = PlacementContext(
+                segment: segment, text: text, box: box, index: index, boxes: boxes, canvas: canvas, scale: scale, estimate: estimate,
+                floor: floor, background: background, foreground: foreground, alignment: alignment, rtl: rtl, monospaced: monospaced
+            )
+            // Overflow (SPEC "译文过长"): replace → below the line → omitted; below → in place of the line → omitted.
+            let primary = mode == .replaceOriginal ? replacing(context) : below(context)
+            if primary.fit != .omitted {
+                placements.append(primary)
+            } else {
+                let fallback = mode == .replaceOriginal ? below(context) : replacing(context)
+                placements.append(fallback.fit != .omitted ? fallback : primary)
             }
         }
         return placements
+    }
+
+    struct PlacementContext {
+        let segment: TextSegment
+        let text: String
+        let box: CanvasRect
+        let index: Int
+        let boxes: [CanvasRect]
+        let canvas: CanvasRect
+        let scale: Double
+        let estimate: Double
+        let floor: Double
+        let background: RGBA?
+        let foreground: RGBA
+        let alignment: RenderTextAlignment
+        let rtl: Bool
+        let monospaced: Bool
+    }
+
+    /// Text in the space under the original line, up to the next line or the canvas edge.
+    func below(_ c: PlacementContext) -> TranslationPlacement {
+        let gap = max(2 * c.scale, 1)
+        let top = c.box.maxY + gap
+        let limit = nextObstacleTop(below: c.box, index: c.index, boxes: c.boxes, canvasBottom: c.canvas.maxY)
+        let width = min(max(c.box.width, c.estimate * 4), max(c.canvas.maxX - c.box.minX, c.box.width))
+        let available = CanvasRect(x: c.box.minX, y: top, width: width, height: max(limit - top, 0))
+        let decision = fit(c.text, in: available, estimate: c.estimate, floor: c.floor, allowGrowDown: true, monospaced: c.monospaced)
+        let backdropColor = (c.background ?? .white).withAlpha(c.background == nil ? Self.backdropAlpha : 1)
+        return TranslationPlacement(
+            segment: c.segment.id, text: c.text, frame: decision.frame ?? available, fontSize: decision.fontSize, color: c.foreground,
+            backdrop: .fill(backdropColor), backdropFrame: decision.frame?.insetBy(dx: -2 * c.scale, dy: -1 * c.scale),
+            alignment: c.alignment, fit: decision.fit, isRightToLeft: c.rtl, monospaced: c.monospaced
+        )
+    }
+
+    /// The translation takes the original's place: same background (opaque when sampled), vertically centred, and a single line
+    /// may use the box's leading (15 %) so it keeps the original size instead of shrinking.
+    func replacing(_ c: PlacementContext) -> TranslationPlacement {
+        let floor = max(c.floor, c.estimate * Self.replaceMinimumScale)
+        let decision = fit(c.text, in: c.box, estimate: c.estimate, floor: floor, allowGrowDown: false, monospaced: c.monospaced,
+                           heightTolerance: Self.replaceHeightTolerance, centred: true)
+        let backdrop: Backdrop = c.background.map { .sampled($0.withAlpha(1)) } ?? .fill(RGBA.white.withAlpha(Self.backdropAlpha))
+        return TranslationPlacement(
+            segment: c.segment.id, text: c.text, frame: decision.frame ?? c.box, fontSize: decision.fontSize, color: c.foreground,
+            backdrop: backdrop,
+            backdropFrame: decision.fit == .omitted ? nil : coverFrame(for: c.box, index: c.index, boxes: c.boxes, scale: c.scale),
+            alignment: c.alignment, fit: decision.fit, isRightToLeft: c.rtl, monospaced: c.monospaced
+        )
     }
 
     struct Decision {

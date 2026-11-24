@@ -417,6 +417,10 @@
 "settings.general.language" = "Lingua";
 "settings.general.languageNote" = "I pannelli di sistema, come le finestre di dialogo dei file e gli aggiornamenti, seguono la lingua di sistema.";
 "settings.general.languageSystem" = "Predefinita di Sistema";
+"settings.general.overlay" = "Traduzione sull’immagine";
+"settings.general.overlayAutomatic" = "Automatico";
+"settings.general.overlayMode" = "Visualizzazione predefinita";
+"settings.general.overlayNote" = "Automatico sostituisce le righe molto vicine (terminali, codice) e mostra il testo spaziato sotto l’originale. Ciò che non entra passa all’altra posizione. Una scelta fatta nel pannello dei risultati vale per quello screenshot.";
 "settings.general.permissions" = "Permessi";
 "settings.general.quality" = "Qualità";
 "settings.general.resetAll" = "Ripristina impostazioni predefinite…";

@@ -99,6 +99,7 @@ struct DocumentWorkflowTests {
         settings.engines.mode = .compare
         settings.engines.compareGroup = [.mtran, .deepl]
         settings.presentation.overlayMode = .replaceOriginal
+        settings.presentation.automaticOverlay = false
 
         let options = DocumentPipelineOptions(settings: settings, target: LanguageCode("fr"), overridePrivacyGuard: true)
         let events = try await collect(pipeline.translate(id, options: options))

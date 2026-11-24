@@ -221,3 +221,10 @@
 - StyleSampler.swift (+CodeLines) added; RecognitionService annotates styles from unmasked input; Normalizer translatability uses CodeLines; DocumentPipeline value-only JSON translation + reassemble. All compile. Next: tests + IntegrationTests render + reinstall.
 - Overlay styling implemented + IntegrationTests/OverlayRenderTests (real Vision OCR on dark terminal fixture → build/overlay/overlay-after.png looks right). OCR quote folding in CodeLines.normalizedQuotes; coverFrame grows 18% clamped to neighbours. Next: full tests/lint, Release reinstall, commit.
 - Overlay styling committed & pushed; /Applications reinstalled (pid 17027). Items 4/5 (auto display mode, overflow→below) still pending.
+- User: "直接做掉4、5". Plan: (4) PresentationSettings.automaticOverlay (default true, decodes missing key) + OverlayModeAdvisor
+  (dense lines → replaceOriginal, sparse → belowOriginal) used when the pipeline first shows the overlay (DocumentPipeline ~L104 and
+  SessionStore ~L348 defaultOverlay); manual drawer choice wins; settings picker gains "自动". (5) layout: replace mode shrink floor 75 %,
+  omitted → fallback to below-original placement; below omitted → fallback to replace.
+- Implemented (uncommitted): PresentationSettings.automaticOverlay, OverlayModeAdvisor.swift, layout PlacementContext + below()/replacing() helpers with mutual fallback, replace floor 75 %. TODO: settings picker in GeneralPage (Interface section), l10n keys, update old LayoutTests expectations (below→replace fallback, replace→below fallback), advisor tests, build, reinstall.
+- Added settings picker (GeneralPage Section settingsGeneralOverlay, OverlayChoice) + 4 l10n keys (500 total, 0 problems). Next: update LayoutTests expectations, advisor tests, run all, reinstall, commit.
+- Items 4/5 implemented + tests pass (advisor, fallbacks). Next: full test/lint, Release reinstall, commit/push, report.

@@ -417,6 +417,10 @@
 "settings.general.language" = "Langue";
 "settings.general.languageNote" = "Les panneaux système, tels que les boîtes de dialogue de fichiers et les fenêtres de mise à jour, suivent la langue du système.";
 "settings.general.languageSystem" = "Défaut du système";
+"settings.general.overlay" = "Traduction sur l’image";
+"settings.general.overlayAutomatic" = "Automatique";
+"settings.general.overlayMode" = "Affichage par défaut";
+"settings.general.overlayNote" = "Automatique remplace les lignes serrées (terminaux, code) et affiche le texte aéré sous l’original. Ce qui ne tient pas passe à l’autre position. Un choix fait dans le panneau des résultats s’applique à cette capture.";
 "settings.general.permissions" = "Autorisations";
 "settings.general.quality" = "Qualité";
 "settings.general.resetAll" = "Rétablir les réglages par défaut…";

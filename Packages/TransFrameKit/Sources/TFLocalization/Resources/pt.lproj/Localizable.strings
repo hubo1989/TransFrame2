@@ -417,6 +417,10 @@
 "settings.general.language" = "Idioma";
 "settings.general.languageNote" = "Painéis do sistema, como caixas de diálogo de arquivos e janelas de atualização, seguem o idioma do sistema.";
 "settings.general.languageSystem" = "Padrão do Sistema";
+"settings.general.overlay" = "Tradução na imagem";
+"settings.general.overlayAutomatic" = "Automático";
+"settings.general.overlayMode" = "Exibição padrão";
+"settings.general.overlayNote" = "Automático substitui linhas muito próximas (terminais, código) e mostra texto espaçado abaixo do original. O que não cabe passa para a outra posição. Uma escolha feita no painel de resultados vale para aquela captura.";
 "settings.general.permissions" = "Permissões";
 "settings.general.quality" = "Qualidade";
 "settings.general.resetAll" = "Restaurar ajustes padrão…";

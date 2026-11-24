@@ -101,7 +101,7 @@ public struct DocumentPipelineService: DocumentPipelineWorkflow {
                 outcome, to: id, inputRevision: revision, kind: .translation, operation: operation,
                 analysisID: analysis.id, analysisRevision: analysisRevision,
                 defaultOverlay: settings.presentation.defaultDisplay == .inPlace && !session.presentation.showsTranslationOverlay
-                    ? settings.presentation.overlayMode : nil
+                    ? (settings.presentation.automaticOverlay ? OverlayModeAdvisor.mode(for: analysis) : settings.presentation.overlayMode) : nil
             )
             await recordHistory(session: session, analysis: analysis, outcome: outcome, input: analysisInput, settings: settings)
         }

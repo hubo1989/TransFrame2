@@ -272,20 +272,39 @@ struct LayoutTests {
         #expect(placements[0].fontSize == 16)
     }
 
-    @Test func wrapsThenShrinksThenOmits() {
+    @Test func replaceShrinksAtMostTo75PercentThenMovesBelow() throws {
         let canvas = CanvasRect(x: 0, y: 0, width: 400, height: 300)
+        let roomy = TextSegment(text: "A", box: rect(0, 0, 100, 30), style: SegmentStyleHint(fontSize: 20))
+        let shrunk = try #require(layout.layout(
+            analysis: analysis([roomy]), translations: [translated(roomy, "abcdefghijkl")], mode: .replaceOriginal, offsetX: 0, offsetY: 0,
+            canvas: canvas, scale: 1).first)
+        #expect(shrunk.fit == .shrunk)
+        #expect(shrunk.fontSize >= 15)
+        #expect(abs(shrunk.frame.midY - 15) < 0.6)
         let narrow = TextSegment(text: "A", box: rect(0, 0, 40, 30), style: SegmentStyleHint(fontSize: 20))
-        let wrapped = layout.layout(
+        let moved = try #require(layout.layout(
             analysis: analysis([narrow]), translations: [translated(narrow, "abcdef")], mode: .replaceOriginal, offsetX: 0, offsetY: 0,
-            canvas: canvas, scale: 1)
-        #expect(wrapped[0].fit == .shrunk || wrapped[0].fit == .wrapped)
-        #expect(wrapped[0].fontSize >= 12)
+            canvas: canvas, scale: 1).first)
+        #expect(moved.fit != .omitted)
+        #expect(moved.frame.minY >= 30)
+        #expect(moved.fontSize == 20)
         let tiny = TextSegment(text: "A", box: rect(0, 0, 20, 10), style: SegmentStyleHint(fontSize: 10))
         let omitted = layout.layout(
             analysis: analysis([tiny]), translations: [translated(tiny, String(repeating: "x", count: 80))], mode: .replaceOriginal, offsetX: 0,
-            offsetY: 0, canvas: canvas, scale: 1)
+            offsetY: 0, canvas: CanvasRect(x: 0, y: 0, width: 20, height: 10), scale: 1)
         #expect(omitted[0].fit == .omitted)
         #expect(omitted[0].backdropFrame == nil)
+    }
+
+    @Test func belowWithoutRoomReplacesTheLine() throws {
+        let a = TextSegment(text: "A", box: rect(0, 0, 100, 20), style: SegmentStyleHint(fontSize: 16))
+        let b = TextSegment(text: "B", box: rect(0, 22, 100, 20), style: SegmentStyleHint(fontSize: 16))
+        let first = try #require(layout.layout(
+            analysis: analysis([a, b]), translations: [translated(a, "ok"), translated(b, "b")], mode: .belowOriginal,
+            offsetX: 0, offsetY: 0, canvas: CanvasRect(x: 0, y: 0, width: 100, height: 300), scale: 1).first)
+        #expect(first.fit == .fits)
+        #expect(first.frame.maxY <= 21)
+        #expect(first.backdropFrame != nil)
     }
 
     @Test func belowOriginalStopsAtNextBlock() {
