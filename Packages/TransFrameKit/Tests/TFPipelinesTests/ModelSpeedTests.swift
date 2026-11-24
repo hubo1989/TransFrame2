@@ -29,7 +29,8 @@ struct ModelSpeedTests {
     }
 
     @Test func ranksSuccessesFastestFirstAndKeepsFailures() async {
-        let engines = PerModelEngines(delays: ["slow": .milliseconds(300), "fast": .milliseconds(20), "mid": .milliseconds(120)], failing: ["broken"])
+        // Gaps far above scheduling noise on slow CI runners (the ranking uses measured durations).
+        let engines = PerModelEngines(delays: ["slow": .milliseconds(1_200), "fast": .zero, "mid": .milliseconds(600)], failing: ["broken"])
         var results: [ModelSpeedResult] = []
         for await result in service(engines).benchmarkModels(.openAICompatible, models: ["slow", "broken", "fast", "mid"], settings: SettingsSnapshot()) {
             results.append(result)
