@@ -27398,61 +27398,61 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "While selecting, the window under the pointer is highlighted: click to select it, or double-click to save it. Tab cycles overlapping windows; Space switches to a free selection."
+            "value": "While selecting, the window under the pointer is highlighted: click to select it, or double-click to copy the screenshot. Tab cycles overlapping windows; Space switches to a free selection."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "框选时高亮指针下的窗口。单击选中，双击保存。按 Tab 切换重叠窗口，按空格切换自由框选。"
+            "value": "框选时高亮指针下的窗口。单击选中，双击复制到剪贴板。按 Tab 切换重叠窗口，按空格切换自由框选。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Beim Auswählen wird das Fenster unter dem Zeiger hervorgehoben: Ein Klick wählt es aus, ein Doppelklick speichert den Screenshot. Tab wechselt zwischen überlappenden Fenstern, die Leertaste schaltet auf freie Auswahl um."
+            "value": "Beim Auswählen wird das Fenster unter dem Zeiger hervorgehoben: Ein Klick wählt es aus, ein Doppelklick kopiert den Screenshot in die Zwischenablage. Tab wechselt zwischen überlappenden Fenstern, die Leertaste schaltet auf freie Auswahl um."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Al seleccionar se resalta la ventana bajo el puntero: haz clic para seleccionarla o doble clic para guardar la captura. Tab alterna entre ventanas superpuestas; Espacio cambia a selección libre."
+            "value": "Al seleccionar se resalta la ventana bajo el puntero: haz clic para seleccionarla o doble clic para copiar la captura al portapapeles. Tab alterna entre ventanas superpuestas; Espacio cambia a selección libre."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pendant la sélection, la fenêtre sous le pointeur est mise en évidence : cliquez pour la sélectionner, double-cliquez pour enregistrer la capture. Tab passe d'une fenêtre superposée à l'autre ; Espace bascule en sélection libre."
+            "value": "Pendant la sélection, la fenêtre sous le pointeur est mise en évidence : cliquez pour la sélectionner, double-cliquez pour copier la capture dans le presse-papiers. Tab passe d'une fenêtre superposée à l'autre ; Espace bascule en sélection libre."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Durante la selezione la finestra sotto il puntatore viene evidenziata: fai clic per selezionarla o doppio clic per salvare l’istantanea. Tab passa tra finestre sovrapposte; Spazio passa alla selezione libera."
+            "value": "Durante la selezione la finestra sotto il puntatore viene evidenziata: fai clic per selezionarla o doppio clic per copiare l’istantanea negli appunti. Tab passa tra finestre sovrapposte; Spazio passa alla selezione libera."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "範囲選択中はポインタの下のウインドウを強調表示します。クリックで選択し、ダブルクリックでスクリーンショットを保存します。Tab で重なったウインドウを切り替え、スペースで自由選択に切り替えます。"
+            "value": "範囲選択中はポインタの下のウインドウを強調表示します。クリックで選択し、ダブルクリックでスクリーンショットをクリップボードにコピーします。Tab で重なったウインドウを切り替え、スペースで自由選択に切り替えます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "영역을 선택할 때 포인터 아래의 윈도우를 강조 표시합니다. 클릭하면 선택하고 이중 클릭하면 스크린샷을 저장합니다. Tab으로 겹친 윈도우를 전환하고 스페이스로 자유 선택으로 바꿉니다."
+            "value": "영역을 선택할 때 포인터 아래의 윈도우를 강조 표시합니다. 클릭하면 선택하고 이중 클릭하면 스크린샷을 클립보드에 복사합니다. Tab으로 겹친 윈도우를 전환하고 스페이스로 자유 선택으로 바꿉니다."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ao selecionar, a janela sob o ponteiro é destacada: clique para selecioná-la ou clique duas vezes para salvar a captura. Tab alterna entre janelas sobrepostas; Espaço muda para seleção livre."
+            "value": "Ao selecionar, a janela sob o ponteiro é destacada: clique para selecioná-la ou clique duas vezes para copiar a captura para a área de transferência. Tab alterna entre janelas sobrepostas; Espaço muda para seleção livre."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "При выделении окно под указателем подсвечивается: один щелчок выбирает окно, двойной щелчок сохраняет снимок. Tab переключает перекрывающиеся окна, пробел включает свободное выделение."
+            "value": "При выделении окно под указателем подсвечивается: один щелчок выбирает окно, двойной щелчок копирует снимок в буфер обмена. Tab переключает перекрывающиеся окна, пробел включает свободное выделение."
           }
         }
       }

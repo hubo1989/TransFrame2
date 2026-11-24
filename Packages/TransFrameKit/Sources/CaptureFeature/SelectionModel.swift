@@ -197,7 +197,7 @@ public final class SelectionModel {
         return !rect.contains(point) && hypot(point.x - start.x, point.y - start.y) < Self.dragThreshold
     }
 
-    /// Double-click save target (CAP-13).
+    /// Double-click copy target (CAP-13).
     public func doubleClickTarget(at point: QuartzPoint) -> (QuartzRect, SelectionSource)? {
         if phase == .selected, let rect {
             return rect.contains(point) ? (rect, source) : nil

@@ -427,7 +427,7 @@
 "settings.general.capture" = "Capture";
 "settings.general.choose" = "Choose…";
 "settings.general.detectWindows" = "Detect windows automatically";
-"settings.general.detectWindowsNote" = "While selecting, the window under the pointer is highlighted: click to select it, or double-click to save it. Tab cycles overlapping windows; Space switches to a free selection.";
+"settings.general.detectWindowsNote" = "While selecting, the window under the pointer is highlighted: click to select it, or double-click to copy the screenshot. Tab cycles overlapping windows; Space switches to a free selection.";
 "settings.general.format" = "Image format";
 "settings.general.history" = "History";
 "settings.general.historyLimit" = "Keep at most";

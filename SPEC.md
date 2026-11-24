@@ -1557,7 +1557,7 @@ README 的每一条功能都落在下面的行上；标 ⚠ 的是 README 与代
 | CAP-10 | 选区尺寸标签 | `Features/Capture/SelectionOverlayWindow.swift:483` | CaptureFeature | S | 2 | 对等 | ☐ |
 | CAP-11 | 像素放大镜 | `Features/Capture/SelectionOverlayWindow.swift:505` | CaptureFeature | S+P | 2 | 对等 | ☐ |
 | CAP-12 | `C` 复制指针处像素的 HEX 色值 | `Features/Capture/SelectionOverlayWindow.swift:1935,1963` | CaptureFeature | U | 2 | 对等 | ☐ |
-| CAP-13 | 双击保存：已框选时保存选区，未框选时保存悬停窗口，无候选时保存指针所在整屏 | `Features/Capture/SelectionOverlayWindow.swift:883,1109-1150` | CaptureFeature | U | 2 | 修正 | ☐ |
+| CAP-13 | 双击复制到剪贴板：已框选时复制选区，未框选时复制悬停窗口，无候选时复制指针所在整屏 | `Features/Capture/SelectionOverlayWindow.swift:883,1109-1150` | CaptureFeature | U | 2 | 对等 | ☐ |
 | CAP-14 | 选区外左键单击、右键或按 `Esc` 取消截图，应用未激活时有全局 `Esc` 兜底 | `Features/Capture/SelectionOverlayWindow.swift:1898,863`、`Features/Capture/CaptureSessionController.swift:280` | CaptureFeature | I+M | 2 | 修正 | ☐ |
 | CAP-15 | 冻结期间滚轮不透传到底下的应用 | `Features/Capture/SelectionOverlayWindow.swift:824` | CaptureFeature | M | 2 | 对等 | ☐ |
 | CAP-16 | 全屏截图：不进选区界面，直接成图、复制到剪贴板并打开编辑器 | `Features/Capture/CaptureSessionController.swift:75-93` | CaptureFeature | I+M | 2 | 修正 | ☐ |

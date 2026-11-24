@@ -7,7 +7,8 @@ All notable changes to TransFrame 2.
 ## 0.0.002 — 2026-11-24
 
 - Make the window under the pointer easier to see in region capture and use ScreenCaptureKit when Quartz returns no candidates.
-- Double-click to save a capture. Click outside the selected area or press Esc to close it.
+- Prefer the top app window under the pointer when a floating system window covers the display.
+- Double-click to copy a capture to the clipboard. Click outside the selected area or press Esc to close it.
 - Give a double-click priority over automatic translation or scrolling when the first click selects a window.
 
 ## 0.0.1 — 2026-11-24

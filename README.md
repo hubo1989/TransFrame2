@@ -32,7 +32,7 @@ Builds are signed with a Developer ID and notarized. Updates arrive through Spar
 ### Capture
 - **Region** (⌘⇧4), **full screen of the display under the pointer** (⌘⇧3), **region then translate** (⌘⇧T) and **scrolling
   capture**. Every display freezes at the shortcut, so videos and menus hold still.
-- **Window detection** — hover to highlight a window, click to select it, and double-click to save. Click outside the selection or press Esc to exit capture.
+- **Window detection** — hover to highlight the top window, click to select it, and double-click to copy the image to the clipboard. Click outside the selection or press Esc to exit capture.
   Tab cycles overlapping windows, Space switches to a free selection. Can be turned off in Settings › General › Capture.
 - Arrow keys move the selection (Shift = 10 pt, Option resizes), `C` copies the HEX color under the pointer, `Enter` or ⌘C copies
   and closes, ⌘S saves, `P` pins, `T` translates, `Esc` steps back.

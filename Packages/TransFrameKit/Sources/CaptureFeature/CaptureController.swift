@@ -138,7 +138,7 @@ final class CaptureController: OverlayViewDelegate {
         if clickCount >= 2, let target = selection.doubleClickTarget(at: point) {
             selection.select(target.0, source: target.1)
             refresh()
-            perform(.save)
+            perform(.copy)
             return
         }
         selection.mouseDown(at: point)
@@ -300,7 +300,7 @@ extension CaptureController {
             canvas.mouseDownHandler = { [weak self, weak editor] event, point in
                 guard let self, let editor, event.clickCount >= 2, editor.tool == nil, editor.textEditing == nil, editor.hitTest(point) == nil
                 else { return false }
-                self.perform(.save)
+                self.perform(.copy)
                 return true
             }
             let selectionFrame = canvas.frame

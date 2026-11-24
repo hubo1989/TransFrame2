@@ -53,7 +53,7 @@ struct WindowSnapTests {
         #expect(model.doubleClickTarget(at: QuartzPoint(x: 900, y: 700))?.0 == display.frame)
     }
 
-    @Test func aSelectedWindowSavesInsideAndClosesOnAnOutsideClick() {
+    @Test func aSelectedWindowTargetsCopyInsideAndClosesOnAnOutsideClick() {
         let inside = QuartzPoint(x: 350, y: 250), outside = QuartzPoint(x: 150, y: 150)
         let model = SelectionModel(frames: frames(pointer: inside))
         model.mouseDown(at: inside)
@@ -87,7 +87,7 @@ struct WindowSnapTests {
         #expect(!model.isOutsideClick(at: handle))
     }
 
-    @Test func cyclingKeepsTheHighlightedWindowAsTheSaveTarget() {
+    @Test func cyclingKeepsTheHighlightedWindowAsTheCopyTarget() {
         let pointer = QuartzPoint(x: 350, y: 250)
         let model = SelectionModel(frames: frames(pointer: pointer))
         model.cycleCandidates()
@@ -109,10 +109,12 @@ struct WindowSnapTests {
         #expect(pixels[middleRow + 350 * 4] > pixels[middleRow + 25 * 4])
     }
 
-    @Test(arguments: [false, true])
-    func windowClickWaitsBeforeScrollAndDoubleClickSaves(doubleClick: Bool) async throws {
+    enum Gesture: CaseIterable { case windowClick, windowDoubleClick, regionDoubleClick }
+
+    @Test(arguments: Gesture.allCases)
+    func windowClickStartsScrollAndDoubleClickCopies(gesture: Gesture) async throws {
         let pointer = QuartzPoint(x: 350, y: 250)
-        let frozen = frames(pointer: pointer, intent: .scroll)
+        let frozen = frames(pointer: pointer, intent: gesture == .regionDoubleClick ? .region : .scroll)
         let sessions = DocumentSessionStore(composer: FakeFrameComposer())
         let files = FakeFileExporter(), pasteboard = FakePasteboard(), sound = FakeSound(), performance = FakePerformanceRecorder()
         let render = RenderService(
@@ -134,24 +136,34 @@ struct WindowSnapTests {
         let controller = CaptureController(frames: frozen, deps: deps, doubleClickInterval: .milliseconds(75)) { finished = true }
         defer { controller.cancel() }
 
-        controller.overlayMouseDown(pointer, clickCount: 1)
-        controller.overlayMouseUp(pointer)
-        #expect(controller.selection.source == .window(WindowID(10)))
+        if gesture == .regionDoubleClick {
+            let start = QuartzPoint(x: 300, y: 200), end = QuartzPoint(x: 700, y: 500)
+            controller.overlayMouseDown(start, clickCount: 1)
+            controller.overlayMouseDragged(end)
+            controller.overlayMouseUp(end)
+            #expect(controller.selection.source == .freeform)
+        } else {
+            controller.overlayMouseDown(pointer, clickCount: 1)
+            controller.overlayMouseUp(pointer)
+            #expect(controller.selection.source == .window(WindowID(10)))
+        }
         #expect(!controller.toolbarModel.scrollRunning)
-        if doubleClick { controller.overlayMouseDown(pointer, clickCount: 2) }
+        if gesture != .windowClick { controller.overlayMouseDown(pointer, clickCount: 2) }
 
         let deadline = ContinuousClock.now + .seconds(2)
         while !finished, scroll.started.calls.isEmpty, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }
-        if doubleClick {
+        if gesture != .windowClick {
             #expect(finished)
-            #expect(files.written.count == 1)
+            let contents = pasteboard.contents.current
+            #expect(contents == [.image(Data(count: 800 * 600))])
             #expect(scroll.started.calls.isEmpty)
         } else {
             #expect(scroll.started.calls == [QuartzRect(x: 300, y: 200, width: 400, height: 300)])
-            #expect(files.written.calls.isEmpty)
+            #expect(pasteboard.contents.current.isEmpty)
         }
+        #expect(files.written.calls.isEmpty)
     }
 
     @Test func turnedOffNothingIsHighlightedAndDoubleClickTakesTheDisplay() {
