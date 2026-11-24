@@ -4,6 +4,9 @@ All notable changes to TransFrame 2.
 
 ## Unreleased
 
+- Prefer the top app window under the pointer when a floating system window covers the display.
+- Copy the captured image to the clipboard on double-click.
+
 ## 0.0.002 — 2026-11-24
 
 - Make the window under the pointer easier to see in region capture and use ScreenCaptureKit when Quartz returns no candidates.

@@ -427,7 +427,7 @@
 "settings.general.capture" = "캡처";
 "settings.general.choose" = "선택…";
 "settings.general.detectWindows" = "윈도우 자동 인식";
-"settings.general.detectWindowsNote" = "영역을 선택할 때 포인터 아래의 윈도우를 강조 표시합니다. 클릭하면 선택하고 이중 클릭하면 스크린샷을 저장합니다. Tab으로 겹친 윈도우를 전환하고 스페이스로 자유 선택으로 바꿉니다.";
+"settings.general.detectWindowsNote" = "영역을 선택할 때 포인터 아래의 윈도우를 강조 표시합니다. 클릭하면 선택하고 이중 클릭하면 스크린샷을 클립보드에 복사합니다. Tab으로 겹친 윈도우를 전환하고 스페이스로 자유 선택으로 바꿉니다.";
 "settings.general.format" = "이미지 포맷";
 "settings.general.history" = "기록";
 "settings.general.historyLimit" = "최대 보관 수";

@@ -427,7 +427,7 @@
 "settings.general.capture" = "Capture";
 "settings.general.choose" = "Choisir…";
 "settings.general.detectWindows" = "Détecter automatiquement les fenêtres";
-"settings.general.detectWindowsNote" = "Pendant la sélection, la fenêtre sous le pointeur est mise en évidence : cliquez pour la sélectionner, double-cliquez pour enregistrer la capture. Tab passe d'une fenêtre superposée à l'autre ; Espace bascule en sélection libre.";
+"settings.general.detectWindowsNote" = "Pendant la sélection, la fenêtre sous le pointeur est mise en évidence : cliquez pour la sélectionner, double-cliquez pour copier la capture dans le presse-papiers. Tab passe d'une fenêtre superposée à l'autre ; Espace bascule en sélection libre.";
 "settings.general.format" = "Format d’image";
 "settings.general.history" = "Historique";
 "settings.general.historyLimit" = "Conserver au maximum";

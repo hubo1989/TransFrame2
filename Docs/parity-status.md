@@ -36,7 +36,7 @@
 | CAP-10 | 选区尺寸标签 | CaptureFeature | S | 待核 |  | ☐ |
 | CAP-11 | 像素放大镜 | CaptureFeature | S+P | 待核 | perf.sh | ☐ |
 | CAP-12 | `C` 复制指针处像素的 HEX 色值 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
-| CAP-13 | 双击保存：已框选时保存选区，未框选时保存悬停窗口，无候选时保存指针所在整屏 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
+| CAP-13 | 双击复制到剪贴板：已框选时复制选区，未框选时复制悬停窗口，无候选时复制指针所在整屏 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
 | CAP-14 | 选区外左键单击、右键或按 `Esc` 取消截图，应用未激活时有全局 `Esc` 兜底 | CaptureFeature | I+M | 待核 | 自动化（见下）；走查 W01 | ☐ |
 | CAP-15 | 冻结期间滚轮不透传到底下的应用 | CaptureFeature | M | 待核 | 走查 W01 | ☐ |
 | CAP-16 | 全屏截图：不进选区界面，直接成图、复制到剪贴板并打开编辑器 | CaptureFeature | I+M | 待核 | 自动化（见下）；走查 W01 | ☐ |

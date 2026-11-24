@@ -427,7 +427,7 @@
 "settings.general.capture" = "キャプチャ";
 "settings.general.choose" = "選択…";
 "settings.general.detectWindows" = "ウインドウを自動認識";
-"settings.general.detectWindowsNote" = "範囲選択中はポインタの下のウインドウを強調表示します。クリックで選択し、ダブルクリックでスクリーンショットを保存します。Tab で重なったウインドウを切り替え、スペースで自由選択に切り替えます。";
+"settings.general.detectWindowsNote" = "範囲選択中はポインタの下のウインドウを強調表示します。クリックで選択し、ダブルクリックでスクリーンショットをクリップボードにコピーします。Tab で重なったウインドウを切り替え、スペースで自由選択に切り替えます。";
 "settings.general.format" = "画像フォーマット";
 "settings.general.history" = "履歴";
 "settings.general.historyLimit" = "最大保存件数";

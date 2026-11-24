@@ -427,7 +427,7 @@
 "settings.general.capture" = "Captura";
 "settings.general.choose" = "Seleccionar…";
 "settings.general.detectWindows" = "Detectar ventanas automáticamente";
-"settings.general.detectWindowsNote" = "Al seleccionar se resalta la ventana bajo el puntero: haz clic para seleccionarla o doble clic para guardar la captura. Tab alterna entre ventanas superpuestas; Espacio cambia a selección libre.";
+"settings.general.detectWindowsNote" = "Al seleccionar se resalta la ventana bajo el puntero: haz clic para seleccionarla o doble clic para copiar la captura al portapapeles. Tab alterna entre ventanas superpuestas; Espacio cambia a selección libre.";
 "settings.general.format" = "Formato de imagen";
 "settings.general.history" = "Historial";
 "settings.general.historyLimit" = "Conservar como máximo";
