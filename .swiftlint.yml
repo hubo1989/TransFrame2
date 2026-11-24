@@ -1,0 +1,52 @@
+# Thresholds inherited from the 1.x repository (SPEC §01 §11).
+included:
+  - App
+  - Packages/TransFrameKit/Sources
+  - Packages/TransFrameKit/Tests
+excluded:
+  - Packages/TransFrameKit/.build
+  - build
+  - "**/*.generated.swift"
+file_length:
+  warning: 600
+  error: 600
+type_body_length:
+  warning: 500
+  error: 500
+function_body_length:
+  warning: 100
+  error: 100
+line_length:
+  warning: 160
+  error: 200
+  ignores_urls: true
+  ignores_comments: true
+cyclomatic_complexity:
+  warning: 25
+  error: 40
+identifier_name:
+  min_length: 1
+  excluded: [x, y, r, g, b, a, i, id, ok, to, at, by, l]
+type_name:
+  min_length: 2
+  max_length: 60
+nesting:
+  type_level: 3
+large_tuple:
+  warning: 4
+  error: 5
+function_parameter_count:
+  warning: 8
+  error: 12
+disabled_rules:
+  - todo
+  - trailing_comma
+  - opening_brace
+  - multiple_closures_with_trailing_closure
+  - redundant_discardable_let
+  - static_over_final_class
+opt_in_rules:
+  - empty_count
+  - first_where
+  - contains_over_first_not_nil
+  - redundant_nil_coalescing

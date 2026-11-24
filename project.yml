@@ -1,0 +1,87 @@
+# XcodeGen spec for TransFrame2.xcodeproj (regenerate with `xcodegen generate`).
+# All modules live in the local package Packages/TransFrameKit; the project only has the app
+# target and one UI test target (SPEC §01 §1).
+name: TransFrame2
+options:
+  bundleIdPrefix: com.transframe
+  deploymentTarget:
+    macOS: "15.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  groupSortPosition: top
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    MARKETING_VERSION: "0.0.1"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_MODULE_VERIFIER: NO
+    # Provisional until the TransFrame2 remote exists; frozen by the first release (ADR-0014).
+    TF_PROJECT_URL: "https://github.com/hubo1989/TransFrame2"
+    TF_UPDATE_FEED_URL: "https://github.com/hubo1989/TransFrame2/releases/latest/download/appcast.xml"
+    # Empty until the release key pair is generated (X5); Sparkle stays off while empty.
+    TF_SPARKLE_PUBLIC_KEY: "FlfSCy4FIzkXDLQpy+AWEVpVBdlr+EMawhy0TOHgmVM="
+packages:
+  TransFrameKit:
+    path: Packages/TransFrameKit
+targets:
+  TransFrame2:
+    type: application
+    platform: macOS
+    sources:
+      - path: App/Sources
+      - path: App/Resources
+    dependencies:
+      - package: TransFrameKit
+        product: TransFrameKit
+    settings:
+      base:
+        PRODUCT_NAME: "TransFrame 2"
+        PRODUCT_MODULE_NAME: TransFrame2
+        INFOPLIST_FILE: App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: App/TransFrame2.entitlements
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        COMBINE_HIDPI_IMAGES: YES
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.transframe.v2.dev
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: com.transframe.v2
+  TransFrame2UITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: AppUITests
+    dependencies:
+      - target: TransFrame2
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.transframe.v2.uitests
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        TEST_TARGET_NAME: TransFrame2
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  TransFrame2:
+    build:
+      targets:
+        TransFrame2: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - TransFrame2UITests
+    archive:
+      config: Release

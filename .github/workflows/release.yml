@@ -1,0 +1,130 @@
+# Release pipeline for TransFrame 2 (SPEC ADR-0014): tag v0.* (preview) or v2.* → universal build, Developer ID signing with Hardened Runtime,
+# notarization + staple, a single DMG, and a Sparkle appcast with minimumSystemVersion 15.0 published to this repository's
+# releases/latest/download/. Never publishes anything to the 1.x update feed.
+#
+# Required repository secrets:
+#   DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD   Developer ID Application certificate (.p12, base64)
+#   APPLE_TEAM_ID, NOTARY_APPLE_ID, NOTARY_PASSWORD      notarytool credentials (app-specific password)
+#   SPARKLE_PRIVATE_KEY                                  new TransFrame 2 EdDSA private key (Sparkle generate_keys -x)
+# Required repository variable:
+#   SPARKLE_PUBLIC_KEY                                   matching public key, written into Info.plist (SUPublicEDKey)
+# Scripts/setup-release-secrets.sh sets all of them with the GitHub CLI.
+name: release
+on:
+  push:
+    tags: ["v0.*", "v2.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing v0.* or v2.* tag to release"
+        required: true
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Select Xcode 26.2
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app
+      - name: Tools
+        run: brew install xcodegen create-dmg
+      - name: Gates
+        run: |
+          Scripts/check-deps.sh
+          Scripts/check-l10n.sh
+          Scripts/check-design.sh
+          Scripts/test.sh package
+      - name: Version from tag
+        run: |
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BUILD=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+      - name: Import signing certificate
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/release.keychain-db"
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain
+          rm "$RUNNER_TEMP/cert.p12"
+      - name: Build universal Release
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SPARKLE_PUBLIC_KEY: ${{ vars.SPARKLE_PUBLIC_KEY }}
+        run: |
+          xcodegen generate
+          xcodebuild -project TransFrame2.xcodeproj -scheme TransFrame2 -configuration Release \
+            -destination 'generic/platform=macOS' ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" \
+            ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" \
+            TF_SPARKLE_PUBLIC_KEY="$SPARKLE_PUBLIC_KEY" \
+            SYMROOT="$PWD/build/Products" OBJROOT="$PWD/build/Intermediates" build
+          APP="build/Products/Release/TransFrame 2.app"
+          lipo -archs "$APP/Contents/MacOS/TransFrame 2" | grep -q "x86_64 arm64\|arm64 x86_64"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          test -n "$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$APP/Contents/Info.plist")"
+      - name: DMG
+        run: |
+          create-dmg --volname "TransFrame 2" --app-drop-link 480 160 --window-size 640 360 --icon "TransFrame 2.app" 160 160 \
+            "build/TransFrame-2-$VERSION.dmg" "build/Products/Release/TransFrame 2.app"
+          codesign --sign "Developer ID Application" --timestamp "build/TransFrame-2-$VERSION.dmg"
+      - name: Notarize and staple
+        env:
+          APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit "build/TransFrame-2-$VERSION.dmg" --apple-id "$APPLE_ID" --password "$PASSWORD" --team-id "$TEAM_ID" --wait
+          xcrun stapler staple "build/TransFrame-2-$VERSION.dmg"
+          xcrun stapler validate "build/TransFrame-2-$VERSION.dmg"
+      - name: Sparkle appcast (minimumSystemVersion 15.0)
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          SIGN_UPDATE=$(find build -path '*Sparkle*/bin/sign_update' -type f | head -1)
+          [ -n "$SIGN_UPDATE" ] || SIGN_UPDATE=$(find ~/Library/Developer/Xcode/DerivedData -path '*artifacts*sparkle*/bin/sign_update' -type f | head -1)
+          SIG=$(echo "$SPARKLE_PRIVATE_KEY" | "$SIGN_UPDATE" --ed-key-file - "build/TransFrame-2-$VERSION.dmg")
+          URL="https://github.com/${{ github.repository }}/releases/download/$TAG/TransFrame-2-$VERSION.dmg"
+          cat > build/appcast.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>TransFrame 2</title>
+              <item>
+                <title>$VERSION</title>
+                <pubDate>$(date -R)</pubDate>
+                <sparkle:version>$BUILD</sparkle:version>
+                <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+                <sparkle:releaseNotesLink>https://github.com/${{ github.repository }}/releases/tag/$TAG</sparkle:releaseNotesLink>
+                <enclosure url="$URL" type="application/octet-stream" $SIG />
+              </item>
+            </channel>
+          </rss>
+          XML
+          grep -q 'sparkle:edSignature' build/appcast.xml
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Notes: the CHANGELOG section for this version ("## 0.0.1 — date" up to the next "## ").
+          awk -v v="$VERSION" '/^## / { if (found) exit; found = index($0, "## " v) == 1; next } found' CHANGELOG.md > build/notes.md
+          [ -s build/notes.md ] || { echo "CHANGELOG.md has no section for $VERSION"; exit 1; }
+          PRERELEASE=""
+          case "$VERSION" in 0.*|*-*) PRERELEASE="--prerelease" ;; esac
+          gh release create "$TAG" "build/TransFrame-2-$VERSION.dmg" build/appcast.xml --title "TransFrame 2 $VERSION" \
+            --notes-file build/notes.md --verify-tag $PRERELEASE \
+            || gh release upload "$TAG" "build/TransFrame-2-$VERSION.dmg" build/appcast.xml --clobber
