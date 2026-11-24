@@ -1,4 +1,4 @@
-# Release pipeline for TransFrame 2 (SPEC ADR-0014): tag v2.* → universal build, Developer ID signing with Hardened Runtime,
+# Release pipeline for TransFrame 2 (SPEC ADR-0014): tag v0.* (preview) or v2.* → universal build, Developer ID signing with Hardened Runtime,
 # notarization + staple, a single DMG, and a Sparkle appcast with minimumSystemVersion 15.0 published to this repository's
 # releases/latest/download/. Never publishes anything to the 1.x update feed.
 #
@@ -8,14 +8,15 @@
 #   SPARKLE_PRIVATE_KEY                                  new TransFrame 2 EdDSA private key (Sparkle generate_keys -x)
 # Required repository variable:
 #   SPARKLE_PUBLIC_KEY                                   matching public key, written into Info.plist (SUPublicEDKey)
+# Scripts/setup-release-secrets.sh sets all of them with the GitHub CLI.
 name: release
 on:
   push:
-    tags: ["v2.*"]
+    tags: ["v0.*", "v2.*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing v2.* tag to release"
+        description: "Existing v0.* or v2.* tag to release"
         required: true
 permissions:
   contents: write
@@ -119,5 +120,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$TAG" "build/TransFrame-2-$VERSION.dmg" build/appcast.xml --title "TransFrame 2 $VERSION" --notes-file CHANGELOG.md --verify-tag \
+          # Notes: the CHANGELOG section for this version ("## 0.0.1 — date" up to the next "## ").
+          awk -v v="$VERSION" '/^## / { if (found) exit; found = index($0, "## " v) == 1; next } found' CHANGELOG.md > build/notes.md
+          [ -s build/notes.md ] || { echo "CHANGELOG.md has no section for $VERSION"; exit 1; }
+          PRERELEASE=""
+          case "$VERSION" in 0.*|*-*) PRERELEASE="--prerelease" ;; esac
+          gh release create "$TAG" "build/TransFrame-2-$VERSION.dmg" build/appcast.xml --title "TransFrame 2 $VERSION" \
+            --notes-file build/notes.md --verify-tag $PRERELEASE \
             || gh release upload "$TAG" "build/TransFrame-2-$VERSION.dmg" build/appcast.xml --clobber
