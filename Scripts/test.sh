@@ -54,7 +54,8 @@ smoke() {
   local app
   app="$("$ROOT/Scripts/build.sh" Debug -quiet | tail -1)"
   local out
-  out="$(TF_SMOKE_TEST=1 timeout 60 "$app/Contents/MacOS/TransFrame 2" 2>&1; echo "exit=$?")"
+  # perl alarm instead of coreutils `timeout`, which macOS runners do not ship.
+  out="$(TF_SMOKE_TEST=1 perl -e 'alarm shift; exec { $ARGV[0] } @ARGV or die "exec: $!"' 60 "$app/Contents/MacOS/TransFrame 2" 2>&1; echo "exit=$?")"
   if grep -q "TF2_MENU_READY" <<<"$out"; then echo "launch smoke passed"; return 0; fi
   echo "launch smoke FAILED"
   tail -40 <<<"$out"
