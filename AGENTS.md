@@ -195,3 +195,4 @@
 - Dev build signed with Apple Development (team 7GT4893YFC) via Scripts/dev-sign.sh <sha1 2E13C393…>; acceptance: Scripts/acceptance.sh <endpoint> <model> [chat|responses].
 - CI on Xcode 26.2 failed: ambiguous cos/sin in Drawing.swift (fixed with explicit Double/Foundation.*). Iterate on CI (no Xcode 26.2 locally).
 - l10n: catalog now compiled to committed <lang>.lproj/Localizable.strings by l10n.py gen (xcstrings excluded from target; check flags stale tables) — Xcode 26.2 SwiftPM didn't compile xcstrings (CI: all strings missing).
+- CI: zh-Hans lproj not found on Xcode 26.2 (renamed folder?) → Localizer scans lproj names case/separator-insensitively.

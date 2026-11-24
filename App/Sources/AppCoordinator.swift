@@ -65,7 +65,12 @@ final class AppCoordinator: AppRouting {
     }
 
     private func observeShortcuts() {
-        withObservationTracking { _ = services.settings.shortcuts } onChange: { [weak self] in
+        // Read through a local: Swift 6.2's SILGen crashes on `_ = services.settings…` inside the tracking closure.
+        let settings = services.settings
+        withObservationTracking {
+            let shortcuts = settings.shortcuts
+            _ = shortcuts
+        } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 if services.settings.shortcuts != registeredShortcuts {
@@ -78,7 +83,11 @@ final class AppCoordinator: AppRouting {
     }
 
     private func observeLanguage() {
-        withObservationTracking { _ = services.settings.general.interfaceLanguage } onChange: { [weak self] in
+        let settings = services.settings
+        withObservationTracking {
+            let language = settings.general.interfaceLanguage
+            _ = language
+        } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 services.localizer.setPreference(services.settings.general.interfaceLanguage)
