@@ -197,3 +197,5 @@
 - l10n: catalog now compiled to committed <lang>.lproj/Localizable.strings by l10n.py gen (xcstrings excluded from target; check flags stale tables) — Xcode 26.2 SwiftPM didn't compile xcstrings (CI: all strings missing).
 - CI: zh-Hans lproj not found on Xcode 26.2 (renamed folder?) → Localizer scans lproj names case/separator-insensitively.
 - CI: package tests + coverage PASS on Xcode 26.2; app target hit Swift 6.2 SILGen crash in AppCoordinator withObservationTracking closures → read via local let (fixed).
+- CI smoke failed: runners lack coreutils timeout → perl alarm + exec {$ARGV[0]} (path has a space).
+- CI GREEN on PR #1 (run 45296774144): checks (macOS 15 + Xcode 26.2: gates, package tests + coverage, UI tests, smoke, universal Release) and intel (x86_64 tests + smoke).
