@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import Testing
 import TFDomain
 import TFDomainTestSupport
@@ -47,6 +47,60 @@ struct WindowSnapTests {
         #expect(target?.1 == .window(WindowID(10)))
         // Outside every window: the whole display.
         #expect(model.doubleClickTarget(at: QuartzPoint(x: 900, y: 700))?.0 == display.frame)
+    }
+
+    @Test func aSelectedWindowSavesInsideAndClosesOnAnOutsideClick() {
+        let inside = QuartzPoint(x: 350, y: 250), outside = QuartzPoint(x: 150, y: 150)
+        let model = SelectionModel(frames: frames(pointer: inside))
+        model.mouseDown(at: inside)
+        #expect(model.mouseUp(at: inside))
+        #expect(model.doubleClickTarget(at: inside)?.1 == .window(WindowID(10)))
+        #expect(model.doubleClickTarget(at: outside) == nil)
+
+        for locked in [false, true] {
+            model.isLocked = locked
+            model.mouseDown(at: outside)
+            #expect(model.isOutsideClick(at: outside))
+            #expect(!model.mouseUp(at: outside))
+        }
+        #expect(model.source == .window(WindowID(10)))
+    }
+
+    @Test func draggingFromOutsideCanReplaceAnUnlockedSelection() {
+        let inside = QuartzPoint(x: 350, y: 250), outside = QuartzPoint(x: 150, y: 150)
+        let end = QuartzPoint(x: 50, y: 50)
+        let model = SelectionModel(frames: frames(pointer: inside))
+        model.mouseDown(at: inside)
+        #expect(model.mouseUp(at: inside))
+        model.mouseDown(at: outside)
+        model.mouseDragged(to: end)
+        #expect(!model.isOutsideClick(at: end))
+        #expect(model.mouseUp(at: end))
+        #expect(model.rect == QuartzRect(x: 50, y: 50, width: 100, height: 100))
+
+        let handle = QuartzPoint(x: 49, y: 50)
+        model.mouseDown(at: handle)
+        #expect(!model.isOutsideClick(at: handle))
+    }
+
+    @Test func cyclingKeepsTheHighlightedWindowAsTheSaveTarget() {
+        let pointer = QuartzPoint(x: 350, y: 250)
+        let model = SelectionModel(frames: frames(pointer: pointer))
+        model.cycleCandidates()
+        #expect(model.hovered?.source == .window(WindowID(20)))
+        #expect(model.doubleClickTarget(at: pointer)?.1 == .window(WindowID(20)))
+    }
+
+    @Test func hoverRevealsTheWindowThroughTheScrim() throws {
+        let pointer = QuartzPoint(x: 350, y: 250)
+        let frozen = frames(pointer: pointer)
+        let view = try OverlayView(frame: #require(frozen.frames.first))
+        let model = SelectionModel(frames: frozen)
+        view.render(selection: nil, candidate: model.hovered?.rect, showHandles: false, pointer: pointer, showMagnifier: false, hex: nil)
+        let scrim = try #require(view.layer?.sublayers?.compactMap { $0 as? CAShapeLayer }.first)
+        let path = try #require(scrim.path)
+        #expect(!path.contains(pointer.raw, using: .evenOdd))
+        #expect(path.contains(CGPoint(x: 25, y: 25), using: .evenOdd))
     }
 
     @Test func turnedOffNothingIsHighlightedAndDoubleClickTakesTheDisplay() {

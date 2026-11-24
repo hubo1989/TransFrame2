@@ -26,7 +26,8 @@ final class CaptureController: OverlayViewDelegate {
     private var observer: DocumentObserver?
     private(set) var results: ResultsModel?
     private var busy = false
-    private var escapeMonitor: Any?
+    private var localEscapeMonitor: Any?
+    private var globalEscapeMonitor: Any?
     private let owner: SessionOwner
     let toolbarModel = ToolbarModel()
     private var creating: Task<SessionID?, Never>?
@@ -73,8 +74,14 @@ final class CaptureController: OverlayViewDelegate {
         refresh()
         CATransaction.flush()
         recordFrozenVisible(frames)
-        // Global Esc fallback while the app is not active (CAP-14).
-        escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        localEscapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, event.keyCode == 53, let window = event.window ?? NSApp.keyWindow,
+                  self.windows.contains(where: { $0 === window }) || self.toolbarPanel === window || self.drawerPanel === window
+            else { return event }
+            self.cancel()
+            return nil
+        }
+        globalEscapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard event.keyCode == 53 else { return }
             Task { @MainActor in self?.cancel() }
         }
@@ -121,30 +128,32 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     func overlayMouseDown(_ point: QuartzPoint, clickCount: Int) {
-        guard !busy else { return }
-        if clickCount >= 2, selection.isLocked, !(selection.rect?.contains(point) ?? false) { return }
+        guard !busy, !finished else { return }
         if clickCount >= 2, let target = selection.doubleClickTarget(at: point) {
-            if sessionID != nil, target.0 != selection.rect { discardSession() }
             selection.select(target.0, source: target.1)
             refresh()
-            perform(.copy)
+            perform(.save)
             return
         }
-        if selection.phase == .selected, sessionID != nil, selection.isLocked { return }
         selection.mouseDown(at: point)
         refresh()
     }
 
     func overlayMouseDragged(_ point: QuartzPoint) {
+        guard !busy, !finished else { return }
         let start = ContinuousClock.now
+        let previousGeometry = selection.geometry()
         selection.mouseDragged(to: point)
-        if sessionID != nil, !selection.isLocked { discardSession() }
+        if sessionID != nil, selection.geometry() != previousGeometry { discardSession() }
         refresh()
         services.performance.record(PerformanceSample(budget: Budget.overlayEventHandling, duration: .now - start))
     }
 
     func overlayMouseUp(_ point: QuartzPoint) {
+        guard !busy, !finished else { return }
+        let outsideClick = selection.isOutsideClick(at: point)
         let created = selection.mouseUp(at: point)
+        if outsideClick { cancel(); return }
         refresh()
         if created, frames?.request.intent == .regionThenTranslate { perform(.translate) }
         if created, toolbarModel.scrollMode { perform(.scroll) }
@@ -167,9 +176,7 @@ final class CaptureController: OverlayViewDelegate {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
         switch event.keyCode {
-        case 53: // Esc: text → selection → tool → drawer → capture (EDT-08, INP-12)
-            if editor?.cancelStep() == true { return true }
-            if drawerPanel != nil { closeDrawer(); return true }
+        case 53: // Esc
             cancel(); return true
         case 36, 76: // Enter
             if selection.rect != nil { perform(.copy) }
@@ -220,7 +227,9 @@ final class CaptureController: OverlayViewDelegate {
             errors.toast(ToastModel(message: message), near: nil)
         }
     }
+}
 
+extension CaptureController {
     // MARK: Session
 
     /// One creation task per controller; results arriving after the capture ended are released (review-1 P1-1).
@@ -265,6 +274,12 @@ final class CaptureController: OverlayViewDelegate {
             canvas.frame = overlay.local(rect)
             canvas.onEscapeUnhandled = { [weak self] in self?.cancel() }
             canvas.keyHandler = { [weak self] event in self?.overlayKeyDown(event) ?? false }
+            canvas.mouseDownHandler = { [weak self, weak editor] event, point in
+                guard let self, let editor, event.clickCount >= 2, editor.tool == nil, editor.textEditing == nil, editor.hitTest(point) == nil
+                else { return false }
+                self.perform(.save)
+                return true
+            }
             let selectionFrame = canvas.frame
             canvas.onRender = { [weak canvas] plan in
                 // Padding (beautify) extends outside the selection so the content stays aligned with the frozen pixels.
@@ -543,8 +558,10 @@ final class CaptureController: OverlayViewDelegate {
         guard !finished else { return }
         finished = true
         creating?.cancel()
-        if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
-        escapeMonitor = nil
+        if let localEscapeMonitor { NSEvent.removeMonitor(localEscapeMonitor) }
+        if let globalEscapeMonitor { NSEvent.removeMonitor(globalEscapeMonitor) }
+        localEscapeMonitor = nil
+        globalEscapeMonitor = nil
         results?.cancel()
         observer?.stop()
         for window in windows { window.orderOut(nil) }

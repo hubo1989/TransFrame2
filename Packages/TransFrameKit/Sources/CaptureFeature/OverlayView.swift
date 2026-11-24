@@ -122,7 +122,7 @@ final class OverlayView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseMoved, .activeAlways, .inVisibleRect, .cursorUpdate], owner: self))
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect, .cursorUpdate], owner: self))
     }
 
     // MARK: Coordinate conversion (view is y-down at the display's top-left = DisplayLocal)
@@ -177,7 +177,9 @@ final class OverlayView: NSView {
         let scrim = CGMutablePath()
         scrim.addRect(bounds)
         let localSelection = selection.map(local)
-        if let localSelection { scrim.addRect(localSelection) }
+        if let highlight = (localSelection ?? candidate.map(local))?.intersection(bounds), !highlight.isEmpty {
+            scrim.addRect(highlight)
+        }
         scrimLayer.path = scrim
         selectionLayer.path = localSelection.map { CGPath(rect: $0.insetBy(dx: -1, dy: -1), transform: nil) }
         candidateLayer.path = candidate.map { CGPath(rect: local($0).insetBy(dx: 1, dy: 1), transform: nil) }
@@ -267,6 +269,16 @@ final class OverlayView: NSView {
 
     // MARK: Events
 
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let hit = super.hitTest(point)
+        let localPoint = convert(point, from: superview)
+        if hit != nil, let selection = lastChrome?.selection, !local(selection).contains(localPoint) {
+            return self
+        }
+        return hit
+    }
+
+    override func mouseEntered(with event: NSEvent) { mouseMoved(with: event) }
     override func mouseMoved(with event: NSEvent) { delegate?.overlayMouseMoved(global(convert(event.locationInWindow, from: nil))) }
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)

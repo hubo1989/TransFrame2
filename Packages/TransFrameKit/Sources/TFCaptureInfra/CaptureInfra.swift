@@ -72,7 +72,10 @@ public final class DisplayTopologyService: DisplayTopologyProviding {
 
 public struct WindowEnumerator: WindowEnumerating {
     /// System processes whose windows are never offered as candidates.
-    static let excludedOwners: Set<String> = ["Window Server", "Dock", "WindowManager", "Control Center", "Notification Center", "Spotlight", "screencaptureui"]
+    static let excludedOwners: Set<String> = [
+        "Window Server", "Dock", "WindowManager", "Control Center", "ControlCenter", "Notification Center", "NotificationCenter",
+        "Spotlight", "Wallpaper", "SystemUIServer", "loginwindow", "screencaptureui",
+    ]
     private let ownPID: Int32
     private let ownBundleID: String?
 
@@ -83,42 +86,58 @@ public struct WindowEnumerator: WindowEnumerating {
 
     public func windows(excluding: Set<WindowID>) async -> [WindowCandidate] { list(excluding: excluding) }
 
-    func list(excluding: Set<WindowID>, stableAgainst previous: [WindowCandidate]? = nil) -> [WindowCandidate] {
+    func list(excluding: Set<WindowID>) -> [WindowCandidate] {
         guard let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return [] }
-        let previousByID = Dictionary((previous ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        var result: [WindowCandidate] = []
-        for entry in info {
+        return info.compactMap { entry in
             guard let number = entry[kCGWindowNumber as String] as? UInt32,
                   let boundsDict = entry[kCGWindowBounds as String] as? NSDictionary,
                   let bounds = CGRect(dictionaryRepresentation: boundsDict),
-                  let pid = entry[kCGWindowOwnerPID as String] as? Int32 else { continue }
+                  let pid = entry[kCGWindowOwnerPID as String] as? Int32 else { return nil }
             let id = WindowID(number)
-            guard !excluding.contains(id), bounds.width >= 20, bounds.height >= 20 else { continue }
+            guard !excluding.contains(id) else { return nil }
             let alpha = entry[kCGWindowAlpha as String] as? Double ?? 1
-            guard alpha > 0.01 else { continue }
+            guard alpha > 0.01 else { return nil }
             let owner = entry[kCGWindowOwnerName as String] as? String ?? ""
-            guard !Self.excludedOwners.contains(owner) else { continue }
             let layer = entry[kCGWindowLayer as String] as? Int ?? 0
             let title = entry[kCGWindowName as String] as? String
-            let isOwn = pid == ownPID
-            // Own windows are only candidates when they are pins (normal level, titled "TF2Pin").
-            if isOwn && title != "TF2Pin" { continue }
-            let kind: WindowKind = isOwn ? .ownPin : (layer == 0 ? .window : (layer >= 100 ? .popoverOrMenu : .sheet))
-            if !isOwn && layer >= 25 && layer < 100 { continue }
-            let bundleID = isOwn ? ownBundleID : NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
-            let frame = QuartzRect(bounds)
-            let stable: Bool
-            if previous != nil, let before = previousByID[id] {
-                stable = before.frame == frame && before.layer == layer
-            } else {
-                stable = previous == nil
-            }
-            result.append(WindowCandidate(
-                id: id, ownerPID: pid, ownerBundleID: bundleID, ownerName: owner, title: isOwn ? nil : title,
-                frame: frame, layer: layer, kind: kind, isStable: stable
-            ))
+            return candidate(id: id, pid: pid, owner: owner, title: title, frame: QuartzRect(bounds), layer: layer)
         }
-        return result
+    }
+
+    func shareableList(excluding: Set<WindowID>) async throws -> [WindowCandidate] {
+        let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+        return content.windows.compactMap { window in
+            let id = WindowID(window.windowID)
+            guard window.isOnScreen, !excluding.contains(id), let app = window.owningApplication else { return nil }
+            return candidate(id: id, pid: app.processID, owner: app.applicationName, title: window.title,
+                             frame: QuartzRect(window.frame), layer: window.windowLayer)
+        }
+    }
+
+    func candidate(id: WindowID, pid: Int32, owner: String, title: String?, frame: QuartzRect, layer: Int) -> WindowCandidate? {
+        guard frame.width >= 20, frame.height >= 20, !Self.excludedOwners.contains(owner) else { return nil }
+        let isOwn = pid == ownPID
+        if isOwn {
+            guard title == "TF2Pin" else { return nil }
+        } else {
+            guard (0..<25).contains(layer) || (100..<Int(CGShieldingWindowLevel())).contains(layer) else { return nil }
+        }
+        let kind: WindowKind = isOwn ? .ownPin : (layer == 0 ? .window : (layer >= 100 ? .popoverOrMenu : .sheet))
+        let bundleID = isOwn ? ownBundleID : NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
+        return WindowCandidate(id: id, ownerPID: pid, ownerBundleID: bundleID, ownerName: owner, title: isOwn ? nil : title,
+                               frame: frame, layer: layer, kind: kind, isStable: true)
+    }
+
+    static func compare(before: [WindowCandidate], after: [WindowCandidate]) -> [WindowCandidate] {
+        let previousByID = Dictionary(before.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return after.map { window in
+            let previous = previousByID[window.id]
+            return WindowCandidate(
+                id: window.id, ownerPID: window.ownerPID, ownerBundleID: window.ownerBundleID, ownerName: window.ownerName,
+                title: window.title, frame: window.frame, layer: window.layer, kind: window.kind,
+                isStable: previous?.ownerPID == window.ownerPID && previous?.frame == window.frame && previous?.layer == window.layer
+            )
+        }
     }
 
     public func frontmostContext() async -> CaptureContext? {
@@ -152,12 +171,24 @@ public actor ScreenSnapshotter: SnapshotCapturing, ScrollCapturing {
     public func freeze(_ request: CaptureRequest) async throws(AppError) -> FrozenFrameSet {
         guard CGPreflightScreenCaptureAccess() else { throw .permission(.screenRecordingDenied) }
         let topology = try await topology.topology()
-        let before = windows.list(excluding: request.excludedWindows)
         let context = await windows.frontmostContext()
+        let quartzWindows = windows.list(excluding: request.excludedWindows)
+        let useShareableWindows = quartzWindows.isEmpty && request.intent != .fullDisplay
+        let before = useShareableWindows ? await shareableWindows(excluding: request.excludedWindows) : quartzWindows
         let frames = try await captureAll(topology)
-        let after = windows.list(excluding: request.excludedWindows, stableAgainst: before)
+        let after = useShareableWindows ? await shareableWindows(excluding: request.excludedWindows) : windows.list(excluding: request.excludedWindows)
         Task { await self.prewarm() }
-        return FrozenFrameSet(request: request, topology: topology, frames: frames, windows: after, context: context)
+        return FrozenFrameSet(request: request, topology: topology, frames: frames, windows: WindowEnumerator.compare(before: before, after: after),
+                              context: context)
+    }
+
+    private func shareableWindows(excluding: Set<WindowID>) async -> [WindowCandidate] {
+        do {
+            return try await windows.shareableList(excluding: excluding)
+        } catch {
+            logger.error("window enumeration failed: \(String(describing: type(of: error)), privacy: .public)")
+            return []
+        }
     }
 
     private func captureAll(_ topology: DisplayTopology) async throws(AppError) -> [CapturedFrame] {

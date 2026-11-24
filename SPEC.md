@@ -1557,8 +1557,8 @@ README 的每一条功能都落在下面的行上；标 ⚠ 的是 README 与代
 | CAP-10 | 选区尺寸标签 | `Features/Capture/SelectionOverlayWindow.swift:483` | CaptureFeature | S | 2 | 对等 | ☐ |
 | CAP-11 | 像素放大镜 | `Features/Capture/SelectionOverlayWindow.swift:505` | CaptureFeature | S+P | 2 | 对等 | ☐ |
 | CAP-12 | `C` 复制指针处像素的 HEX 色值 | `Features/Capture/SelectionOverlayWindow.swift:1935,1963` | CaptureFeature | U | 2 | 对等 | ☐ |
-| CAP-13 | 双击确认：选区内双击复制；未框选时双击悬停窗口截该窗口，无窗口则截整屏 | `Features/Capture/SelectionOverlayWindow.swift:883,1109-1150` | CaptureFeature | U | 2 | 对等 | ☐ |
-| CAP-14 | `Esc` 取消（含应用未激活时的全局兜底），右键取消 | `Features/Capture/SelectionOverlayWindow.swift:1898,863`、`Features/Capture/CaptureSessionController.swift:280` | CaptureFeature | I+M | 2 | 对等 | ☐ |
+| CAP-13 | 双击保存：已框选时保存选区，未框选时保存悬停窗口，无候选时保存指针所在整屏 | `Features/Capture/SelectionOverlayWindow.swift:883,1109-1150` | CaptureFeature | U | 2 | 修正 | ☐ |
+| CAP-14 | 选区外左键单击、右键或按 `Esc` 取消截图，应用未激活时有全局 `Esc` 兜底 | `Features/Capture/SelectionOverlayWindow.swift:1898,863`、`Features/Capture/CaptureSessionController.swift:280` | CaptureFeature | I+M | 2 | 修正 | ☐ |
 | CAP-15 | 冻结期间滚轮不透传到底下的应用 | `Features/Capture/SelectionOverlayWindow.swift:824` | CaptureFeature | M | 2 | 对等 | ☐ |
 | CAP-16 | 全屏截图：不进选区界面，直接成图、复制到剪贴板并打开编辑器 | `Features/Capture/CaptureSessionController.swift:75-93` | CaptureFeature | I+M | 2 | 修正 | ☐ |
 | CAP-17 | 多屏、混合缩放、负坐标布局下选区与输出一致；跨屏选区按最高密度拼接 | `Services/SnapshotCaptureService.swift:197-260`、`Services/CoordinateMapper.swift:61-174` | TFDomain、TFCaptureInfra | U+M | 2 | 对等 | ☐ |
@@ -1585,7 +1585,7 @@ CAP-16 的修正：1.x 固定取主屏（`CaptureSessionController.swift:77`）�
 | INP-09 | 上传到图床（1.x 因无设置入口而永不显示） | `Features/Capture/SelectionInPlaceToolbar.swift:357`、`Features/Capture/CaptureSessionController.swift:249` | CaptureFeature、TFUploadInfra | I+R | 6 | 补齐 | ☐ |
 | INP-10 | 取消按钮 | `Features/Capture/SelectionInPlaceToolbar.swift:370` | CaptureFeature | U | 2 | 对等 | ☐ |
 | INP-11 | 结果抽屉：识别与翻译两个标签；重跑；复制全部、原文、译文；逐行复制；目标语言快速切换 | `Features/Capture/InPlaceResultsPanel.swift:8,90,104,172,250` | TFWorkspaceUI | S+I | 4 | 对等 | ☐ |
-| INP-12 | 抽屉有键盘焦点时 `Esc` 只关抽屉，不取消截图 | `Features/Capture/SelectionOverlayWindow.swift:1864` | CaptureFeature | U | 4 | 对等 | ☐ |
+| INP-12 | 结果抽屉有键盘焦点时，`Esc` 关闭整个截图 | `Features/Capture/SelectionOverlayWindow.swift:1864` | CaptureFeature | U | 4 | 修正 | ☐ |
 | INP-13 | 就地状态消息（成功、错误） | `Features/Capture/SelectionOverlayWindow.swift:1583` | TFDesignSystem | S | 3 | 对等 | ☐ |
 | INP-14 | 新一轮识别或翻译取消旧一轮；旧结果不得覆盖新结果 | `Features/Capture/SelectionOverlayWindow.swift:1655-1657` | TFPipelines | I | 4 | 对等 | ☐ |
 
@@ -1604,7 +1604,7 @@ INP-08 的修正：1.x 用云端视觉模型做检测，检测时已经把原图
 | ANN-05 | 马赛克强度调节 | `Features/Capture/SelectionOverlayWindow.swift:1820`、`Features/Preview/PreviewToolBar.swift:111` | TFWorkspaceUI | U+S | 3 | 对等 | ☐ |
 | ANN-06 | 矩形与椭圆的填充开关与填充色 | `Features/Preview/PreviewToolBar.swift:256-281` | TFWorkspaceUI | U+S | 3 | 对等 | ☐ |
 | ANN-07 | 文字字号调节 | `Features/Preview/PreviewViewModel+Drawing.swift:555` | TFWorkspaceUI | U+S | 3 | 对等 | ☐ |
-| ANN-08 | 文字就地输入：`Enter` 提交、`Esc` 取消、双击已有文字重新编辑 | `Features/Capture/SelectionOverlayWindow.swift:1222,1277,1321,883`、`Features/Preview/PreviewViewModel+Drawing.swift:656` | TFWorkspaceUI | U+M | 3 | 对等 | ☐ |
+| ANN-08 | 文字就地输入：`Enter` 提交，双击已有文字重新编辑。编辑器内 `Esc` 取消输入，截图时 `Esc` 退出截图 | `Features/Capture/SelectionOverlayWindow.swift:1222,1277,1321,883`、`Features/Preview/PreviewViewModel+Drawing.swift:656` | TFWorkspaceUI | U+M | 3 | 修正 | ☐ |
 | ANN-09 | 选中已有标注后移动、用手柄缩放或调端点；文字提交后可拖动 | `Features/Capture/SelectionOverlayWindow.swift:869,900-940`、`Features/Preview/PreviewViewModel+Drawing.swift:306,355,403` | TFWorkspaceUI | U+M | 3 | 对等 | ☐ |
 | ANN-10 | `Delete` 删除选中的标注 | `Features/Capture/SelectionOverlayWindow.swift:1902`、`Features/Preview/PreviewWindow.swift:239` | TFWorkspaceUI | U | 3 | 对等 | ☐ |
 | ANN-11 | 撤销与重做（`⌘Z`、`⌘⇧Z`、工具条按钮） | `Features/Capture/SelectionOverlayWindow.swift:1888,1356`、`Features/Preview/PreviewViewModel.swift:307,322` | TFPipelines | U | 3 | 对等 | ☐ |
