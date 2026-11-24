@@ -40,6 +40,41 @@ public struct WorkspaceServices {
         self.performance = performance
     }
 
+    /// The scan stays up at least this long, so a fast detection still reads as a scan instead of a flash.
+    static let minimumScan: Duration = .milliseconds(800)
+
+    /// Smart mosaic with feedback (INP-08): the canvas scans while detection runs, the areas it found light up, and a
+    /// toast says how many were pixelated or that nothing private was found. Returns the number of areas.
+    @discardableResult
+    public func smartMosaic(_ id: SessionID, on canvas: DocumentCanvasView?, near anchor: CGPoint? = nil) async throws(AppError) -> Int {
+        guard let pipeline else { return 0 }
+        // The sweep starts on the click; the baseline snapshot is read afterwards.
+        let started = ContinuousClock.now
+        canvas?.beginScanning()
+        if let canvas {
+            NSAccessibility.post(
+                element: canvas, notification: .announcementRequested, userInfo: [.announcement: localizer[.feedbackSmartMosaicScanning]])
+        }
+        let before = Set(((try? await sessions.snapshot(of: id))?.annotations ?? []).map(\.id))
+        let count: Int
+        do {
+            count = try await pipeline.smartMosaic(id, settings: settings.snapshot)
+        } catch {
+            canvas?.finishScanning(found: [])
+            throw error
+        }
+        let remaining = Self.minimumScan - (ContinuousClock.now - started)
+        if remaining > .zero { try? await Task.sleep(for: remaining) }
+        let found = ((try? await sessions.snapshot(of: id))?.annotations ?? []).filter { !before.contains($0.id) }.map(\.bounds)
+        canvas?.finishScanning(found: found)
+        errors.toast(
+            count > 0
+                ? ToastModel(.success, message: localizer.string(.feedbackSmartMosaic, count))
+                : ToastModel(.info, message: localizer[.feedbackSmartMosaicNone]),
+            near: anchor)
+        return count
+    }
+
     /// Annotation editor wired to defaults memory (ANN-15) and the annotation color picker (COL-11).
     public func makeEditor(for id: SessionID) -> AnnotationEditor {
         let editor = AnnotationEditor(sessions: sessions, sessionID: id, defaults: settings.annotationDefaults) { [localizer] key in
@@ -188,7 +223,7 @@ public final class ResultsModel {
         let lines = VisualLines.group(session)
         let text: String = switch scope {
         case .source: lines.map(\.source).joined(separator: "\n")
-        case .translation: lines.compactMap(\.translation).joined(separator: "\n")
+        case .translation: lines.compactMap { $0.status == .sameLanguageSkipped ? $0.source : $0.translation }.joined(separator: "\n")
         case .all: lines.map { [$0.source, $0.translation].compactMap { $0 }.joined(separator: "\n") }.joined(separator: "\n\n")
         }
         copyText(text)

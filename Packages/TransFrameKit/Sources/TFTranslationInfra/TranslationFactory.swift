@@ -49,6 +49,20 @@ public enum LanguageDetection {
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
         guard let language = recognizer.dominantLanguage, language != .undetermined else { return nil }
+        return code(language)
+    }
+
+    /// The dominant language only when the recognizer is confident and the text has enough letters to judge.
+    public static func detect(_ text: String, minimumConfidence: Double) -> LanguageCode? {
+        guard text.unicodeScalars.filter({ CharacterSet.letters.contains($0) }).count >= 2 else { return nil }
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+        guard let (language, confidence) = recognizer.languageHypotheses(withMaximum: 1).first, language != .undetermined,
+              confidence >= minimumConfidence else { return nil }
+        return code(language)
+    }
+
+    private static func code(_ language: NLLanguage) -> LanguageCode {
         switch language {
         case .simplifiedChinese: return .simplifiedChinese
         case .traditionalChinese: return LanguageCode("zh-Hant")

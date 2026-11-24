@@ -28,12 +28,13 @@ public enum OverlayMode: String, Sendable, Codable, Equatable, CaseIterable {
 }
 
 public enum BeautifyStyle: Sendable, Codable, Equatable, Hashable {
-    /// Gradient background; padding, corner radius and shadow are content parameters (36 / 12 / 24).
-    case gradient(start: RGBA, end: RGBA)
+    /// Rounded corners and a soft shadow inside a transparent margin, no backdrop. Padding, corner radius and shadow
+    /// are content parameters (36 / 12 / 24).
+    case transparent
+    /// The same frame on a solid matte, for formats without alpha (JPEG).
+    case matte(RGBA)
 
-    public static let `default` = BeautifyStyle.gradient(
-        start: RGBA(red: 0.40, green: 0.49, blue: 0.92), end: RGBA(red: 0.46, green: 0.29, blue: 0.64)
-    )
+    public static let `default` = BeautifyStyle.transparent
     public static let padding = 36.0
     public static let cornerRadius = 12.0
     public static let shadowRadius = 24.0

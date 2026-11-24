@@ -28,9 +28,11 @@ public struct GeneralSettings: Sendable, Codable, Equatable {
     /// nil means follow the system (L10N-02).
     public var interfaceLanguage: String?
     public var playsSound = true
+    /// Capture highlights the window under the pointer; a click selects it and a double click captures it (CAP-05, CAP-13).
+    public var detectsWindows = true
 
     public init() {}
-    private enum CodingKeys: String, CodingKey { case schemaVersion, saveLocationPath, interfaceLanguage, playsSound }
+    private enum CodingKeys: String, CodingKey { case schemaVersion, saveLocationPath, interfaceLanguage, playsSound, detectsWindows }
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = GeneralSettings()
@@ -38,6 +40,7 @@ public struct GeneralSettings: Sendable, Codable, Equatable {
         saveLocationPath = c.value(.saveLocationPath, default: d.saveLocationPath)
         interfaceLanguage = c.value(.interfaceLanguage, default: d.interfaceLanguage)
         playsSound = c.value(.playsSound, default: d.playsSound)
+        detectsWindows = c.value(.detectsWindows, default: d.detectsWindows)
     }
 }
 

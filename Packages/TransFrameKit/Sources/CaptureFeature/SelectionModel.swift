@@ -50,10 +50,12 @@ public final class SelectionModel {
 
     public static let dragThreshold = 3.0
 
-    public init(frames: FrozenFrameSet) {
+    /// `snapsToWindows` follows the "detect windows" setting; Space still toggles it for one capture.
+    public init(frames: FrozenFrameSet, snapsToWindows: Bool = true) {
         topology = frames.topology
         bounds = frames.topology.bounds
         pointer = frames.request.pointer
+        self.snapsToWindows = snapsToWindows
         windowCandidates = frames.windows.filter { $0.isStable }.map {
             SnapCandidate(kind: .window($0.id), rect: $0.frame, title: $0.title.flatMap { $0.isEmpty ? nil : $0 } ?? $0.ownerName)
         }
@@ -187,10 +189,11 @@ public final class SelectionModel {
         return false
     }
 
-    /// Double click: copy the selection, else the hovered window, else the display under the pointer (CAP-13).
+    /// Double click: copy the selection, else the window under the pointer (when window detection is on), else the display
+    /// under the pointer (CAP-13).
     public func doubleClickTarget(at point: QuartzPoint) -> (QuartzRect, SelectionSource)? {
         if let rect, rect.contains(point) { return (rect, source) }
-        if let window = candidates(at: point).first { return (window.rect, window.source) }
+        if snapsToWindows, let window = candidates(at: point).first { return (window.rect, window.source) }
         guard let display = topology.display(containing: point) else { return nil }
         return (display.frame, .display(display.id))
     }

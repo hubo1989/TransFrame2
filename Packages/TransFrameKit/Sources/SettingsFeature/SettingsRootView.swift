@@ -107,6 +107,10 @@ struct GeneralPage: View {
                 }
                 Toggle(l10n[.settingsGeneralSound], isOn: settings.general.playsSound)
             }
+            Section(l10n[.settingsGeneralCapture]) {
+                Toggle(l10n[.settingsGeneralDetectWindows], isOn: settings.general.detectsWindows)
+                Text(l10n[.settingsGeneralDetectWindowsNote]).font(DS.Typography.caption).foregroundStyle(.secondary)
+            }
             Section(l10n[.settingsGeneralInterface]) {
                 Picker(l10n[.settingsGeneralLanguage], selection: Binding(
                     get: { model.settings.general.interfaceLanguage ?? "" },

@@ -17,7 +17,8 @@ struct ReviewRegressionTests {
     @Test func outboundFieldsAndGenerationUseGuardedText() async throws {
         let source = "Set password: ExampleSecret before continuing"
         let term = GlossaryEntry(source: "password: ExampleSecret", target: "ExampleSecret", to: .simplifiedChinese)
-        let engine = FakeTranslationEngine(.openAICompatible, locality: .cloud, capabilities: [.batch, .glossary, .context], behavior: .translate { $0 })
+        let engine = FakeTranslationEngine(
+            .openAICompatible, locality: .cloud, capabilities: [.batch, .glossary, .context], behavior: .translate { "T: " + $0 })
         let service = TranslationService(engines: FakeTranslationEngines([engine]), performance: FakePerformanceRecorder())
         var settings = SettingsSnapshot()
         settings.privacy.sendContext = true
@@ -29,7 +30,7 @@ struct ReviewRegressionTests {
         #expect(batch.context?.appName == "Notes")
         #expect(batch.context?.windowTitle == nil)
         #expect(batch.units.first?.text.contains("ExampleSecret") == false)
-        #expect(outcome.effectiveResult?.segments.first?.translated == source)
+        #expect(outcome.effectiveResult?.segments.first?.translated == "T: " + source)
         let generator = FakeTextGenerator { "Edited: " + $0 }
         let rewritten = try await PrivacyGuard.generate(.polish, input: source, using: generator, settings: settings.privacy)
         #expect(rewritten == "Edited: " + source)
@@ -62,7 +63,7 @@ struct ReviewRegressionTests {
     }
 
     @Test func cachedReplyRebindsIDsAndRestoresOnlyThisRequestsSecret() async throws {
-        let engine = FakeTranslationEngine(.openAICompatible, locality: .cloud, behavior: .translate { $0 })
+        let engine = FakeTranslationEngine(.openAICompatible, locality: .cloud, behavior: .translate { "T: " + $0 })
         let service = TranslationService(engines: FakeTranslationEngines([engine]), performance: FakePerformanceRecorder())
         let first = makeJob("Please reset password: FirstSecret next", route: .ordered([.openAICompatible]))
         let second = makeJob("Please reset password: SecondSecret next", route: .ordered([.openAICompatible]))
@@ -70,7 +71,7 @@ struct ReviewRegressionTests {
         let secondOutcome = try await service.run(second, settings: SettingsSnapshot()) { _ in }
         let segment = try #require(secondOutcome.effectiveResult?.segments.first)
         #expect(segment.id == second.units[0].id)
-        #expect(segment.translated == second.units[0].text)
+        #expect(segment.translated == "T: " + second.units[0].text)
         #expect(secondOutcome.effectiveResult?.fromCache == true)
         #expect(engine.calls.count == 1)
     }

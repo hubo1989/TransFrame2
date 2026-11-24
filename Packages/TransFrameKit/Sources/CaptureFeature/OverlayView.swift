@@ -137,9 +137,43 @@ final class OverlayView: NSView {
 
     // MARK: Rendering state
 
+    private struct Chrome: Equatable {
+        let selection: QuartzRect?
+        let candidate: QuartzRect?
+        let showHandles: Bool
+        let label: String?
+    }
+
+    private struct Magnifier: Equatable {
+        let pointer: QuartzPoint
+        let hex: String?
+    }
+
+    private var lastChrome: Chrome?
+    private var lastMagnifier: Magnifier??
+
+    /// Updates only the layers whose inputs changed: pointer moves over a settled selection cost nothing (SPEC §05 §3).
     func render(selection: QuartzRect?, candidate: QuartzRect?, showHandles: Bool, pointer: QuartzPoint, showMagnifier: Bool, hex: String?) {
+        let chrome = Chrome(
+            selection: selection, candidate: candidate, showHandles: showHandles, label: selection != nil ? labelTexts.size : labelTexts.candidate)
+        let magnifier = showMagnifier ? Magnifier(pointer: pointer, hex: hex) : nil
+        let chromeChanged = chrome != lastChrome, magnifierChanged = lastMagnifier.map { $0 != magnifier } ?? true
+        guard chromeChanged || magnifierChanged else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        if chromeChanged {
+            lastChrome = chrome
+            renderChrome(chrome)
+        }
+        if magnifierChanged {
+            lastMagnifier = .some(magnifier)
+            updateMagnifier(pointer: pointer, visible: showMagnifier, hex: hex)
+        }
+        CATransaction.commit()
+    }
+
+    private func renderChrome(_ chrome: Chrome) {
+        let selection = chrome.selection, candidate = chrome.candidate
         let scrim = CGMutablePath()
         scrim.addRect(bounds)
         let localSelection = selection.map(local)
@@ -149,7 +183,7 @@ final class OverlayView: NSView {
         candidateLayer.path = candidate.map { CGPath(rect: local($0).insetBy(dx: 1, dy: 1), transform: nil) }
 
         let handles = CGMutablePath()
-        if showHandles, let selection {
+        if chrome.showHandles, let selection {
             let size = DS.Overlay.handleSize
             for point in SelectionModel.handlePoints(selection).values {
                 let p = CGPoint(x: point.x - display.frame.minX, y: point.y - display.frame.minY)
@@ -158,8 +192,7 @@ final class OverlayView: NSView {
         }
         handlesLayer.path = handles
 
-        let labelText = selection != nil ? labelTexts.size : labelTexts.candidate
-        if let labelText, let anchor = localSelection ?? candidate.map(local) {
+        if let labelText = chrome.label, let anchor = localSelection ?? candidate.map(local) {
             labelLayer.string = labelText
             let width = CGFloat(labelText.count) * 7.5 + 16
             var origin = CGPoint(x: anchor.minX, y: anchor.minY - 24)
@@ -170,8 +203,6 @@ final class OverlayView: NSView {
         } else {
             labelLayer.isHidden = true
         }
-        updateMagnifier(pointer: pointer, visible: showMagnifier, hex: hex)
-        CATransaction.commit()
     }
 
     /// Pixel magnifier around the pointer (CAP-11), read from the frozen frame only.
@@ -201,6 +232,8 @@ final class OverlayView: NSView {
             magnifierLabel.string = "\(hex)  \(Int(center.x)),\(Int(center.y))"
             magnifierLabel.frame = CGRect(x: origin.x, y: origin.y + 124, width: 120, height: 20)
             magnifierLabel.isHidden = false
+        } else {
+            magnifierLabel.isHidden = true
         }
     }
 

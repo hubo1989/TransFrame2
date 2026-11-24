@@ -14,9 +14,15 @@ public struct TranslationService: TranslationWorkflow {
     private let cache: ResultCache<[Reply?]>
     private let limiter: EngineLimiter
     private let performance: any PerformanceRecording
+    /// On-device language identification; nil when it is not confident. Screenshot lines already in the target language
+    /// are not sent to any engine.
+    private let languageOf: (@Sendable (String) -> LanguageCode?)?
 
-    public init(engines: any TranslationEngineProviding, performance: any PerformanceRecording) {
+    public init(
+        engines: any TranslationEngineProviding, performance: any PerformanceRecording, languageOf: (@Sendable (String) -> LanguageCode?)? = nil
+    ) {
         self.engines = engines
+        self.languageOf = languageOf
         cache = ResultCache(maxCount: 256, maxBytes: 8 * 1024 * 1024) { $0.reduce(0) { $0 + ($1?.text?.utf8.count ?? 0) + 64 } }
         limiter = EngineLimiter(cloudLimit: 2)
         self.performance = performance
@@ -43,6 +49,41 @@ public struct TranslationService: TranslationWorkflow {
     }
 
     func run(_ job: TranslationJob, settings: SettingsSnapshot, overridePrivacy: Bool = false, emit: @escaping @Sendable (TranslationEvent) -> Void)
+        async throws(AppError) -> TranslationOutcome
+    {
+        // Screenshot lines that already read in the target language keep their original and cost no engine call.
+        guard job.scene == .screenshot, let languageOf else { return try await route(job, settings: settings, overridePrivacy: overridePrivacy, emit: emit) }
+        var skipped: [SegmentID: BilingualSegment] = [:]
+        for unit in job.units {
+            guard let language = languageOf(unit.text), language.isSameLanguage(as: job.to) else { continue }
+            skipped[unit.id] = BilingualSegment(id: unit.id, source: unit.text, translated: nil, status: .sameLanguageSkipped, from: language, to: job.to)
+        }
+        guard !skipped.isEmpty else { return try await route(job, settings: settings, overridePrivacy: overridePrivacy, emit: emit) }
+        let rest = job.units.filter { skipped[$0.id] == nil }
+        guard !rest.isEmpty else {
+            let engine = job.routing.engines.first ?? .appleTranslation
+            return TranslationOutcome(
+                operation: job.operation, routing: job.routing, results: [EngineResult(id: engine, segments: job.units.compactMap { skipped[$0.id] })],
+                effective: engine, target: job.to)
+        }
+        let restJob = TranslationJob(
+            operation: job.operation, source: job.source, units: rest, from: job.from, to: job.to, routing: job.routing, prompt: job.prompt,
+            glossary: job.glossary, context: job.context, tone: job.tone, cache: job.cache, scene: job.scene)
+        var outcome = try await route(restJob, settings: settings, overridePrivacy: overridePrivacy, emit: emit)
+        outcome = TranslationOutcome(
+            operation: outcome.operation, routing: outcome.routing,
+            results: outcome.results.map { result in
+                guard !result.segments.isEmpty else { return result }
+                let byID = Dictionary(result.segments.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                return EngineResult(
+                    id: result.id, segments: job.units.compactMap { skipped[$0.id] ?? byID[$0.id] }, error: result.error, skipped: result.skipped,
+                    duration: result.duration, fromCache: result.fromCache)
+            },
+            effective: outcome.effective, target: outcome.target, privacy: outcome.privacy)
+        return outcome
+    }
+
+    private func route(_ job: TranslationJob, settings: SettingsSnapshot, overridePrivacy: Bool, emit: @escaping @Sendable (TranslationEvent) -> Void)
         async throws(AppError) -> TranslationOutcome
     {
         if Task.isCancelled { throw .cancelled }
@@ -243,7 +284,8 @@ public struct TranslationService: TranslationWorkflow {
             }
             text = PrivacyGuard.restore(text, glossary[unit.id] ?? [:])
             text = PrivacyGuard.restore(text, placeholders[unit.id] ?? [:])
-            if let detected, detected.isSameLanguage(as: to), text == unit.text {
+            // A "translation" that only repeats the source (paths, names, text already in the target language) is not shown.
+            if TranslationText.sameContent(text, unit.text) {
                 return BilingualSegment(id: unit.id, source: unit.text, translated: nil, status: .sameLanguageSkipped, from: detected, to: to)
             }
             return BilingualSegment(
@@ -262,6 +304,20 @@ public struct TranslationService: TranslationWorkflow {
             }
             return try await body()
         }
+    }
+}
+
+/// Compares a translation with its source ignoring character width, spacing and punctuation (`一行）:` and `一行）：` are the same).
+public enum TranslationText {
+    public static func sameContent(_ a: String, _ b: String) -> Bool {
+        let x = normalized(a), y = normalized(b)
+        return x.isEmpty || y.isEmpty
+            ? a.trimmingCharacters(in: .whitespacesAndNewlines) == b.trimmingCharacters(in: .whitespacesAndNewlines) : x == y
+    }
+
+    static func normalized(_ text: String) -> String {
+        let ignored = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters).union(.symbols)
+        return String(String.UnicodeScalarView(text.precomposedStringWithCompatibilityMapping.unicodeScalars.filter { !ignored.contains($0) }))
     }
 }
 

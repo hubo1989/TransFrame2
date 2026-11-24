@@ -230,8 +230,8 @@ public enum Annotation: Sendable, Equatable, Hashable, Identifiable, Codable {
             return DocumentRect(r.insetBy(dx: -a.lineWidth / 2, dy: -a.lineWidth / 2))
         case .text(let a):
             let lines = max(a.text.split(separator: "\n", omittingEmptySubsequences: false).count, 1)
-            let longest = a.text.split(separator: "\n").map(\.count).max() ?? 1
-            let width = a.maxWidth ?? Double(max(longest, 1)) * a.fontSize * 0.62
+            let longest = a.text.split(separator: "\n").map(Self.estimatedEms).max() ?? 0.62
+            let width = a.maxWidth ?? max(longest, 0.62) * a.fontSize
             return DocumentRect(x: a.anchor.x, y: a.anchor.y, width: width, height: Double(lines) * a.fontSize * 1.25)
         case .numberLabel(let a):
             return DocumentRect(x: a.center.x - a.diameter / 2, y: a.center.y - a.diameter / 2, width: a.diameter, height: a.diameter)
@@ -239,6 +239,21 @@ public enum Annotation: Sendable, Equatable, Hashable, Identifiable, Codable {
             return a.bubble.union(DocumentRect(x: a.pointer.x, y: a.pointer.y, width: 0, height: 0))
         case .mosaic(let a): return a.rect
         case .redaction(let a): return a.rect
+        }
+    }
+
+    /// Approximate line width in ems: East Asian wide characters are one em, others about 0.62.
+    static func estimatedEms(_ line: Substring) -> Double {
+        line.unicodeScalars.reduce(0) { total, scalar in
+            switch scalar.value {
+            case 0x1100...0x115F, 0x2E80...0xA4CF, 0xAC00...0xD7A3, 0xF900...0xFAFF, 0xFE30...0xFE4F, 0xFF00...0xFF60, 0xFFE0...0xFFE6,
+                 0x1F300...0x1FAFF, 0x20000...0x3FFFD:
+                total + 1
+            case 0x0300...0x036F, 0x200B...0x200F, 0xFE00...0xFE0F:
+                total
+            default:
+                total + 0.62
+            }
         }
     }
 

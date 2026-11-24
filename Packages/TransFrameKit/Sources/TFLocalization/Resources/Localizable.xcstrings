@@ -449,6 +449,70 @@
         }
       }
     },
+    "action.beautify.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rounded corners and a shadow in a transparent margin"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "圆角与阴影，外围保留透明留白"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgerundete Ecken und Schatten in einem transparenten Rand"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esquinas redondeadas y sombra en un margen transparente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coins arrondis et ombre dans une marge transparente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angoli arrotondati e ombra in un margine trasparente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角丸と影。周囲に透明な余白を残します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "둥근 모서리와 그림자, 바깥쪽에 투명한 여백"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cantos arredondados e sombra numa margem transparente"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скруглённые углы и тень с прозрачными полями"
+          }
+        }
+      }
+    },
     "action.cancel": {
       "localizations": {
         "en": {
@@ -509,6 +573,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Отмена"
+          }
+        }
+      }
+    },
+    "action.cancel.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard this capture"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放弃本次截图"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Aufnahme verwerfen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descartar esta captura"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abandonner cette capture"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla questa cattura"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このキャプチャを破棄"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 캡처 취소"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descartar esta captura"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отменить этот снимок"
           }
         }
       }
@@ -641,6 +769,70 @@
         }
       }
     },
+    "action.copy.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the image to the clipboard and finish"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制到剪贴板并结束"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild in die Zwischenablage kopieren und beenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar la imagen al portapapeles y terminar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier l'image dans le presse-papiers et terminer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia l'immagine negli appunti e termina"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像をクリップボードにコピーして終了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지를 클립보드에 복사하고 마치기"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar a imagem para a área de transferência e concluir"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скопировать изображение в буфер обмена и завершить"
+          }
+        }
+      }
+    },
     "action.crop": {
       "localizations": {
         "en": {
@@ -701,6 +893,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Обрезать"
+          }
+        }
+      }
+    },
+    "action.crop.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag to choose the area to keep; Return applies, Esc cancels"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽选择保留区域，回车应用、Esc 取消"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu behaltenden Bereich aufziehen; Zeilenschalter übernimmt, Esc bricht ab"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para elegir la zona que se conserva; Retorno aplica, Esc cancela"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser pour choisir la zone à conserver ; Retour applique, Échap annule"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina per scegliere l'area da tenere; Invio applica, Esc annulla"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残す範囲をドラッグで選択。Return で適用、Esc で取消"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남길 영역을 드래그로 선택. Return으로 적용, Esc로 취소"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste para escolher a área a manter; Return aplica, Esc cancela"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выделите область, которую нужно оставить; Return — применить, Esc — отмена"
           }
         }
       }
@@ -1153,6 +1409,70 @@
         }
       }
     },
+    "action.pin.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep the image floating on screen"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把截图钉在屏幕上"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild schwebend auf dem Bildschirm behalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantener la imagen flotando en la pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder l'image flottante à l'écran"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantieni l'immagine fissata sullo schermo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像を画面上に固定表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지를 화면에 고정"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manter a imagem flutuando na tela"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закрепить изображение поверх окон"
+          }
+        }
+      }
+    },
     "action.recognize": {
       "localizations": {
         "en": {
@@ -1217,6 +1537,70 @@
         }
       }
     },
+    "action.recognize.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognize the text in the image"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别图中的文字"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text im Bild erkennen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconocer el texto de la imagen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnaître le texte de l'image"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riconosci il testo nell'immagine"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像内の文字を認識"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 속 텍스트 인식"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconhecer o texto da imagem"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознать текст на изображении"
+          }
+        }
+      }
+    },
     "action.redo": {
       "localizations": {
         "en": {
@@ -1277,6 +1661,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Повторить"
+          }
+        }
+      }
+    },
+    "action.redo.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redo what was just undone"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复刚才撤销的操作"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerade Widerrufenes wiederholen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rehacer lo que se acaba de deshacer"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir ce qui vient d'être annulé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripeti ciò che è appena stato annullato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り消した操作をやり直す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방금 실행 취소한 작업 다시 실행"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refazer o que acabou de ser desfeito"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вернуть только что отменённое"
           }
         }
       }
@@ -1409,6 +1857,70 @@
         }
       }
     },
+    "action.save.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save to the save location"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存到保存位置"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am Speicherort sichern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar en la ubicación de guardado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer dans l'emplacement d'enregistrement"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva nella posizione di salvataggio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存先に保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장 위치에 저장"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvar no local de salvamento"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить в папку сохранения"
+          }
+        }
+      }
+    },
     "action.scrollCapture": {
       "localizations": {
         "en": {
@@ -1469,6 +1981,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Снимок с прокруткой"
+          }
+        }
+      }
+    },
+    "action.scrollCapture.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scroll the page to capture it as one long image"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "滚动页面，拼接成一张长截图"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seite scrollen und als ein langes Bild aufnehmen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desplaza la página para capturarla como una imagen larga"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites défiler la page pour la capturer en une seule longue image"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorri la pagina per catturarla come un'unica immagine lunga"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページをスクロールして 1 枚の長いスクリーンショットに"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "페이지를 스크롤하여 하나의 긴 이미지로 캡처"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Role a página para capturá-la como uma imagem longa"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прокрутите страницу, чтобы снять её одним длинным изображением"
           }
         }
       }
@@ -1601,6 +2177,70 @@
         }
       }
     },
+    "action.smartMosaic.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find sensitive information and pixelate it (undoable)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动查找敏感信息并打码，可撤销"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sensible Informationen finden und verpixeln (widerrufbar)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Busca información sensible y la pixela (se puede deshacer)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trouve les informations sensibles et les pixélise (annulable)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trova le informazioni sensibili e le pixela (annullabile)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機密情報を検出してモザイク（取り消し可）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "민감한 정보를 찾아 모자이크(실행 취소 가능)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontra informações sensíveis e as pixeliza (pode desfazer)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Находит конфиденциальные данные и пикселизирует их (можно отменить)"
+          }
+        }
+      }
+    },
     "action.translate": {
       "localizations": {
         "en": {
@@ -1661,6 +2301,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Перевести"
+          }
+        }
+      }
+    },
+    "action.translate.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate the text in the image"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译图中的文字"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text im Bild übersetzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traducir el texto de la imagen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduire le texte de l'image"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduci il testo nell'immagine"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像内の文字を翻訳"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 속 텍스트 번역"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduzir o texto da imagem"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перевести текст на изображении"
           }
         }
       }
@@ -1729,6 +2433,70 @@
         }
       }
     },
+    "action.undo.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo the last annotation edit"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤销上一步标注操作"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Anmerkungsänderung widerrufen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deshacer la última edición de anotación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler la dernière modification d'annotation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla l'ultima modifica alle annotazioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直前の注釈操作を取り消す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 주석 편집 실행 취소"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desfazer a última edição de anotação"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отменить последнее изменение пометок"
+          }
+        }
+      }
+    },
     "action.upload": {
       "localizations": {
         "en": {
@@ -1789,6 +2557,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Загрузить"
+          }
+        }
+      }
+    },
+    "action.upload.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload to your image host and copy the link"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上传到图床并复制链接"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Bildhoster hochladen und Link kopieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subir al alojamiento de imágenes y copiar el enlace"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer vers votre hébergeur d'images et copier le lien"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carica sul servizio di hosting immagini e copia il link"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像ホストにアップロードしてリンクをコピー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 호스팅에 업로드하고 링크 복사"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar ao serviço de imagens e copiar o link"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузить на фотохостинг и скопировать ссылку"
           }
         }
       }
@@ -14982,61 +15814,189 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Masked %d areas"
+            "value": "Pixelated %d private areas"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已遮挡 %d 处"
+            "value": "已完成打码，共 %d 处"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d Bereiche verdeckt"
+            "value": "%d private Bereiche verpixelt"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d áreas ocultadas"
+            "value": "Se pixelaron %d zonas privadas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d zones masquées"
+            "value": "%d zones privées pixélisées"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d aree oscurate"
+            "value": "%d aree private pixelate"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d 箇所をマスクしました"
+            "value": "%d か所の個人情報にモザイクをかけました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d개 영역 가림"
+            "value": "개인 정보 %d곳을 모자이크 처리했습니다"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d áreas ocultadas"
+            "value": "%d áreas privadas pixelizadas"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Скрыто областей: %d"
+            "value": "Скрыто мозаикой: %d"
+          }
+        }
+      }
+    },
+    "feedback.smartMosaicNone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No private information found"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未检测到隐私信息"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine privaten Informationen gefunden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se encontró información privada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune information privée détectée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna informazione privata trovata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人情報は見つかりませんでした"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인 정보가 발견되지 않았습니다"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma informação privada encontrada"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Личные данные не найдены"
+          }
+        }
+      }
+    },
+    "feedback.smartMosaicScanning": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanning for private information…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在扫描隐私信息…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche nach privaten Informationen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscando información privada…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche d'informations privées…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricerca di informazioni private…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人情報をスキャンしています…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인 정보를 검사하는 중…"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Procurando informações privadas…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поиск личных данных…"
           }
         }
       }
@@ -26241,6 +27201,70 @@
         }
       }
     },
+    "settings.general.capture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截图"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmfoto"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Captura"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cattura"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캡처"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Captura"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Снимок экрана"
+          }
+        }
+      }
+    },
     "settings.general.choose": {
       "localizations": {
         "en": {
@@ -26301,6 +27325,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выбрать…"
+          }
+        }
+      }
+    },
+    "settings.general.detectWindows": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detect windows automatically"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动识别窗口"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenster automatisch erkennen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detectar ventanas automáticamente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détecter automatiquement les fenêtres"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rileva automaticamente le finestre"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウインドウを自動認識"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "윈도우 자동 인식"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detectar janelas automaticamente"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически распознавать окна"
+          }
+        }
+      }
+    },
+    "settings.general.detectWindowsNote": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While selecting, the window under the pointer is highlighted: click to select it, double-click to capture it right away. Tab cycles overlapping windows; Space switches to a free selection."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "框选时高亮指针下的窗口：单击选中，双击直接截取该窗口。Tab 在重叠窗口间切换，空格切换为自由框选。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Auswählen wird das Fenster unter dem Zeiger hervorgehoben: Klicken wählt es aus, Doppelklicken nimmt es sofort auf. Tab wechselt zwischen überlappenden Fenstern, die Leertaste schaltet auf freie Auswahl um."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al seleccionar se resalta la ventana bajo el puntero: haz clic para seleccionarla o doble clic para capturarla al instante. Tab alterna entre ventanas superpuestas; Espacio cambia a selección libre."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pendant la sélection, la fenêtre sous le pointeur est mise en évidence : cliquez pour la sélectionner, double-cliquez pour la capturer aussitôt. Tab passe d'une fenêtre superposée à l'autre ; Espace bascule en sélection libre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante la selezione la finestra sotto il puntatore viene evidenziata: fai clic per selezionarla, doppio clic per catturarla subito. Tab passa tra finestre sovrapposte; Spazio passa alla selezione libera."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範囲選択中はポインタの下のウインドウを強調表示します。クリックで選択、ダブルクリックでそのウインドウをすぐにキャプチャします。Tab で重なったウインドウを切り替え、スペースで自由選択に切り替えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영역을 선택할 때 포인터 아래의 윈도우를 강조 표시합니다. 클릭하면 선택하고 이중 클릭하면 바로 캡처합니다. Tab으로 겹친 윈도우를 전환하고 스페이스로 자유 선택으로 바꿉니다."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ao selecionar, a janela sob o ponteiro é destacada: clique para selecioná-la ou clique duas vezes para capturá-la na hora. Tab alterna entre janelas sobrepostas; Espaço muda para seleção livre."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "При выделении окно под указателем подсвечивается: щелчок выбирает его, двойной щелчок сразу делает снимок. Tab переключает перекрывающиеся окна, пробел — свободное выделение."
           }
         }
       }
@@ -30401,6 +31553,70 @@
         }
       }
     },
+    "tool.arrow.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag from tail to tip. Hold ⌘ to snap to 45°."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从箭尾拖向箭头，按住 ⌘ 按 45° 吸附"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Ende zur Spitze ziehen. ⌘ gedrückt halten rastet in 45°-Schritten ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra de la cola a la punta. Mantén ⌘ para ajustar a 45°."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser de la queue vers la pointe. Maintenez ⌘ pour aligner à 45°."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina dalla coda alla punta. Tieni premuto ⌘ per agganciare a 45°."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "矢じりの方向へドラッグ。⌘ を押すと 45° 単位に吸着"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "꼬리에서 머리 방향으로 드래그. ⌘를 누르면 45° 단위로 맞춤"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste da cauda até a ponta. Mantenha ⌘ para alinhar a 45°."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тяните от хвоста к острию. Удерживайте ⌘ для привязки к 45°."
+          }
+        }
+      }
+    },
     "tool.callout": {
       "localizations": {
         "en": {
@@ -30461,6 +31677,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выноска"
+          }
+        }
+      }
+    },
+    "tool.callout.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag to draw a bubble, then type. Drag the blue dot to aim the pointer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽绘制气泡后输入文字；拖动蓝色圆点调整指向"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blase aufziehen, dann tippen. Den blauen Punkt ziehen, um den Zeiger auszurichten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para dibujar un globo y escribe. Arrastra el punto azul para orientar el puntero."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tracez une bulle puis saisissez. Faites glisser le point bleu pour orienter la pointe."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina per disegnare un fumetto, poi scrivi. Trascina il punto blu per orientare la punta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグで吹き出しを描いて入力。青い点をドラッグして向きを調整"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그하여 말풍선을 그린 뒤 입력. 파란 점을 드래그해 꼬리 방향 조정"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste para desenhar um balão e digite. Arraste o ponto azul para apontar."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нарисуйте выноску и введите текст. Перетащите синюю точку, чтобы направить указатель."
+          }
+        }
+      }
+    },
+    "tool.delete.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the selected annotation"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除选中的标注"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählte Anmerkung löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar la anotación seleccionada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer l'annotation sélectionnée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina l'annotazione selezionata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した注釈を削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택한 주석 삭제"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar a anotação selecionada"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить выбранную пометку"
           }
         }
       }
@@ -30529,6 +31873,326 @@
         }
       }
     },
+    "tool.ellipse.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag to draw. Hold ⌘ for a circle."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽绘制，按住 ⌘ 画正圆"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Zeichnen ziehen. ⌘ gedrückt halten für einen Kreis."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para dibujar. Mantén ⌘ para un círculo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser pour dessiner. Maintenez ⌘ pour un cercle."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina per disegnare. Tieni premuto ⌘ per un cerchio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグで描画。⌘ を押すと正円"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그하여 그리기. ⌘를 누르면 원"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste para desenhar. Mantenha ⌘ para um círculo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетащите, чтобы нарисовать. Удерживайте ⌘ для круга."
+          }
+        }
+      }
+    },
+    "tool.fill": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fill"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填充"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füllung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relleno"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplissage"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riempimento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "塗りつぶし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채우기"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preenchimento"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заливка"
+          }
+        }
+      }
+    },
+    "tool.fill.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fill rectangles and ellipses"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填充矩形和椭圆"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechtecke und Ellipsen füllen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rellenar rectángulos y elipses"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplir les rectangles et les ellipses"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riempi rettangoli ed ellissi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長方形と楕円を塗りつぶす"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사각형과 타원 채우기"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preencher retângulos e elipses"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заливать прямоугольники и эллипсы"
+          }
+        }
+      }
+    },
+    "tool.fillColor": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fill Color"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填充颜色"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füllfarbe"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color de relleno"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couleur de remplissage"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colore di riempimento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "塗りつぶしの色"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채우기 색상"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cor de preenchimento"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Цвет заливки"
+          }
+        }
+      }
+    },
+    "tool.fillColor.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color and opacity of the fill; follows the line color until changed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填充的颜色与不透明度；未单独设置时跟随线条颜色"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe und Deckkraft der Füllung; folgt der Linienfarbe, bis sie geändert wird"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color y opacidad del relleno; sigue al color de línea hasta que lo cambies"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couleur et opacité du remplissage ; suit la couleur du trait tant qu'elle n'est pas modifiée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colore e opacità del riempimento; segue il colore della linea finché non lo cambi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "塗りつぶしの色と不透明度。変更するまで線の色に連動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채우기 색상과 불투명도. 변경하기 전까지 선 색상을 따름"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cor e opacidade do preenchimento; acompanha a cor da linha até ser alterada"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Цвет и непрозрачность заливки; следует за цветом линии, пока его не измените"
+          }
+        }
+      }
+    },
     "tool.freehand": {
       "localizations": {
         "en": {
@@ -30589,6 +32253,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Рисование"
+          }
+        }
+      }
+    },
+    "tool.freehand.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag to draw freely."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住拖动自由绘制"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziehen, um frei zu zeichnen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para dibujar a mano alzada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser pour dessiner à main levée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina per disegnare a mano libera."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグで自由に描画"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그하여 자유롭게 그리기"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste para desenhar à mão livre."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетащите, чтобы рисовать от руки."
           }
         }
       }
@@ -30657,6 +32385,70 @@
         }
       }
     },
+    "tool.highlight.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag over an area to highlight it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽框选需要高亮的区域"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über einen Bereich ziehen, um ihn hervorzuheben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra sobre una zona para resaltarla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser sur une zone pour la surligner."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina su un'area per evidenziarla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグした範囲をハイライト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그한 영역을 강조 표시"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste sobre uma área para destacá-la."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обведите область, чтобы выделить её."
+          }
+        }
+      }
+    },
     "tool.line": {
       "localizations": {
         "en": {
@@ -30717,6 +32509,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Линия"
+          }
+        }
+      }
+    },
+    "tool.line.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag to draw. Hold ⌘ to snap to 45°."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽绘制，按住 ⌘ 按 45° 吸附"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Zeichnen ziehen. ⌘ gedrückt halten rastet in 45°-Schritten ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para dibujar. Mantén ⌘ para ajustar a 45°."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser pour dessiner. Maintenez ⌘ pour aligner à 45°."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina per disegnare. Tieni premuto ⌘ per agganciare a 45°."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグで描画。⌘ を押すと 45° 単位に吸着"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그하여 그리기. ⌘를 누르면 45° 단위로 맞춤"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste para desenhar. Mantenha ⌘ para alinhar a 45°."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетащите, чтобы нарисовать. Удерживайте ⌘ для привязки к 45°."
           }
         }
       }
@@ -30785,6 +32641,70 @@
         }
       }
     },
+    "tool.mosaic.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag over an area to pixelate it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽框选区域打马赛克"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über einen Bereich ziehen, um ihn zu verpixeln."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra sobre una zona para pixelarla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser sur une zone pour la pixéliser."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina su un'area per pixelarla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグした範囲にモザイク"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그한 영역에 모자이크"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste sobre uma área para pixelizá-la."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обведите область, чтобы пикселизировать её."
+          }
+        }
+      }
+    },
     "tool.numberLabel": {
       "localizations": {
         "en": {
@@ -30845,6 +32765,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Номер"
+          }
+        }
+      }
+    },
+    "tool.numberLabel.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to place the next number."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单击放置自动递增的编号"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken, um die nächste Nummer zu setzen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz clic para colocar el siguiente número."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez pour placer le numéro suivant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fai clic per inserire il numero successivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックで連番を配置"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭하여 다음 번호 배치"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clique para colocar o próximo número."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Щёлкните, чтобы поставить следующий номер."
           }
         }
       }
@@ -30913,6 +32897,70 @@
         }
       }
     },
+    "tool.pickScreenColor.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick a color anywhere on screen"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从屏幕任意位置取色"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Farbe irgendwo auf dem Bildschirm aufnehmen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toma un color de cualquier parte de la pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prélever une couleur n'importe où à l'écran"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preleva un colore da qualsiasi punto dello schermo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面上の任意の位置から色を取得"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 어디에서나 색상 추출"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capturar uma cor em qualquer lugar da tela"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Взять цвет в любом месте экрана"
+          }
+        }
+      }
+    },
     "tool.rectangle": {
       "localizations": {
         "en": {
@@ -30973,6 +33021,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Прямоугольник"
+          }
+        }
+      }
+    },
+    "tool.rectangle.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag to draw. Hold ⌘ for a square."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽绘制，按住 ⌘ 画正方形"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Zeichnen ziehen. ⌘ gedrückt halten für ein Quadrat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para dibujar. Mantén ⌘ para un cuadrado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser pour dessiner. Maintenez ⌘ pour un carré."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina per disegnare. Tieni premuto ⌘ per un quadrato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグで描画。⌘ を押すと正方形"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그하여 그리기. ⌘를 누르면 정사각형"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste para desenhar. Mantenha ⌘ para um quadrado."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетащите, чтобы нарисовать. Удерживайте ⌘ для квадрата."
           }
         }
       }
@@ -31041,6 +33153,70 @@
         }
       }
     },
+    "tool.redaction.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag to cover an area with a solid block."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖拽用实色块遮住敏感内容"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziehen, um einen Bereich vollständig abzudecken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para tapar una zona con un bloque sólido."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser pour masquer une zone par un bloc opaque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina per coprire un'area con un blocco pieno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグした範囲を塗りつぶして隠す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그한 영역을 단색 블록으로 가리기"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste para cobrir uma área com um bloco sólido."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетащите, чтобы закрыть область сплошным блоком."
+          }
+        }
+      }
+    },
     "tool.style": {
       "localizations": {
         "en": {
@@ -31101,6 +33277,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Стиль"
+          }
+        }
+      }
+    },
+    "tool.style.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colors, line width, text size, fill and mosaic strength"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "颜色、线宽、字号、填充与马赛克强度"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farben, Linienstärke, Textgröße, Füllung und Mosaikstärke"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colores, grosor de línea, tamaño de texto, relleno e intensidad del mosaico"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couleurs, épaisseur du trait, taille du texte, remplissage et intensité de la mosaïque"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colori, spessore linea, dimensione testo, riempimento e intensità mosaico"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "色、線の太さ、文字サイズ、塗りつぶし、モザイクの強さ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "색상, 선 굵기, 글자 크기, 채우기, 모자이크 강도"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cores, espessura da linha, tamanho do texto, preenchimento e intensidade do mosaico"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Цвета, толщина линии, размер текста, заливка и сила мозаики"
           }
         }
       }
@@ -31169,6 +33409,70 @@
         }
       }
     },
+    "tool.systemColor.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the system color panel"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开系统颜色面板"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Systemfarbpalette öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir el panel de colores del sistema"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir le panneau Couleurs du système"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri il pannello colori di sistema"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムのカラーパネルを開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 색상 패널 열기"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir o painel de cores do sistema"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть системную панель цветов"
+          }
+        }
+      }
+    },
     "tool.text": {
       "localizations": {
         "en": {
@@ -31229,6 +33533,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Текст"
+          }
+        }
+      }
+    },
+    "tool.text.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to type. Return finishes, Esc cancels; double-click text to edit it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单击输入文字，回车完成、Esc 取消；双击已有文字可再次编辑"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken und tippen. Zeilenschalter beendet, Esc bricht ab; Text zum Bearbeiten doppelklicken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz clic para escribir. Retorno termina, Esc cancela; doble clic en un texto para editarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez pour saisir. Retour valide, Échap annule ; double-cliquez sur un texte pour le modifier."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fai clic per scrivere. Invio conferma, Esc annulla; doppio clic su un testo per modificarlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックして入力。Return で確定、Esc で取消。テキストをダブルクリックで再編集"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭하여 입력. Return으로 완료, Esc로 취소. 텍스트를 이중 클릭하면 다시 편집"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clique para digitar. Return conclui, Esc cancela; clique duas vezes num texto para editá-lo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Щёлкните и вводите текст. Return — готово, Esc — отмена; двойной щелчок по тексту — правка."
           }
         }
       }

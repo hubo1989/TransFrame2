@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 import TFDomain
 import TFDomainTestSupport
 import TFPipelines
@@ -29,6 +30,9 @@ final class CanvasHarness {
         let size = NSSize(width: Double(width) / scale, height: Double(height) / scale)
         window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
+        // Ordered in far off-screen so AppKit really draws (an unordered window never displays).
+        window.setFrameOrigin(NSPoint(x: -30_000, y: -30_000))
+        window.orderFrontRegardless()
         let content = NSView(frame: NSRect(origin: .zero, size: size))
         window.contentView = content
         canvas.frame = content.bounds
@@ -66,6 +70,29 @@ final class CanvasHarness {
         deadline.cancel()
     }
 
+    /// Backing store of the overlay layer at 2× (an occluded off-screen window never draws, so frames are drawn here).
+    private lazy var backing: CGContext = {
+        let size = canvas.bounds.size
+        let context = CGContext(
+            data: nil, width: Int(size.width * 2), height: Int(size.height * 2), bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)!
+        context.translateBy(x: 0, y: size.height * 2)
+        context.scaleBy(x: 2, y: -2)
+        return context
+    }()
+
+    /// Clears and redraws the region the canvas invalidated, like AppKit does for a layer-backed view.
+    func drawOverlayFrame() {
+        let rect = canvas.pendingOverlayDirty
+        guard !rect.isNull else { return }
+        defer { canvas.overlayDidDraw() }
+        backing.saveGState()
+        backing.clip(to: rect)
+        backing.clear(rect)
+        canvas.drawOverlay(in: backing)
+        backing.restoreGState()
+    }
+
     func session() async throws -> DocumentSession { try await store.snapshot(of: id) }
 
     /// Waits until the store has applied `count` more edits than `after`.
@@ -86,7 +113,9 @@ final class CanvasHarness {
             context: nil, eventNumber: 0, clickCount: clicks, pressure: 1)!
     }
 
-    func down(_ p: CGPoint, clicks: Int = 1, flags: NSEvent.ModifierFlags = []) { canvas.mouseDown(with: event(.leftMouseDown, p, clicks: clicks, flags: flags)) }
+    func down(_ p: CGPoint, clicks: Int = 1, flags: NSEvent.ModifierFlags = []) {
+        canvas.mouseDown(with: event(.leftMouseDown, p, clicks: clicks, flags: flags))
+    }
     func drag(_ p: CGPoint, flags: NSEvent.ModifierFlags = []) { canvas.mouseDragged(with: event(.leftMouseDragged, p, flags: flags)) }
     func up(_ p: CGPoint) { canvas.mouseUp(with: event(.leftMouseUp, p)) }
 

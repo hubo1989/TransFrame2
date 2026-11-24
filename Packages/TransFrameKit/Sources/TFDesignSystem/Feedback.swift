@@ -161,6 +161,7 @@ public final class FeedbackCenter {
             display: true)
         panel.ignoresMouseEvents = action == nil
         panel.alphaValue = 1
+        Self.raise(panel)
         panel.orderFrontRegardless()
         NSAccessibility.post(
             element: panel, notification: .announcementRequested,
@@ -199,10 +200,17 @@ public final class FeedbackCenter {
         }
         panel.setFrame(frame, display: true)
         panel.ignoresMouseEvents = true
+        Self.raise(panel)
         panel.orderFrontRegardless()
     }
 
     public func hideHUD() { hudPanel?.orderOut(nil) }
+
+    /// Above every visible window of the app: the capture overlay sits at the shielding level and would hide a floating toast.
+    private static func raise(_ panel: NSPanel) {
+        let top = NSApp.windows.filter { $0.isVisible && $0 !== panel }.map(\.level.rawValue).max() ?? 0
+        panel.level = NSWindow.Level(rawValue: max(NSWindow.Level.floating.rawValue, top + 1))
+    }
 
     private static func makePanel() -> NSPanel {
         let panel = NSPanel(

@@ -74,7 +74,14 @@ enum TextDrawing {
 // MARK: - Annotations (document pixel geometry; the caller has translated the context to the canvas)
 
 enum AnnotationDrawing {
-    typealias Mosaic = (PixelImage, CGRect, Double) -> CGImage?
+    struct MosaicTile {
+        let image: CGImage
+        /// Area the tile image covers (whole blocks); drawing is clipped to `region`.
+        let cover: CGRect
+        let region: CGRect
+    }
+
+    typealias Mosaic = (PixelImage, CGRect, Double) -> MosaicTile?
 
     static func draw(_ annotation: Annotation, base: PixelImage, mosaic: Mosaic, in context: CGContext) {
         context.saveGState()
@@ -126,11 +133,10 @@ enum AnnotationDrawing {
         case .callout(let a):
             drawCallout(a, context)
         case .mosaic(let a):
-            guard let image = mosaic(base, a.rect.raw.standardized, a.blockSize) else { return }
+            guard let tile = mosaic(base, a.rect.raw.standardized, a.blockSize) else { return }
+            context.clip(to: tile.region)
             context.interpolationQuality = .none
-            Bitmap.drawImage(
-                image, in: a.rect.raw.standardized.integral.intersection(CGRect(x: 0, y: 0, width: base.cgImage.width, height: base.cgImage.height)),
-                context: context)
+            Bitmap.drawImage(tile.image, in: tile.cover, context: context)
         case .redaction(let a):
             fill(a.rect.raw.standardized, a.fill, context)
         }

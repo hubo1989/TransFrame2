@@ -113,7 +113,8 @@ final class CompositionRoot {
         let recognition = RecognitionService(
             sessions: sessions, render: render, engines: recognitionEngines, guardian: guardian, performance: performance
         )
-        let translation = TranslationService(engines: translationEngines, performance: performance)
+        let translation = TranslationService(
+            engines: translationEngines, performance: performance, languageOf: { LanguageDetection.detect($0, minimumConfidence: 0.8) })
         let glossaryStore = GlossaryFileStore(url: environment.isUITest ? nil : environment.supportDirectory.appending(path: "Glossary.json"))
         let glossary = GlossaryService(store: glossaryStore, sessions: sessions)
         let pipeline = DocumentPipelineService(

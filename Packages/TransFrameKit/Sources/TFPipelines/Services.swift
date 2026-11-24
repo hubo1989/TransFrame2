@@ -84,6 +84,13 @@ public struct RenderService: RenderWorkflow {
         return plan
     }
 
+    public func plan(of session: DocumentSession, purpose: RenderPurpose, excluding: Set<AnnotationID>) throws(AppError) -> RenderPlan {
+        let start = ContinuousClock.now
+        let plan = try planner.plan(for: session, purpose: purpose, excluding: excluding)
+        performance.record(PerformanceSample(budget: Budget.renderPlan, duration: .now - start))
+        return plan
+    }
+
     public func image(for id: SessionID, purpose: RenderPurpose) async throws(AppError) -> PixelImage {
         try await image(of: try await sessions.snapshot(of: id), purpose: purpose)
     }

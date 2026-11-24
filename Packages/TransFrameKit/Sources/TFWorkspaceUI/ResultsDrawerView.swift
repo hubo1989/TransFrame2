@@ -104,10 +104,12 @@ private struct ResultRow: View {
     @State private var draft = ""
 
     var body: some View {
+        // A line already in the target language is shown once, as is, without a translation under it.
+        let bilingual = showsTranslation && row.status != .sameLanguageSkipped
         VStack(alignment: .leading, spacing: DS.Space.s1 / 2) {
-            Text(row.source).font(showsTranslation ? DS.Typography.secondary : DS.Typography.body)
-                .foregroundStyle(showsTranslation ? .secondary : .primary)
-            if showsTranslation {
+            Text(row.source).font(bilingual ? DS.Typography.secondary : DS.Typography.body)
+                .foregroundStyle(bilingual ? .secondary : .primary)
+            if bilingual {
                 if let translation = row.translation {
                     Text(translation).font(DS.Typography.body)
                 } else if let status = row.status {

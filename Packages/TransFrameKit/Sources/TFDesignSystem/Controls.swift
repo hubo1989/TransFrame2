@@ -148,7 +148,7 @@ public struct ColorSwatch: View {
                 .overlay(Circle().strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 2))
         }
         .buttonStyle(.plain)
-        .help(name)
+        .hoverHint(name)
         .accessibilityLabel(name)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -174,5 +174,98 @@ public struct ToolbarDivider: View {
     public init() {}
     public var body: some View {
         Divider().frame(height: DS.Size.iconButton - DS.Space.s2).padding(.horizontal, DS.Space.s1 / 2)
+    }
+}
+
+// MARK: - System color panel (ANN-03, ANN-06)
+
+/// Opens the system color panel for one color. Over high-level windows (the capture overlay) the panel is raised above
+/// the host window while this control is on screen, and closed and put back when it goes away, so it never ends up
+/// hidden under the overlay or floating over everything afterwards.
+public struct SystemColorButton: View {
+    let title: String
+    let systemImage: String
+    let detail: String?
+    let color: NSColor
+    let supportsOpacity: Bool
+    let onChange: (NSColor) -> Void
+    @State private var link = ColorPanelLink()
+
+    public init(
+        _ title: String, systemImage: String, detail: String? = nil, color: NSColor, supportsOpacity: Bool,
+        onChange: @escaping (NSColor) -> Void
+    ) {
+        self.title = title
+        self.systemImage = systemImage
+        self.detail = detail
+        self.color = color
+        self.supportsOpacity = supportsOpacity
+        self.onChange = onChange
+    }
+
+    public var body: some View {
+        IconButton(title, systemImage: systemImage, detail: detail) {
+            link.open(color: color, supportsOpacity: supportsOpacity, onChange: onChange)
+        }
+        .background(ColorPanelAnchor(link: link))
+        .onDisappear { link.close() }
+    }
+}
+
+@MainActor
+final class ColorPanelLink: NSObject {
+    weak var view: NSView?
+    private var onChange: ((NSColor) -> Void)?
+    private var raised = false
+    private var linked = false
+
+    func open(color: NSColor, supportsOpacity: Bool, onChange: @escaping (NSColor) -> Void) {
+        let panel = NSColorPanel.shared
+        panel.setTarget(nil)
+        panel.setAction(nil)
+        panel.showsAlpha = supportsOpacity
+        panel.color = color
+        panel.isContinuous = true
+        self.onChange = onChange
+        panel.setTarget(self)
+        panel.setAction(#selector(colorChanged(_:)))
+        linked = true
+        if let window = view?.window, window.level.rawValue >= panel.level.rawValue {
+            panel.level = NSWindow.Level(rawValue: window.level.rawValue + 1)
+            raised = true
+        }
+        panel.orderFrontRegardless()
+    }
+
+    @objc func colorChanged(_ sender: NSColorPanel) { onChange?(sender.color) }
+
+    func close() {
+        guard linked, NSColorPanel.sharedColorPanelExists else { return }
+        linked = false
+        let panel = NSColorPanel.shared
+        panel.setTarget(nil)
+        panel.setAction(nil)
+        panel.orderOut(nil)
+        if raised {
+            panel.level = .floating
+            raised = false
+        }
+        onChange = nil
+    }
+}
+
+private struct ColorPanelAnchor: NSViewRepresentable {
+    let link: ColorPanelLink
+
+    func makeNSView(context: Context) -> NSView {
+        let view = PassThrough()
+        link.view = view
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) { link.view = view }
+
+    private final class PassThrough: NSView {
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
     }
 }

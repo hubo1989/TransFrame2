@@ -8,10 +8,10 @@ import TFDomain
 /// The single render executor (ADR-0006): screen, clipboard, file, pin, thumbnail and analysis input
 /// all draw through `draw(_:base:in:)`. Deterministic for a given plan, base image and fonts.
 public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
-    /// Entries belong to `base`; a different base image resets the cache, so reused object addresses never match (review-1 P2-8).
+    /// Mosaic grids belong to `base`; a different base image resets the cache, so reused object addresses never match (review-1 P2-8).
     private struct MosaicState: @unchecked Sendable {
         var base: CGImage?
-        var entries: [MosaicKey: CGImage] = [:]
+        var grids: [Int: CGImage] = [:]
     }
     private let mosaicCache = OSAllocatedUnfairLock<MosaicState>(initialState: MosaicState())
 
@@ -84,16 +84,16 @@ public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
         Bitmap.drawImage(image, in: destination, context: context)
     }
 
+    /// Transparent margin (or a matte for JPEG) with the content's shadow; the content itself is clipped to the rounded rect.
     private func drawBeautifyBackground(_ style: BeautifyStyle, canvas: CGRect, content: CGRect, scale: Double, in context: CGContext) {
-        guard case .gradient(let start, let end) = style else { return }
-        let space = CGColorSpace(name: CGColorSpace.sRGB)!
-        let colors = [start.cgColor, end.cgColor] as CFArray
-        if let gradient = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1]) {
-            context.drawLinearGradient(gradient, start: CGPoint(x: canvas.minX, y: canvas.minY), end: CGPoint(x: canvas.maxX, y: canvas.maxY), options: [])
+        if case .matte(let color) = style {
+            context.setFillColor(color.cgColor)
+            context.fill(canvas)
         }
         let radius = BeautifyStyle.cornerRadius * scale
         context.saveGState()
-        context.setShadow(offset: CGSize(width: 0, height: 6 * scale), blur: BeautifyStyle.shadowRadius * scale, color: CGColor(gray: 0, alpha: 0.35))
+        // Shadow offsets ignore the CTM: in device space (y up) a negative offset falls below the content of the y-down plan.
+        context.setShadow(offset: CGSize(width: 0, height: -6 * scale), blur: BeautifyStyle.shadowRadius * scale, color: CGColor(gray: 0, alpha: 0.35))
         context.addPath(CGPath(roundedRect: content, cornerWidth: radius, cornerHeight: radius, transform: nil))
         context.setFillColor(CGColor(gray: 1, alpha: 1))
         context.fillPath()
@@ -124,52 +124,54 @@ public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
             context.setFillColor(color.cgColor)
             context.fill(item.frame.raw)
         case .mosaic(let blockSize):
-            if let image = mosaic(base, item.source.raw, blockSize) {
-                context.saveGState()
-                context.interpolationQuality = .none
-                Bitmap.drawImage(image, in: item.frame.raw, context: context)
-                context.restoreGState()
-            }
+            guard let tile = mosaic(base, item.source.raw, blockSize) else { return }
+            let dx = item.frame.minX - item.source.minX, dy = item.frame.minY - item.source.minY
+            context.saveGState()
+            context.clip(to: item.frame.raw)
+            context.interpolationQuality = .none
+            Bitmap.drawImage(tile.image, in: tile.cover.offsetBy(dx: dx, dy: dy), context: context)
+            context.restoreGState()
         }
     }
 
-    // MARK: Mosaic (cached by region + block size + base image)
+    // MARK: Mosaic (one pixelated grid per base image and block size)
 
-    private struct MosaicKey: Hashable {
-        let image: ObjectIdentifier
-        let x: Int, y: Int, width: Int, height: Int
-        let block: Int
-    }
-
-    /// Small pixelated image; drawn scaled up with nearest-neighbour interpolation.
-    private func mosaic(_ base: PixelImage, _ rect: CGRect, _ blockSize: Double) -> CGImage? {
+    /// Pixelated tile covering `rect` (document pixels): `image` is drawn into `cover` with nearest-neighbour scaling and
+    /// clipped to the region. Blocks sit on the image grid, so a mosaic being dragged or resized does not re-grid
+    /// (no shimmering), and all regions of one block size share a single downsample.
+    func mosaic(_ base: PixelImage, _ rect: CGRect, _ blockSize: Double) -> AnnotationDrawing.MosaicTile? {
         let bounds = CGRect(x: 0, y: 0, width: base.cgImage.width, height: base.cgImage.height)
         let region = rect.integral.intersection(bounds)
         guard !region.isNull, region.width >= 1, region.height >= 1 else { return nil }
         let block = max(Int(blockSize.rounded()), 2)
-        let key = MosaicKey(
-            image: ObjectIdentifier(base.cgImage), x: Int(region.minX), y: Int(region.minY),
-            width: Int(region.width), height: Int(region.height), block: block
-        )
+        guard let grid = mosaicGrid(base, block: block) else { return nil }
+        let c0 = Int(region.minX) / block, r0 = Int(region.minY) / block
+        let c1 = (Int(region.maxX) + block - 1) / block, r1 = (Int(region.maxY) + block - 1) / block
+        guard let image = grid.cropping(to: CGRect(x: c0, y: r0, width: c1 - c0, height: r1 - r0)) else { return nil }
+        let cover = CGRect(x: c0 * block, y: r0 * block, width: (c1 - c0) * block, height: (r1 - r0) * block)
+        return AnnotationDrawing.MosaicTile(image: image, cover: cover, region: region)
+    }
+
+    private func mosaicGrid(_ base: PixelImage, block: Int) -> CGImage? {
         let image = base.cgImage
         if let cached = mosaicCache.withLock({ state -> CGImage? in
             if state.base !== image { state = MosaicState(base: image) }
-            return state.entries[key]
+            return state.grids[block]
         }) { return cached }
-        guard let crop = base.cgImage.cropping(to: region) else { return nil }
-        let size = PixelSize(width: max(Int(region.width) / block, 1), height: max(Int(region.height) / block, 1))
-        guard let small = Bitmap.context(size: size, colorSpace: crop.colorSpace) else { return nil }
+        let columns = (image.width + block - 1) / block, rows = (image.height + block - 1) / block
+        guard let small = Bitmap.context(size: PixelSize(width: columns, height: rows), colorSpace: image.colorSpace) else { return nil }
         small.interpolationQuality = .medium
-        small.draw(crop, in: CGRect(x: 0, y: 0, width: size.width, height: size.height))
-        let result = small.makeImage()
-        if let result {
-            mosaicCache.withLock { state in
-                guard state.base === image else { return }
-                if state.entries.count > 64 { state.entries.removeAll() }
-                state.entries[key] = result
-            }
+        // Stretched first so a partial last column or row is opaque, then the exactly aligned pass on top.
+        small.draw(image, in: CGRect(x: 0, y: 0, width: columns, height: rows))
+        let width = Double(image.width) / Double(block), height = Double(image.height) / Double(block)
+        small.draw(image, in: CGRect(x: 0, y: Double(rows) - height, width: width, height: height))
+        guard let grid = small.makeImage() else { return nil }
+        mosaicCache.withLock { state in
+            guard state.base === image else { return }
+            if state.grids.count >= 8 { state.grids.removeAll() }
+            state.grids[block] = grid
         }
-        return result
+        return grid
     }
 
     // MARK: TextMeasuring (same attributes as drawing)

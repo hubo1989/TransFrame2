@@ -228,3 +228,36 @@
 - Implemented (uncommitted): PresentationSettings.automaticOverlay, OverlayModeAdvisor.swift, layout PlacementContext + below()/replacing() helpers with mutual fallback, replace floor 75 %. TODO: settings picker in GeneralPage (Interface section), l10n keys, update old LayoutTests expectations (below→replace fallback, replace→below fallback), advisor tests, build, reinstall.
 - Added settings picker (GeneralPage Section settingsGeneralOverlay, OverlayChoice) + 4 l10n keys (500 total, 0 problems). Next: update LayoutTests expectations, advisor tests, run all, reinstall, commit.
 - Items 4/5 implemented + tests pass (advisor, fallbacks). Next: full test/lint, Release reinstall, commit/push, report.
+- Items 4/5 committed & pushed; /Applications reinstalled (pid 58448). NOTE: some other agent is writing Tests/TFWorkspaceUITests/CanvasHarness.swift + AnnotationPerfTests.swift (not mine); an earlier version of CanvasHarness got into dbd6fb8 via git add -A. Do not touch/commit them.
+- Annotation bar round (uncommitted, separate agent from the overlay work): hover hints = TFDesignSystem/HoverHint.swift
+  (`.hoverHintScope()` on a toolbar root + `.hoverHint(...)`/IconButton `detail:`; panel level = host window + 1 so it shows over
+  the shielding-level capture overlay; outside a scope it falls back to `.help`). Popover style panel replaced by the inline
+  AnnotationStyleBar (contextual controls, fill color, Delete; SystemColorButton raises NSColorPanel over the overlay).
+  AnnotationEditor: displayedStyle/setStyle (changed fields only, fill follows stroke), new annotations stay selected, PendingEdit
+  "settling" (overlay keeps committed edits until the canvas shows a newer revision — no flicker), arrow-key nudge, callout
+  pointer handle, cursors, text edit hides original. Value types moved to AnnotationModel.swift.
+- Canvas perf: CA spends ~22 ms on the main thread copying a 4K CGImage set as layer contents → DocumentCanvasView renders off-main
+  into pooled IOSurfaces (0.25 ms), one render at a time (latest wins), plans its own snapshot (`RenderWorkflow.plan(of:)`), dirty-rect
+  overlay, freehand tail invalidation + trimming; mosaic grid cached per block size (image-aligned, no re-grid while dragging).
+  Perf harness: `TF_PERF_OUT=/tmp/x swift test -c release --filter "AnnotationPerfTests/<test>"` (run tests one at a time; parallel
+  suites contend for the main thread). Before→after on 4K@2x: commit p50 28.7→4.7 ms, drag frame 0.17→0.03 ms, 3000-pt freehand
+  frame 3.8→0.03 ms. Offscreen windows never draw: the harness draws the overlay into a bitmap clipped to `pendingOverlayDirty`.
+- SF Symbol `textformat` localizes to "格式" in zh → text tool uses `character.textbox`. `cacheDisplay` drops glass-vibrant icons
+  (screenshot artifact, not a bug). Real hover in the capture overlay still needs a manual check (no pointer-move automation).
+- Release (HEAD 4aa46ed + uncommitted annotation-bar round) built, re-signed with Developer ID 35C70643… (same designated requirement as before, so TCC grants survive: build.sh Release alone yields adhoc), installed to /Applications (pid 25744). Previous app backed up at /tmp/tf2-old-install-20261124-111124.
+- Beautify = rounded corners + shadow in a transparent 36 pt margin (BeautifyStyle .transparent; JPEG uses .matte(.white)); gradient
+  removed per user (SPEC INP-07 updated). Fixed: CG shadow offsets ignore the CTM, so the old +6 put the shadow above the content.
+- Smart mosaic feedback: WorkspaceServices.smartMosaic(_:on:near:) — ScanEffectView sweep (Reduce Motion → pulse) for ≥0.8 s,
+  found areas light up staggered, toast "已完成打码，共 N 处" / "未检测到隐私信息". FeedbackCenter raises toasts/HUD above every
+  visible app window (they were hidden under the shielding-level capture overlay). Reinstalled /Applications (pid 11712);
+  backups /tmp/tf2-old-install-20261124-111124 (original) and -113251 (previous round).
+- Same-language lines: TranslationService(languageOf:) — App injects LanguageDetection.detect(_:minimumConfidence: 0.8); screenshot
+  units already in the target language are not sent (sameLanguageSkipped); TranslationText.sameContent (NFKC, no spaces/punct,
+  case-sensitive) marks echo translations sameLanguageSkipped. Drawer shows such rows once as primary text. Echo fake engines in
+  tests now return "T: …". Window detection setting: GeneralSettings.detectsWindows (default on, Settings › General › Capture);
+  off → no hover/click snap, double-click takes the display, no Vision content-block pass. Window list = CGWindowList (no Vision).
+  Reinstalled /Applications (pid 75724); backup /tmp/tf2-old-install-20261124-114627.
+- Release 0.0.1 prep: README (en) + README.zh-CN, CONTRIBUTING, SECURITY, LICENSE (MIT), PR/issue templates, CHANGELOG 0.0.1.
+  MARKETING_VERSION 0.0.1. release.yml: tags v0.* and v2.*, notes = CHANGELOG section for the version, 0.x → --prerelease.
+  Secrets: user runs Scripts/setup-release-secrets.sh <DeveloperID.p12> (verifies notary creds, sets 6 secrets + 1 variable).
+  Old README's shortcut table was wrong: ⌘⇧T = region then translate, ⌘⇧Y = translate selection, ⌘⇧I = translate and insert.

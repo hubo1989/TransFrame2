@@ -1099,7 +1099,7 @@ struct TranslationOutcome: Sendable {
 - **顺序链**：某个引擎失败（网络、接口、超时）就试下一个；未配置的成员跳过并记入 `results`；全部失败 → `translation(.allEnginesFailed)`，逐个列出原因。
 - **对比**：全部并行；至少一个成功即整体成功；切换查看的引擎只改 `effective`，不重新请求。
 - **取消**：立即终止，不再尝试后续引擎；已完成的段保留，未完成的段标 `cancelled`。
-- 源语言与目标语言相同的段标 `sameLanguageSkipped`，与翻译成功在界面上要能区分。
+- 源语言与目标语言相同的段标 `sameLanguageSkipped`，与翻译成功在界面上要能区分：图上不画译文，结果抽屉只显示原文一行。截图翻译中本机语言识别有把握判定为目标语言的行不发给引擎；引擎返回的译文与原文在忽略全半角、空白和标点后相同，同样按此处理。
 - 不带段落号能力（`segmentIDs`）的引擎由适配器按顺序与数量严格核对；核对不上的整批判失败并可重试，不做猜测性对齐。
 - `prompt`、`glossary`、`context`、`tone` 的摘要都进缓存键。
 
@@ -1580,8 +1580,8 @@ CAP-16 的修正：1.x 固定取主屏（`CaptureSessionController.swift:77`）�
 | INP-04 | 钉图（`P`） | `Features/Capture/SelectionOverlayWindow.swift:1919`、`Features/Capture/CaptureSessionController.swift:208` | CaptureFeature、PinFeature | I | 3 | 对等 | ☐ |
 | INP-05 | 识别：不离开选区界面，就地展开结果抽屉 | `Features/Capture/SelectionOverlayWindow.swift:1443,1637,1670` | CaptureFeature、TFWorkspaceUI | I+S | 4 | 对等 | ☐ |
 | INP-06 | 翻译（`T`）：同上 | `Features/Capture/SelectionOverlayWindow.swift:1922,1637` | CaptureFeature、TFWorkspaceUI | I+S | 4 | 对等 | ☐ |
-| INP-07 | 美化开关：渐变背景、留白 36、圆角 12、阴影；选区内实时预览 | `Features/Capture/SelectionOverlayWindow.swift:1458,392`、`Services/BeautifyRenderer.swift:6-90` | TFRenderInfra、TFWorkspaceUI | S | 3 | 对等 | ☐ |
-| INP-08 | 智能马赛克：一键检测敏感区域并加马赛克，可撤销 | `Features/Capture/SelectionOverlayWindow.swift:1465,1518`、`Services/SmartPrivacyRedactionService.swift:45` | TFPipelines、TFRecognitionInfra | I+S | 4 | 修正 | ☐ |
+| INP-07 | 美化开关：圆角 12、阴影，圆角外保留 36 的透明留白（不加背景，JPEG 以白色衬底）；选区内实时预览 | `Features/Capture/SelectionOverlayWindow.swift:1458,392`、`Services/BeautifyRenderer.swift:6-90` | TFRenderInfra、TFWorkspaceUI | S | 3 | 对等 | ☐ |
+| INP-08 | 智能马赛克：一键检测敏感区域并加马赛克，可撤销；检测时画面显示扫描动画，完成后逐个高亮检出区域，提示「已完成打码，共 N 处」或「未检测到隐私信息」 | `Features/Capture/SelectionOverlayWindow.swift:1465,1518`、`Services/SmartPrivacyRedactionService.swift:45` | TFPipelines、TFRecognitionInfra | I+S | 4 | 修正 | ☐ |
 | INP-09 | 上传到图床（1.x 因无设置入口而永不显示） | `Features/Capture/SelectionInPlaceToolbar.swift:357`、`Features/Capture/CaptureSessionController.swift:249` | CaptureFeature、TFUploadInfra | I+R | 6 | 补齐 | ☐ |
 | INP-10 | 取消按钮 | `Features/Capture/SelectionInPlaceToolbar.swift:370` | CaptureFeature | U | 2 | 对等 | ☐ |
 | INP-11 | 结果抽屉：识别与翻译两个标签；重跑；复制全部、原文、译文；逐行复制；目标语言快速切换 | `Features/Capture/InPlaceResultsPanel.swift:8,90,104,172,250` | TFWorkspaceUI | S+I | 4 | 对等 | ☐ |
@@ -1685,7 +1685,7 @@ EDT-04 的修正：1.x 的裁剪会重建截图对象，丢掉裁剪框外的标
 | TRN-12 | 引擎配置表单：启用、密钥、端点、模型、拉取模型列表、测试翻译 | `Features/Settings/EngineConfigSheet.swift:73,126,229,328,340,367` | SettingsFeature | I+S | 4 | 对等 | ☐ |
 | TRN-13 | 自定义提示词：按引擎、按兼容实例、按场景（截图、划词、翻译并插入）；变量插入；恢复默认 | `Features/Settings/PromptSettingsView.swift:54,95,132,173,333`、`Models/TranslationPromptConfig.swift:32-87` | SettingsFeature、TFPipelines | U+S | 4 | 对等 | ☐ |
 | TRN-14 | 源语言与目标语言（29 种加自动）；目标语言可跟随系统 | `Services/TranslationEngine.swift:11-41`、`Features/Settings/LanguageSettingsTab.swift:58,82` | SettingsFeature | U | 4 | 对等 | ☐ |
-| TRN-15 | 源语言与目标语言相同的段跳过；清洗明显损坏的译文 | `Services/TranslationService.swift:262,355,406` | TFPipelines | U | 4 | 对等 | ☐ |
+| TRN-15 | 源语言与目标语言相同的段跳过（含截图中已是目标语言的行、与原文相同的译文）；清洗明显损坏的译文 | `Services/TranslationService.swift:262,355,406` | TFPipelines | U | 4 | 对等 | ☐ |
 | TRN-16 | 大模型按批翻译并解析结构化响应 | `Services/Translation/LLMTranslationBatching.swift:7`、`Services/Translation/LLMTranslationResponseParser.swift` | TFTranslationInfra | C | 4 | 对等 | ☐ |
 | TRN-17 | 本地端点（Ollama 预设、回环地址的自定义端点）不要求密钥 | `Features/Settings/EngineConfigSheet.swift:84-85,411` | TFTranslationInfra | U+C | 4 | 对等 | ☐ |
 | TRN-18 | Apple 翻译在翻译前检查语言对是否已安装 | `Services/TranslationEngine.swift:351-395` | TFTranslationInfra | I | 4 | 对等 | ☐ |
@@ -2126,7 +2126,7 @@ N-09 的范围：在选区界面里进入滚动模式，用户滚动内容时自
 - 1.x 的圆角有 7 种值 73 处，其中 4 和 8 占 63 处；收敛到三档加胶囊后不改变主体观感。
 - macOS 26 上玻璃自带层次，玻璃元素不再叠加 `shadow.*`。
 - 动画一律带 `value` 参数或用显式事务；系统开启「减弱动态效果」时，位移与缩放类动画改为淡入淡出或直接取消。
-- 美化截图的留白 36、圆角 12、阴影 24 属于**内容参数**，不是界面 token，沿用 1.x 的数值。
+- 美化截图的留白 36、圆角 12、阴影 24 属于**内容参数**，不是界面 token，沿用 1.x 的数值；留白透明，不再绘制 1.x 的渐变背景（2026-11-24 用户决定）。
 
 ### 3. 组件库
 

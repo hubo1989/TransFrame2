@@ -2,7 +2,19 @@ import CoreGraphics
 import Foundation
 import TFDomain
 
-public enum StyleField: Hashable, Sendable { case color, lineWidth, fontSize, fill, mosaic }
+public enum StyleField: Hashable, Sendable {
+    case color, lineWidth, fontSize, fill, mosaic
+
+    static func changed(from old: AnnotationStyle, to new: AnnotationStyle) -> Set<StyleField> {
+        var fields: Set<StyleField> = []
+        if old.color != new.color { fields.insert(.color) }
+        if old.lineWidth != new.lineWidth { fields.insert(.lineWidth) }
+        if old.fontSize != new.fontSize { fields.insert(.fontSize) }
+        if old.isFilled != new.isFilled || old.fillColor != new.fillColor { fields.insert(.fill) }
+        if old.mosaicBlockSize != new.mosaicBlockSize { fields.insert(.mosaic) }
+        return fields
+    }
+}
 
 /// Pure geometry for annotation interaction: hit testing, handles, resize, ⌘ constraints (ANN-09, ANN-12).
 public enum AnnotationGeometry {
@@ -37,15 +49,23 @@ public enum AnnotationGeometry {
     public static func handles(for annotation: Annotation) -> [AnnotationHandle: DocumentPoint] {
         switch annotation {
         case .line(let l), .arrow(let l): return [.start: l.start, .end: l.end]
+        case .callout(let c):
+            var handles = boxHandles(c.bubble)
+            handles[.pointer] = c.pointer
+            return handles
         default:
-            guard let r = box(of: annotation)?.standardized else { return [:] }
-            return [
-                .topLeft: DocumentPoint(x: r.minX, y: r.minY), .top: DocumentPoint(x: r.midX, y: r.minY),
-                .topRight: DocumentPoint(x: r.maxX, y: r.minY), .right: DocumentPoint(x: r.maxX, y: r.midY),
-                .bottomRight: DocumentPoint(x: r.maxX, y: r.maxY), .bottom: DocumentPoint(x: r.midX, y: r.maxY),
-                .bottomLeft: DocumentPoint(x: r.minX, y: r.maxY), .left: DocumentPoint(x: r.minX, y: r.midY),
-            ]
+            return box(of: annotation).map(boxHandles) ?? [:]
         }
+    }
+
+    private static func boxHandles(_ box: DocumentRect) -> [AnnotationHandle: DocumentPoint] {
+        let r = box.standardized
+        return [
+            .topLeft: DocumentPoint(x: r.minX, y: r.minY), .top: DocumentPoint(x: r.midX, y: r.minY),
+            .topRight: DocumentPoint(x: r.maxX, y: r.minY), .right: DocumentPoint(x: r.maxX, y: r.midY),
+            .bottomRight: DocumentPoint(x: r.maxX, y: r.maxY), .bottom: DocumentPoint(x: r.midX, y: r.maxY),
+            .bottomLeft: DocumentPoint(x: r.minX, y: r.maxY), .left: DocumentPoint(x: r.minX, y: r.midY),
+        ]
     }
 
     /// Moves one handle; with ⌘ the box keeps its aspect ratio (ANN-12).
@@ -57,6 +77,9 @@ public enum AnnotationGeometry {
         case .arrow(var l):
             if handle == .start { l.start = constrain ? snap45(l.end, p) : p } else { l.end = constrain ? snap45(l.start, p) : p }
             return .arrow(l)
+        case .callout(var c) where handle == .pointer:
+            c.pointer = p
+            return .callout(c)
         default:
             guard let r = box(of: annotation)?.standardized.raw else { return annotation }
             var minX = r.minX, minY = r.minY, maxX = r.maxX, maxY = r.maxY
@@ -69,7 +92,7 @@ public enum AnnotationGeometry {
             case .bottom: maxY = p.y
             case .bottomLeft: minX = p.x; maxY = p.y
             case .left: minX = p.x
-            case .start, .end: break
+            case .start, .end, .pointer: break
             }
             var new = CGRect(x: min(minX, maxX), y: min(minY, maxY), width: abs(maxX - minX), height: abs(maxY - minY))
             if constrain, r.width > 0, r.height > 0, [.topLeft, .topRight, .bottomLeft, .bottomRight].contains(handle) {
@@ -94,17 +117,47 @@ public enum AnnotationGeometry {
         }
     }
 
-    /// Applies only the given style fields to an annotation (ANN-13).
+    /// Applies only the given style fields to an annotation (ANN-13); every other value stays bit-identical.
     public static func restyle(_ annotation: Annotation, with style: AnnotationStyle, scale: Double, fields: Set<StyleField>) -> Annotation {
-        var merged = AnnotationStyle(defaults: AnnotationDefaults())
-        let current = currentStyle(of: annotation, scale: scale, fallback: style)
-        merged.color = fields.contains(.color) ? style.color : current.color
-        merged.lineWidth = fields.contains(.lineWidth) ? style.lineWidth : current.lineWidth
-        merged.fontSize = fields.contains(.fontSize) ? style.fontSize : current.fontSize
-        merged.isFilled = fields.contains(.fill) ? style.isFilled : current.isFilled
-        merged.fillColor = fields.contains(.fill) ? style.fillColor : current.fillColor
-        merged.mosaicBlockSize = fields.contains(.mosaic) ? style.mosaicBlockSize : current.mosaicBlockSize
-        return restyle(annotation, with: merged, scale: scale)
+        let color = fields.contains(.color), width = fields.contains(.lineWidth), font = fields.contains(.fontSize)
+        func shape(_ a: inout ShapeAnnotation) {
+            if color { a.strokeColor = style.color }
+            if width { a.lineWidth = style.lineWidth * scale }
+            if fields.contains(.fill) { a.isFilled = style.isFilled; a.fillColor = style.fillColor }
+        }
+        switch annotation {
+        case .rectangle(var a): shape(&a); return .rectangle(a)
+        case .ellipse(var a): shape(&a); return .ellipse(a)
+        case .highlight(var a): if color { a.strokeColor = style.color }; return .highlight(a)
+        case .line(var a):
+            if color { a.color = style.color }
+            if width { a.lineWidth = style.lineWidth * scale }
+            return .line(a)
+        case .arrow(var a):
+            if color { a.color = style.color }
+            if width { a.lineWidth = style.lineWidth * scale }
+            return .arrow(a)
+        case .freehand(var a):
+            if color { a.color = style.color }
+            if width { a.lineWidth = style.lineWidth * scale }
+            return .freehand(a)
+        case .text(var a):
+            if color { a.color = style.color }
+            if font { a.fontSize = style.fontSize * scale }
+            return .text(a)
+        case .numberLabel(var a):
+            if color { a.color = style.color }
+            if font { a.diameter = style.numberDiameter(scale: scale) }
+            return .numberLabel(a)
+        case .callout(var a):
+            if color { a.color = style.color }
+            if font { a.fontSize = style.fontSize * scale }
+            return .callout(a)
+        case .mosaic(var a):
+            if fields.contains(.mosaic) { a.blockSize = style.mosaicBlockSize * scale }
+            return .mosaic(a)
+        case .redaction: return annotation
+        }
     }
 
     /// Style values (points) read back from an annotation.
@@ -117,7 +170,7 @@ public enum AnnotationGeometry {
         case .line(let a), .arrow(let a): s.color = a.color; s.lineWidth = a.lineWidth / scale
         case .freehand(let a): s.color = a.color; s.lineWidth = a.lineWidth / scale
         case .text(let a): s.color = a.color; s.fontSize = a.fontSize / scale
-        case .numberLabel(let a): s.color = a.color
+        case .numberLabel(let a): s.color = a.color; s.fontSize = a.diameter / scale / 1.6
         case .callout(let a): s.color = a.color; s.fontSize = a.fontSize / scale
         case .mosaic(let a): s.mosaicBlockSize = a.blockSize / scale
         case .redaction: break
@@ -125,26 +178,9 @@ public enum AnnotationGeometry {
         return s
     }
 
-    /// Applies the current style to an annotation (ANN-13).
+    /// Applies the whole current style to an annotation (ANN-13).
     public static func restyle(_ annotation: Annotation, with style: AnnotationStyle, scale: Double) -> Annotation {
-        let width = style.lineWidth * scale
-        switch annotation {
-        case .rectangle(var a):
-            a.strokeColor = style.color; a.lineWidth = width; a.isFilled = style.isFilled; a.fillColor = style.fillColor
-            return .rectangle(a)
-        case .ellipse(var a):
-            a.strokeColor = style.color; a.lineWidth = width; a.isFilled = style.isFilled; a.fillColor = style.fillColor
-            return .ellipse(a)
-        case .highlight(var a): a.strokeColor = style.color; return .highlight(a)
-        case .line(var a): a.color = style.color; a.lineWidth = width; return .line(a)
-        case .arrow(var a): a.color = style.color; a.lineWidth = width; return .arrow(a)
-        case .freehand(var a): a.color = style.color; a.lineWidth = width; return .freehand(a)
-        case .text(var a): a.color = style.color; a.fontSize = style.fontSize * scale; return .text(a)
-        case .numberLabel(var a): a.color = style.color; return .numberLabel(a)
-        case .callout(var a): a.color = style.color; a.fontSize = style.fontSize * scale; return .callout(a)
-        case .mosaic(var a): a.blockSize = style.mosaicBlockSize * scale; return .mosaic(a)
-        case .redaction: return annotation
-        }
+        restyle(annotation, with: style, scale: scale, fields: [.color, .lineWidth, .fontSize, .fill, .mosaic])
     }
 
     public static func hit(_ annotation: Annotation, point p: DocumentPoint, tolerance: Double) -> Bool {

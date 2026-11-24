@@ -39,6 +39,8 @@ public protocol RenderWorkflow: Sendable {
     func image(for id: SessionID, purpose: RenderPurpose) async throws(AppError) -> PixelImage
     /// Screen plan without the annotations being dragged (they are drawn as a live draft).
     func plan(for id: SessionID, purpose: RenderPurpose, excluding: Set<AnnotationID>) async throws(AppError) -> RenderPlan
+    /// Plan of a snapshot the caller already holds, so a canvas draws exactly the revision it shows.
+    func plan(of session: DocumentSession, purpose: RenderPurpose, excluding: Set<AnnotationID>) throws(AppError) -> RenderPlan
     /// Draws a plan into a context; the same executor as export (ADR-0006).
     func draw(_ plan: RenderPlan, base: PixelImage, in context: CGContext)
 }

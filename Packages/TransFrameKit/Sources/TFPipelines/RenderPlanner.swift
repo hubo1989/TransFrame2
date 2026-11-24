@@ -71,7 +71,7 @@ public struct RenderPlanner: Sendable {
 
         let background: CanvasBackground
         switch purpose {
-        case .file(.jpeg): background = beautify ? .beautify(session.presentation.beautifyStyle) : .white
+        case .file(.jpeg): background = beautify ? .beautify(.matte(.white)) : .white
         default: background = beautify ? .beautify(session.presentation.beautifyStyle) : .transparent
         }
 

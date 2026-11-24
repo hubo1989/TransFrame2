@@ -29,12 +29,21 @@ final class CaptureController: OverlayViewDelegate {
     let toolbarModel = ToolbarModel()
     private var creating: Task<SessionID?, Never>?
     private var finished = false
+    /// Last toolbar placement; the panel is only moved when the selection or the toolbar size changes.
+    private var toolbarPlacement: ToolbarPlacement?
+    private var toolbarSize: NSSize?
+
+    private struct ToolbarPlacement: Equatable {
+        let rect: QuartzRect
+        let size: NSSize
+        let hasDrawer: Bool
+    }
 
     init(frames: FrozenFrameSet, deps: CaptureDependencies, onFinish: @escaping () -> Void) {
         self.frames = frames
         self.deps = deps
         self.onFinish = onFinish
-        selection = SelectionModel(frames: frames)
+        selection = SelectionModel(frames: frames, snapsToWindows: deps.workspace.settings.general.detectsWindows)
         owner = .capture(frames.request.id)
     }
 
@@ -67,11 +76,14 @@ final class CaptureController: OverlayViewDelegate {
             guard event.keyCode == 53 else { return }
             Task { @MainActor in self?.cancel() }
         }
-        Task { [weak self] in
-            guard let self, let frames = self.frames else { return }
-            let blocks = await self.deps.capture.contentBlocks(in: frames)
-            self.selection.setBlocks(blocks)
-            self.refresh()
+        // Content blocks (local Vision text regions) are only snap candidates with window detection on.
+        if selection.snapsToWindows {
+            Task { [weak self] in
+                guard let self, let frames = self.frames else { return }
+                let blocks = await self.deps.capture.contentBlocks(in: frames)
+                self.selection.setBlocks(blocks)
+                self.refresh()
+            }
         }
         if frames.request.intent == .scroll { toolbarModel.scrollMode = true }
     }
@@ -86,7 +98,7 @@ final class CaptureController: OverlayViewDelegate {
     private func refresh() {
         let showHandles = selection.phase == .selected && !selection.isLocked
         let showMagnifier = selection.phase != .selected
-        let hex = overlays.lazy.compactMap { $0.hex(at: self.selection.pointer) }.first
+        let hex = showMagnifier ? overlays.lazy.compactMap { $0.hex(at: self.selection.pointer) }.first : nil
         for overlay in overlays {
             overlay.labelTexts = (selection.hovered?.title, selection.pixelSizeLabel)
             overlay.render(
@@ -163,6 +175,10 @@ final class CaptureController: OverlayViewDelegate {
         case 48: selection.cycleCandidates(); refresh(); return true // Tab
         case 49: selection.toggleSnapping(); refresh(); return true // Space
         case 123, 124, 125, 126:
+            // A selected annotation moves first; otherwise the selection does (INP-01).
+            if let editor, editor.selectedID != nil {
+                return editor.handleKey(key, keyCode: event.keyCode, modifiers: flags)
+            }
             let step = flags.contains(.shift) ? 10.0 : 1.0
             let (dx, dy): (Double, Double) = switch event.keyCode {
             case 123: (-step, 0)
@@ -258,9 +274,12 @@ final class CaptureController: OverlayViewDelegate {
         observer.onChange = { [weak self, weak canvas] session in
             canvas?.update(session)
             self?.results?.update(session)
-            self?.selection.isLocked = !session.annotations.isEmpty || session.analysis != nil
-            self?.toolbarModel.beautify = session.presentation.beautify
-            self?.refresh()
+            guard let self else { return }
+            let locked = !session.annotations.isEmpty || session.analysis != nil
+            let lockChanged = self.selection.isLocked != locked
+            if lockChanged { self.selection.isLocked = locked }
+            if self.toolbarModel.beautify != session.presentation.beautify { self.toolbarModel.beautify = session.presentation.beautify }
+            if lockChanged { self.refresh() }
         }
         observer.start()
         self.editor = editor
@@ -332,9 +351,9 @@ final class CaptureController: OverlayViewDelegate {
         case .translate: openDrawer { $0.translate() }
         case .smartMosaic:
             run(finishes: false) { id in
-                guard let pipeline = self.services.pipeline else { return }
-                let count = try await pipeline.smartMosaic(id, settings: settings)
-                self.services.errors.toast(ToastModel(.info, message: self.l10n.string(.feedbackSmartMosaic, count)), near: nil)
+                self.toolbarModel.scanning = true
+                defer { self.toolbarModel.scanning = false }
+                try await self.services.smartMosaic(id, on: self.canvas, near: self.selectionAnchor)
             }
         case .beautify:
             run(finishes: false) { id in
@@ -348,6 +367,14 @@ final class CaptureController: OverlayViewDelegate {
         case .scroll:
             startScrollCapture()
         }
+    }
+
+    /// Center of the selection in Cocoa coordinates (toasts appear on its screen).
+    private var selectionAnchor: CGPoint? {
+        guard let rect = selection.rect, let frames else { return nil }
+        let primaryHeight = frames.topology.display(frames.topology.primary)?.frame.height ?? 0
+        let cocoa = QuartzConversion.cocoaRect(fromQuartz: rect, primaryHeight: primaryHeight)
+        return CGPoint(x: cocoa.midX, y: cocoa.midY)
     }
 
     private func run(finishes: Bool = true, _ body: @escaping (SessionID) async throws -> Void) {
@@ -376,6 +403,7 @@ final class CaptureController: OverlayViewDelegate {
         let panel = drawerPanel ?? Self.makePanel(level: windows.first?.level ?? .floating)
         panel.contentView = NSHostingView(rootView: ResultsDrawerView(model: model) { [weak self] in self?.closeDrawer() }.localized(l10n))
         drawerPanel = panel
+        toolbarPlacement = nil
         layoutToolbar()
         panel.orderFrontRegardless()
     }
@@ -383,6 +411,7 @@ final class CaptureController: OverlayViewDelegate {
     private func closeDrawer() {
         drawerPanel?.orderOut(nil)
         drawerPanel = nil
+        toolbarPlacement = nil
         windows.first?.makeKey()
     }
 
@@ -390,13 +419,20 @@ final class CaptureController: OverlayViewDelegate {
 
     private func layoutToolbar() {
         guard selection.phase == .selected, let rect = selection.rect, let frames else {
-            toolbarPanel?.orderOut(nil)
-            drawerPanel?.orderOut(nil)
+            if toolbarPlacement != nil {
+                toolbarPanel?.orderOut(nil)
+                drawerPanel?.orderOut(nil)
+                toolbarPlacement = nil
+            }
             return
         }
         let primaryHeight = frames.topology.display(frames.topology.primary)?.frame.height ?? 0
         let panel = toolbarPanel ?? makeToolbarPanel()
-        let size = panel.contentView?.fittingSize ?? NSSize(width: 600, height: 44)
+        let size = toolbarSize ?? panel.contentView?.fittingSize ?? NSSize(width: 600, height: 44)
+        toolbarSize = size
+        let placement = ToolbarPlacement(rect: rect, size: size, hasDrawer: drawerPanel != nil)
+        guard placement != toolbarPlacement else { return }
+        toolbarPlacement = placement
         let display = frames.topology.display(containing: QuartzPoint(x: rect.midX, y: rect.maxY)) ?? frames.topology.displays[0]
         var top = rect.maxY + DS.Space.s2
         if top + size.height > display.frame.maxY - DS.Space.s1 { top = rect.minY - size.height - DS.Space.s2 }
@@ -423,6 +459,11 @@ final class CaptureController: OverlayViewDelegate {
         toolbarModel.uploadEnabled = services.settings.imageHost.provider != nil
         toolbarModel.pipelineEnabled = services.pipeline != nil
         toolbarModel.scrollEnabled = deps.scroll != nil
+        toolbarModel.onResize = { [weak self] size in
+            guard let self, self.toolbarSize != size else { return }
+            self.toolbarSize = size
+            self.layoutToolbar()
+        }
         let view = InPlaceToolbarView(model: toolbarModel) { [weak self] action in self?.perform(action) }.localized(l10n)
         let hosting = NSHostingView(rootView: view)
         hosting.sizingOptions = [.intrinsicContentSize]

@@ -63,6 +63,8 @@ final class EditorModel {
     var isCropping = false
     var cropRect: DocumentRect?
     var busy = false
+    var scanning = false
+    @ObservationIgnored weak var canvas: DocumentCanvasView?
 
     init(services: WorkspaceServices, sessionID: SessionID) {
         self.services = services
@@ -91,11 +93,14 @@ final class EditorModel {
 
     func pin() { services.router.route(.pin(sessionID)) }
 
+    /// Scan animation on the canvas, found areas light up, then a toast with the result (INP-08).
     func smartMosaic() {
-        guard let pipeline = services.pipeline else { return }
+        guard services.pipeline != nil else { return }
         act {
-            let count = try await pipeline.smartMosaic(self.sessionID, settings: self.services.settings.snapshot)
-            self.services.errors.toast(ToastModel(.info, message: self.l10n.string(.feedbackSmartMosaic, count)), near: nil)
+            self.scanning = true
+            defer { self.scanning = false }
+            let anchor = self.canvas?.window.map { CGPoint(x: $0.frame.midX, y: $0.frame.midY) }
+            try await self.services.smartMosaic(self.sessionID, on: self.canvas, near: anchor)
         }
     }
 
@@ -170,6 +175,7 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
         window.keyHandler = { [weak self] event in self?.handleKey(event) ?? false }
         let root = EditorRootView(model: model, canvas: canvas, close: { [weak self] in self?.window.close() }).localized(services.localizer)
         window.contentView = NSHostingView(rootView: root)
+        model.canvas = canvas
         canvas.onEscapeUnhandled = { [weak self] in self?.escape() }
         canvas.onRender = { [weak self] plan in self?.sizeToFit(plan) }
         model.observer.onChange = { [weak self] session in
@@ -270,29 +276,46 @@ struct EditorRootView: View {
             HStack(spacing: DS.Space.s1) {
                 AnnotationToolbar(editor: model.editor)
                 ToolbarDivider()
-                IconButton(l10n[.actionUndo], systemImage: "arrow.uturn.backward", shortcutHint: "⌘Z") { model.observer.undo() }.disabled(
-                    !model.observer.canUndo)
-                IconButton(l10n[.actionRedo], systemImage: "arrow.uturn.forward", shortcutHint: "⇧⌘Z") { model.observer.redo() }.disabled(
-                    !model.observer.canRedo)
+                IconButton(l10n[.actionUndo], systemImage: "arrow.uturn.backward", shortcutHint: "⌘Z", detail: l10n[.actionUndoHint]) {
+                    model.observer.undo()
+                }
+                .disabled(!model.observer.canUndo)
+                IconButton(l10n[.actionRedo], systemImage: "arrow.uturn.forward", shortcutHint: "⇧⌘Z", detail: l10n[.actionRedoHint]) {
+                    model.observer.redo()
+                }
+                .disabled(!model.observer.canRedo)
                 Spacer(minLength: DS.Space.s2)
-                IconButton(l10n[.actionCrop], systemImage: "crop", shortcutHint: "C", isActive: model.isCropping) {
+                IconButton(l10n[.actionCrop], systemImage: "crop", shortcutHint: "C", detail: l10n[.actionCropHint], isActive: model.isCropping) {
                     model.isCropping ? model.applyCrop() : model.beginCrop()
                 }
                 IconButton(
-                    l10n[.actionBeautify], systemImage: "sparkles.rectangle.stack", isActive: model.observer.session?.presentation.beautify ?? false
+                    l10n[.actionBeautify], systemImage: "sparkles.rectangle.stack", detail: l10n[.actionBeautifyHint], isActive: model.observer.beautify
                 ) { model.toggleBeautify() }
                 if model.services.pipeline != nil {
-                    IconButton(l10n[.actionSmartMosaic], systemImage: "eye.trianglebadge.exclamationmark") { model.smartMosaic() }
-                    IconButton(l10n[.actionRecognize], systemImage: "text.viewfinder") { model.recognize() }
-                    IconButton(l10n[.actionTranslate], systemImage: "character.bubble") { model.translate() }
+                    IconButton(
+                        l10n[.actionSmartMosaic], systemImage: "eye.trianglebadge.exclamationmark", detail: l10n[.actionSmartMosaicHint],
+                        isActive: model.scanning
+                    ) { model.smartMosaic() }
+                    IconButton(l10n[.actionRecognize], systemImage: "text.viewfinder", detail: l10n[.actionRecognizeHint]) { model.recognize() }
+                    IconButton(l10n[.actionTranslate], systemImage: "character.bubble", detail: l10n[.actionTranslateHint]) { model.translate() }
                 }
-                IconButton(l10n[.actionPin], systemImage: "pin", shortcutHint: "P") { model.pin() }
-                IconButton(l10n[.actionSave], systemImage: "square.and.arrow.down", shortcutHint: "⌘S") { model.save() }
-                Button(l10n[.actionCopy]) { model.copyAndClose(close) }.buttonStyle(.borderedProminent).help("\(l10n[.actionCopy]) (↩)")
+                IconButton(l10n[.actionPin], systemImage: "pin", shortcutHint: "P", detail: l10n[.actionPinHint]) { model.pin() }
+                IconButton(l10n[.actionSave], systemImage: "square.and.arrow.down", shortcutHint: "⌘S", detail: l10n[.actionSaveHint]) { model.save() }
+                Button(l10n[.actionCopy]) { model.copyAndClose(close) }
+                    .buttonStyle(.borderedProminent)
+                    .hoverHint(l10n[.actionCopy], keys: ["↩", "⌘C"], detail: l10n[.actionCopyHint])
             }
             .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s2)
             .padding(.top, DS.Space.s5)
+            if model.editor.showsStyleBar {
+                HStack(spacing: 0) {
+                    AnnotationStyleBar(editor: model.editor)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.bottom, DS.Space.s2)
+            }
             Divider()
             HStack(spacing: 0) {
                 CanvasHost(canvas: canvas, model: model)
@@ -305,6 +328,7 @@ struct EditorRootView: View {
             }
         }
         .background(DS.Palette.surfaceWindow)
+        .hoverHintScope()
     }
 }
 

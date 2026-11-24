@@ -109,3 +109,13 @@ struct AnnotationTransactionTests {
         DocumentSession(origin: .importedFile(name: "fixture"), baseImage: TestImages.solid(width: 100, height: 80), annotations: annotations)
     }
 }
+
+@Suite("Text bounds")
+struct TextBoundsTests {
+    @Test func wideCharactersCountAsOneEm() {
+        let latin = Annotation.text(TextAnnotation(anchor: DocumentPoint(x: 0, y: 0), text: "ab", color: .black, fontSize: 10))
+        let chinese = Annotation.text(TextAnnotation(anchor: DocumentPoint(x: 0, y: 0), text: "你好", color: .black, fontSize: 10))
+        #expect(abs(latin.bounds.width - 12.4) < 0.001)
+        #expect(chinese.bounds.width == 20)
+    }
+}

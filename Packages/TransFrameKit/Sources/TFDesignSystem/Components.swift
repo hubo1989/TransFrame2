@@ -1,22 +1,25 @@
 import AppKit
 import SwiftUI
 
-/// Icon-only button with a mandatory text label (visually hidden) and tooltip (SPEC §05 §3).
+/// Icon-only button with a mandatory text label (visually hidden) and a hover hint (SPEC §05 §3): name, shortcut
+/// key caps and an optional one-line explanation.
 public struct IconButton: View {
     let title: String
     let systemImage: String
-    let shortcutHint: String?
+    let keys: [String]
+    let detail: String?
     let isActive: Bool
     let role: ButtonRole?
     let action: () -> Void
 
     public init(
-        _ title: String, systemImage: String, shortcutHint: String? = nil, isActive: Bool = false,
-        role: ButtonRole? = nil, action: @escaping () -> Void
+        _ title: String, systemImage: String, shortcutHint: String? = nil, shortcutKeys: [String] = [], detail: String? = nil,
+        isActive: Bool = false, role: ButtonRole? = nil, action: @escaping () -> Void
     ) {
         self.title = title
         self.systemImage = systemImage
-        self.shortcutHint = shortcutHint
+        keys = shortcutKeys + (shortcutHint.map { [$0] } ?? [])
+        self.detail = detail
         self.isActive = isActive
         self.role = role
         self.action = action
@@ -30,7 +33,7 @@ public struct IconButton: View {
                 .contentShape(.rect)
         }
         .buttonStyle(IconButtonStyle(isActive: isActive))
-        .help(shortcutHint.map { "\(title) (\($0))" } ?? title)
+        .hoverHint(HoverHintContent(title, keys: keys, detail: detail))
         .accessibilityLabel(title)
         .accessibilityAddTraits(isActive ? .isSelected : [])
     }

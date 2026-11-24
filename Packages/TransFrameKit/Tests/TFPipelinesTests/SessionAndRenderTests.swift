@@ -229,6 +229,8 @@ struct RenderPlannerTests {
         let plan = try planner.plan(for: s, purpose: .file(.png))
         #expect(plan.canvas == PixelSize(width: 200 + 144, height: 100 + 144))
         #expect(plan.contentFrame == CanvasRect(x: 72, y: 72, width: 200, height: 100))
+        #expect(plan.background == .beautify(.transparent))
+        #expect(try planner.plan(for: s, purpose: .file(.jpeg)).background == .beautify(.matte(.white)))
         #expect(try planner.plan(for: s, purpose: .analysisInput(.safe)).canvas == PixelSize(width: 200, height: 100))
     }
 
