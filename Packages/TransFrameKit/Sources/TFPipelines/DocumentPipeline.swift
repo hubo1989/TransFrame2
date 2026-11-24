@@ -74,8 +74,15 @@ public struct DocumentPipelineService: DocumentPipelineWorkflow {
                 (session, analysisRevision) = try await sessions.analysisSnapshot(of: id)
             }
             guard let analysis = session.analysis else { throw AppError.cancelled }
-            let units = analysis.segments.filter { $0.translatability.isTranslatable }
-                .map { TranslationUnit(id: $0.id, text: $0.effectiveText, kind: $0.kind) }
+            // JSON lines send only the string value; the key and punctuation are put back afterwards.
+            var templates: [SegmentID: (prefix: String, suffix: String, source: String)] = [:]
+            let units = analysis.segments.filter { $0.translatability.isTranslatable }.map { segment -> TranslationUnit in
+                if let template = CodeLines.jsonValueTemplate(segment.effectiveText) {
+                    templates[segment.id] = (template.prefix, template.suffix, segment.effectiveText)
+                    return TranslationUnit(id: segment.id, text: template.value, kind: segment.kind)
+                }
+                return TranslationUnit(id: segment.id, text: segment.effectiveText, kind: segment.kind)
+            }
             guard !units.isEmpty else { throw AppError.translation(.noTranslatableText) }
             emit(.stage(.translating))
             let target = options.target ?? settings.languages.capture.target.resolved(preferred: preferredLanguages())
@@ -88,6 +95,7 @@ public struct DocumentPipelineService: DocumentPipelineWorkflow {
                 if case .finished(let finished) = event { outcome = finished }
             }
             guard var outcome else { throw AppError.cancelled }
+            if !templates.isEmpty { outcome = Self.reassemble(outcome, templates: templates) }
             if outcome.privacy == nil { outcome.privacy = privacy }
             try await sessions.writeTranslation(
                 outcome, to: id, inputRevision: revision, kind: .translation, operation: operation,
@@ -97,6 +105,27 @@ public struct DocumentPipelineService: DocumentPipelineWorkflow {
             )
             await recordHistory(session: session, analysis: analysis, outcome: outcome, input: analysisInput, settings: settings)
         }
+    }
+
+    /// Wraps value-only translations back into their JSON line (`"key": "<translation>",`), keeping the full source line.
+    static func reassemble(_ outcome: TranslationOutcome, templates: [SegmentID: (prefix: String, suffix: String, source: String)]) -> TranslationOutcome {
+        let results = outcome.results.map { result -> EngineResult in
+            let segments = result.segments.map { segment -> BilingualSegment in
+                guard let template = templates[segment.id] else { return segment }
+                let translated = segment.translated.map { template.prefix + $0.replacingOccurrences(of: "\"", with: "\\\"") + template.suffix }
+                return BilingualSegment(
+                    id: segment.id, source: template.source, translated: translated, status: segment.status, from: segment.from, to: segment.to,
+                    glossaryHits: segment.glossaryHits
+                )
+            }
+            return EngineResult(
+                id: result.id, segments: segments, error: result.error, skipped: result.skipped, duration: result.duration, fromCache: result.fromCache
+            )
+        }
+        return TranslationOutcome(
+            operation: outcome.operation, routing: outcome.routing, results: results, effective: outcome.effective, target: outcome.target,
+            privacy: outcome.privacy
+        )
     }
 
     func makeJob(

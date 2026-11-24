@@ -138,6 +138,13 @@ public enum RecognitionNormalizer {
         if text.range(of: #"^(https?://|www\.)\S+$|^[\w.+-]+@[\w-]+\.[\w.]+$|^[A-Z0-9_\-]{2,}\d[A-Z0-9_\-]*$"#, options: .regularExpression) != nil {
             return .keepOriginal(.identifier)
         }
+        // Data and code stay as they are: paths, hashes, timestamps, JSON keys and non-text JSON values, code lines.
+        if CodeLines.isIdentifier(text) { return .keepOriginal(.identifier) }
+        if CodeLines.isJSONKeyOnly(text) { return .keepOriginal(.code) }
+        if let template = CodeLines.jsonValueTemplate(text) {
+            return CodeLines.isNaturalLanguage(template.value) ? .translate : .keepOriginal(.code)
+        }
+        if CodeLines.looksLikeCode(text) { return .keepOriginal(.code) }
         return .translate
     }
 

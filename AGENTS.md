@@ -209,3 +209,14 @@
 - Done: Domain ModelSpeedResult (+ranked), EngineCatalogProviding.benchmarkModels, EngineCatalogService.benchmarkModels/measure (3 concurrent, 20 s each), testTranslation 20 s deadline. Next: EnginesModel speed state + fetch fix, EngineCard UI (SpeedTestSection), strings, test, reinstall.
 - Speed test UI/model fetch done (SpeedTestSection, fetch button + auto-fetch on expand). Real endpoint check via RealEngineAcceptance speedOfModels: glm-5.3-flash 2.9 s, group/flash 6.0 s, group/turbo 13.5 s.
 - Speed test + fetch fix committed & pushed; Release reinstalled to /Applications (pid 83775).
+- User asked to IMPLEMENT overlay styling items 1+2+3: (1) sample bg/fg colors per segment from the analysis input (StyleSampler in
+  TFPipelines, called in RecognitionService before caching; opaque `.sampled` backdrop, ~1 px radius); (2) monospaced font when the source
+  is terminal/editor/code (SegmentStyleHint.monospaced, TranslationPlacement.monospaced, TextMeasuring monospaced overload, Drawing uses
+  NSFont.monospacedSystemFont), single-line height tolerance 15 % + vertical centering in replace mode, backdrop dy 0;
+  (3) translatability: JSON key-only/path/URL/hex/UUID/timestamp/code lines keepOriginal; JSON string values translated value-only
+  (prefix/suffix template applied in DocumentPipelineService). Then IntegrationTests target rendering a dark terminal fixture to PNG
+  (before/after evidence), reinstall /Applications build. Items 4/5 (auto display mode, overflow→below) are a later step.
+- Done so far (uncommitted): Domain SegmentStyleHint.monospaced+with(), TextSegment.with(style:translatability:), TranslationPlacement.monospaced, TextMeasuring monospaced overload; RenderInfra monospaced font + sampled radius. Next: layout planner, StyleSampler, translatability rules, JSON value templates, tests, integration render.
+- Layout planner updated (monospaced, opaque sampled backdrop, 15% single-line tolerance, centred, dy 0). Next: StyleSampler.swift + hook in RecognitionService, translatability + JSON value templates, tests.
+- StyleSampler.swift (+CodeLines) added; RecognitionService annotates styles from unmasked input; Normalizer translatability uses CodeLines; DocumentPipeline value-only JSON translation + reassemble. All compile. Next: tests + IntegrationTests render + reinstall.
+- Overlay styling implemented + IntegrationTests/OverlayRenderTests (real Vision OCR on dark terminal fixture → build/overlay/overlay-after.png looks right). OCR quote folding in CodeLines.normalizedQuotes; coverFrame grows 18% clamped to neighbours. Next: full tests/lint, Release reinstall, commit.

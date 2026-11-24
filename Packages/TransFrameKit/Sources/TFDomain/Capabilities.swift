@@ -177,6 +177,14 @@ public protocol RenderPlanExecuting: Sendable {
 
 public protocol TextMeasuring: Sendable {
     func measure(_ text: String, fontSize: Double, maxWidth: Double) -> TextMetrics
+    /// Fixed-width measurement for monospaced sources; defaults to the proportional metrics.
+    func measure(_ text: String, fontSize: Double, maxWidth: Double, monospaced: Bool) -> TextMetrics
+}
+
+public extension TextMeasuring {
+    func measure(_ text: String, fontSize: Double, maxWidth: Double, monospaced: Bool) -> TextMetrics {
+        measure(text, fontSize: fontSize, maxWidth: maxWidth)
+    }
 }
 
 public protocol FrameComposing: Sendable {

@@ -95,13 +95,15 @@ let package = Package(
         tests("TFSystemInfraTests", [domain, "TFSystemInfra"]),
         tests("TFCaptureInfraTests", [domain, "TFCaptureInfra"]),
         tests("TFAIInfraTests", [domain, "TFAIInfra"]),
+        // End-to-end rendering of real OCR output (no network, no UI): pipelines + recognition + render.
+        tests("IntegrationTests", [domain, "TFPipelines", "TFRecognitionInfra", "TFRenderInfra"]),
         tests("TFLocalizationTests", ["TFLocalization"]),
         tests(
             "TFDesignSystemTests",
             ["TFDesignSystem", "TFLocalization", .product(name: "SnapshotTesting", package: "swift-snapshot-testing")],
             ui: true
         ),
-        tests("TFWorkspaceUITests", uiBase, ui: true),
+        tests("TFWorkspaceUITests", uiBase + ["TFPipelines", "TFRenderInfra"], ui: true),
         tests("FeatureTests", uiBase + features.map { Target.Dependency(stringLiteral: $0) }, ui: true),
     ] + features.map(feature)
 )

@@ -8,11 +8,14 @@ import TFDomain
 
 enum TextDrawing {
     static func attributes(
-        fontSize: Double, color: RGBA, alignment: RenderTextAlignment, rightToLeft: Bool, fontName: String? = nil, bold: Bool = false
+        fontSize: Double, color: RGBA, alignment: RenderTextAlignment, rightToLeft: Bool, fontName: String? = nil, bold: Bool = false,
+        monospaced: Bool = false
     ) -> [NSAttributedString.Key: Any] {
         let font: CTFont
         if let fontName, let custom = NSFont(name: fontName, size: fontSize) {
             font = custom as CTFont
+        } else if monospaced {
+            font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: bold ? .bold : .regular) as CTFont
         } else {
             font = (bold ? NSFont.boldSystemFont(ofSize: fontSize) : NSFont.systemFont(ofSize: fontSize)) as CTFont
         }
@@ -28,9 +31,10 @@ enum TextDrawing {
         return [.font: font, .foregroundColor: color.cgColor, .paragraphStyle: paragraph]
     }
 
-    static func measure(_ text: String, fontSize: Double, maxWidth: Double, fontName: String? = nil) -> TextMetrics {
+    static func measure(_ text: String, fontSize: Double, maxWidth: Double, fontName: String? = nil, monospaced: Bool = false) -> TextMetrics {
         let string = NSAttributedString(
-            string: text, attributes: attributes(fontSize: fontSize, color: .black, alignment: .leading, rightToLeft: false, fontName: fontName))
+            string: text,
+            attributes: attributes(fontSize: fontSize, color: .black, alignment: .leading, rightToLeft: false, fontName: fontName, monospaced: monospaced))
         let framesetter = CTFramesetterCreateWithAttributedString(string)
         let constraint = CGSize(width: maxWidth.isFinite ? maxWidth : CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
         let size = CTFramesetterSuggestFrameSizeWithConstraints(framesetter, CFRange(location: 0, length: 0), nil, constraint, nil)
@@ -45,12 +49,14 @@ enum TextDrawing {
     /// Draws wrapped text into `rect` of a y-down context.
     static func draw(
         _ text: String, in rect: CGRect, fontSize: Double, color: RGBA, alignment: RenderTextAlignment, rightToLeft: Bool,
-        fontName: String? = nil, bold: Bool = false, context: CGContext
+        fontName: String? = nil, bold: Bool = false, monospaced: Bool = false, context: CGContext
     ) {
         guard rect.width > 0, rect.height > 0 else { return }
         let string = NSAttributedString(
             string: text,
-            attributes: attributes(fontSize: fontSize, color: color, alignment: alignment, rightToLeft: rightToLeft, fontName: fontName, bold: bold))
+            attributes: attributes(
+                fontSize: fontSize, color: color, alignment: alignment, rightToLeft: rightToLeft, fontName: fontName, bold: bold, monospaced: monospaced
+            ))
         let framesetter = CTFramesetterCreateWithAttributedString(string)
         let height = rect.height + 2
         let path = CGPath(rect: CGRect(x: 0, y: 0, width: rect.width, height: height), transform: nil)

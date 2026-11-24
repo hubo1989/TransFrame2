@@ -106,13 +106,15 @@ public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
         case .none: break
         case .fill(let color), .sampled(let color):
             context.setFillColor(color.cgColor)
-            let radius = min(3 * scale, backdropRect.height / 4)
+            // A sampled backdrop replaces the original background, so it stays nearly square; a fill reads as a label.
+            let isSampled = if case .sampled = placement.backdrop { true } else { false }
+            let radius = isSampled ? min(1 * scale, backdropRect.height / 6) : min(3 * scale, backdropRect.height / 4)
             context.addPath(CGPath(roundedRect: backdropRect, cornerWidth: radius, cornerHeight: radius, transform: nil))
             context.fillPath()
         }
         TextDrawing.draw(
             placement.text, in: placement.frame.raw, fontSize: placement.fontSize, color: placement.color,
-            alignment: placement.alignment, rightToLeft: placement.isRightToLeft, context: context
+            alignment: placement.alignment, rightToLeft: placement.isRightToLeft, monospaced: placement.monospaced, context: context
         )
     }
 
@@ -171,6 +173,10 @@ public final class CoreGraphicsRenderer: RenderPlanExecuting, TextMeasuring {
     }
 
     // MARK: TextMeasuring (same attributes as drawing)
+
+    public func measure(_ text: String, fontSize: Double, maxWidth: Double, monospaced: Bool) -> TextMetrics {
+        TextDrawing.measure(text, fontSize: fontSize, maxWidth: maxWidth, monospaced: monospaced)
+    }
 
     public func measure(_ text: String, fontSize: Double, maxWidth: Double) -> TextMetrics {
         TextDrawing.measure(text, fontSize: fontSize, maxWidth: maxWidth)

@@ -135,12 +135,22 @@ public struct SegmentStyleHint: Sendable, Codable, Equatable, Hashable {
     public let foreground: RGBA?
     public let background: RGBA?
     public let alignment: RenderTextAlignment?
+    /// The source is set in a fixed-width face (terminals, editors, code); in-place translations follow it.
+    public let monospaced: Bool?
 
-    public init(fontSize: Double? = nil, foreground: RGBA? = nil, background: RGBA? = nil, alignment: RenderTextAlignment? = nil) {
+    public init(
+        fontSize: Double? = nil, foreground: RGBA? = nil, background: RGBA? = nil, alignment: RenderTextAlignment? = nil, monospaced: Bool? = nil
+    ) {
         self.fontSize = fontSize
         self.foreground = foreground
         self.background = background
         self.alignment = alignment
+        self.monospaced = monospaced
+    }
+
+    public func with(foreground: RGBA?, background: RGBA?, monospaced: Bool?) -> SegmentStyleHint {
+        SegmentStyleHint(fontSize: fontSize, foreground: foreground ?? self.foreground, background: background ?? self.background,
+                         alignment: alignment, monospaced: monospaced ?? self.monospaced)
     }
 }
 
@@ -233,6 +243,13 @@ public struct TextSegment: Sendable, Codable, Identifiable, Equatable, Hashable 
         var copy = self
         copy.revisedText = revisedText
         return copy
+    }
+
+    public func with(style: SegmentStyleHint?, translatability: Translatability? = nil) -> TextSegment {
+        TextSegment(
+            id: id, kind: kind, text: text, revisedText: revisedText, box: box, quad: quad, lines: lines, confidence: confidence,
+            language: language, parent: parent, translatability: translatability ?? self.translatability, style: style
+        )
     }
 }
 

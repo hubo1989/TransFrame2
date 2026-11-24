@@ -31,11 +31,12 @@ public struct TranslationPlacement: Sendable, Equatable, Hashable {
     public let alignment: RenderTextAlignment
     public let fit: FitDecision
     public let isRightToLeft: Bool
+    public let monospaced: Bool
 
     public init(
         segment: SegmentID, text: String, frame: CanvasRect, fontSize: Double, color: RGBA, backdrop: Backdrop,
         backdropFrame: CanvasRect? = nil, alignment: RenderTextAlignment = .leading, fit: FitDecision,
-        isRightToLeft: Bool = false
+        isRightToLeft: Bool = false, monospaced: Bool = false
     ) {
         self.segment = segment
         self.text = text
@@ -47,6 +48,7 @@ public struct TranslationPlacement: Sendable, Equatable, Hashable {
         self.alignment = alignment
         self.fit = fit
         self.isRightToLeft = isRightToLeft
+        self.monospaced = monospaced
     }
 }
 

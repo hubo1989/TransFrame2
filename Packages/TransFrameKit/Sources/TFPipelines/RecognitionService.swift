@@ -56,6 +56,8 @@ public struct RecognitionService: RecognitionWorkflow {
             guard let cropped = input.cgImage.cropping(to: crop) else { throw .recognition(.regionOutOfBounds) }
             input = PixelImage(cgImage: cropped, scale: input.scale)
         }
+        // Colours are sampled locally from the unmasked input so redaction boxes never become a "background".
+        let unmasked = input
         var privacy: PrivacyReport?
         if PrivacyGuard.applies(to: descriptor.locality, settings: settings.privacy, overridden: overridePrivacy) {
             let start = ContinuousClock.now
@@ -107,6 +109,9 @@ public struct RecognitionService: RecognitionWorkflow {
                     provenance: provenance)
             }
             try Task.checkCancellation()
+            result = StyleSampler.annotate(
+                result, image: unmasked.cgImage, origin: DocumentPoint(x: region.minX, y: region.minY), appBundleID: session.context?.appBundleID
+            )
             return Outcome(result: result, privacy: privacy, input: frozenInput)
         } catch {
             throw AppError.from(error)
