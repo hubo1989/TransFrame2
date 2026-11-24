@@ -208,3 +208,4 @@
   curl timings: group/turbo 4.2 s, group/flash 7.2 s, auto/deepseek-v4.1-flash 10 s.
 - Done: Domain ModelSpeedResult (+ranked), EngineCatalogProviding.benchmarkModels, EngineCatalogService.benchmarkModels/measure (3 concurrent, 20 s each), testTranslation 20 s deadline. Next: EnginesModel speed state + fetch fix, EngineCard UI (SpeedTestSection), strings, test, reinstall.
 - Speed test UI/model fetch done (SpeedTestSection, fetch button + auto-fetch on expand). Real endpoint check via RealEngineAcceptance speedOfModels: glm-5.3-flash 2.9 s, group/flash 6.0 s, group/turbo 13.5 s.
+- Speed test + fetch fix committed & pushed; Release reinstalled to /Applications (pid 83775).
