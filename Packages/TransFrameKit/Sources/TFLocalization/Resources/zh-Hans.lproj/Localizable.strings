@@ -427,7 +427,7 @@
 "settings.general.capture" = "截图";
 "settings.general.choose" = "选择…";
 "settings.general.detectWindows" = "自动识别窗口";
-"settings.general.detectWindowsNote" = "框选时高亮指针下的窗口：单击选中，双击直接截取该窗口。Tab 在重叠窗口间切换，空格切换为自由框选。";
+"settings.general.detectWindowsNote" = "框选时高亮指针下的窗口。单击选中，双击保存。按 Tab 切换重叠窗口，按空格切换自由框选。";
 "settings.general.format" = "图片格式";
 "settings.general.history" = "历史";
 "settings.general.historyLimit" = "最多保留条数";

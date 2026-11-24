@@ -104,6 +104,6 @@ let package = Package(
             ui: true
         ),
         tests("TFWorkspaceUITests", uiBase + ["TFPipelines", "TFRenderInfra"], ui: true),
-        tests("FeatureTests", uiBase + features.map { Target.Dependency(stringLiteral: $0) }, ui: true),
+        tests("FeatureTests", uiBase + ["TFPipelines"] + features.map { Target.Dependency(stringLiteral: $0) }, ui: true),
     ] + features.map(feature)
 )

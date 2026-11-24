@@ -1,7 +1,11 @@
-import Foundation
+import AppKit
 import Testing
+import TFDesignSystem
 import TFDomain
 import TFDomainTestSupport
+import TFLocalization
+import TFPipelines
+import TFWorkspaceUI
 @testable import CaptureFeature
 
 /// Window detection on the frozen screen (CAP-05, CAP-06, CAP-13) and its setting.
@@ -17,9 +21,9 @@ struct WindowSnapTests {
     }
 
     /// Front-to-back like the window server: the editor covers part of the browser.
-    private func frames(pointer: QuartzPoint) -> FrozenFrameSet {
+    private func frames(pointer: QuartzPoint, intent: CaptureIntent = .region) -> FrozenFrameSet {
         FrozenFrameSet(
-            request: CaptureRequest(intent: .region, trigger: .programmatic, pointer: pointer),
+            request: CaptureRequest(intent: intent, trigger: .programmatic, pointer: pointer),
             topology: DisplayTopology(version: 1, displays: [display], primary: display.id),
             frames: [CapturedFrame(display: display, image: TestImages.solid(width: 2000, height: 1600, scale: 2), requestedAt: .now, completedAt: .now)],
             windows: [
@@ -49,6 +53,107 @@ struct WindowSnapTests {
         #expect(model.doubleClickTarget(at: QuartzPoint(x: 900, y: 700))?.0 == display.frame)
     }
 
+    @Test func aSelectedWindowSavesInsideAndClosesOnAnOutsideClick() {
+        let inside = QuartzPoint(x: 350, y: 250), outside = QuartzPoint(x: 150, y: 150)
+        let model = SelectionModel(frames: frames(pointer: inside))
+        model.mouseDown(at: inside)
+        #expect(model.mouseUp(at: inside))
+        #expect(model.doubleClickTarget(at: inside)?.1 == .window(WindowID(10)))
+        #expect(model.doubleClickTarget(at: outside) == nil)
+
+        for locked in [false, true] {
+            model.isLocked = locked
+            model.mouseDown(at: outside)
+            #expect(model.isOutsideClick(at: outside))
+            #expect(!model.mouseUp(at: outside))
+        }
+        #expect(model.source == .window(WindowID(10)))
+    }
+
+    @Test func draggingFromOutsideCanReplaceAnUnlockedSelection() {
+        let inside = QuartzPoint(x: 350, y: 250), outside = QuartzPoint(x: 150, y: 150)
+        let end = QuartzPoint(x: 50, y: 50)
+        let model = SelectionModel(frames: frames(pointer: inside))
+        model.mouseDown(at: inside)
+        #expect(model.mouseUp(at: inside))
+        model.mouseDown(at: outside)
+        model.mouseDragged(to: end)
+        #expect(!model.isOutsideClick(at: end))
+        #expect(model.mouseUp(at: end))
+        #expect(model.rect == QuartzRect(x: 50, y: 50, width: 100, height: 100))
+
+        let handle = QuartzPoint(x: 49, y: 50)
+        model.mouseDown(at: handle)
+        #expect(!model.isOutsideClick(at: handle))
+    }
+
+    @Test func cyclingKeepsTheHighlightedWindowAsTheSaveTarget() {
+        let pointer = QuartzPoint(x: 350, y: 250)
+        let model = SelectionModel(frames: frames(pointer: pointer))
+        model.cycleCandidates()
+        #expect(model.hovered?.source == .window(WindowID(20)))
+        #expect(model.doubleClickTarget(at: pointer)?.1 == .window(WindowID(20)))
+    }
+
+    @Test func hoverRevealsTheWindowThroughTheScrim() throws {
+        let pointer = QuartzPoint(x: 350, y: 250)
+        let frozen = frames(pointer: pointer)
+        let view = try OverlayView(frame: #require(frozen.frames.first))
+        let model = SelectionModel(frames: frozen)
+        view.render(selection: nil, candidate: model.hovered?.rect, showHandles: false, pointer: pointer, showMagnifier: false, hex: nil)
+        let context = try #require(TestImages.context(width: 1000, height: 800))
+        let layer = try #require(view.layer)
+        layer.render(in: context)
+        let pixels = try #require(context.data).assumingMemoryBound(to: UInt8.self)
+        let middleRow = 400 * context.bytesPerRow
+        #expect(pixels[middleRow + 350 * 4] > pixels[middleRow + 25 * 4])
+    }
+
+    @Test(arguments: [false, true])
+    func windowClickWaitsBeforeScrollAndDoubleClickSaves(doubleClick: Bool) async throws {
+        let pointer = QuartzPoint(x: 350, y: 250)
+        let frozen = frames(pointer: pointer, intent: .scroll)
+        let sessions = DocumentSessionStore(composer: FakeFrameComposer())
+        let files = FakeFileExporter(), pasteboard = FakePasteboard(), sound = FakeSound(), performance = FakePerformanceRecorder()
+        let render = RenderService(
+            sessions: sessions, planner: RenderPlanner(measurer: FakeTextMeasurer()), executor: FakeRenderExecutor(), performance: performance)
+        let export = ExportService(
+            sessions: sessions, render: render, pasteboard: pasteboard, encoder: FakeImageCodec(), files: files, sound: sound, uploader: nil,
+            history: nil, namer: FileNamer(), guardian: PrivacyGuard(detector: FakeSensitiveDetector([])),
+            defaultDirectory: { FileManager.default.temporaryDirectory })
+        let workspace = WorkspaceServices(
+            sessions: sessions, render: render, export: export, pipeline: nil, glossary: nil,
+            colorPick: ColorPickService(sampler: FakeColorSampler(), pasteboard: pasteboard, history: FakeHistoryWorkflow()),
+            pasteboard: pasteboard, settings: FakeSettings(), localizer: Localizer(preference: "en"), errors: CaptureTestErrors(),
+            router: FakeRouter(), performance: performance)
+        let scroll = RecordingScroll()
+        let deps = CaptureDependencies(
+            workspace: workspace, capture: CaptureService(snapshotter: FakeSnapshotter(), blocks: nil, performance: performance),
+            topology: CaptureTestTopology(frames: frozen), permissions: FakePermissions(granted: [.screenRecording]), scroll: scroll, sound: sound)
+        var finished = false
+        let controller = CaptureController(frames: frozen, deps: deps, doubleClickInterval: .milliseconds(75)) { finished = true }
+        defer { controller.cancel() }
+
+        controller.overlayMouseDown(pointer, clickCount: 1)
+        controller.overlayMouseUp(pointer)
+        #expect(controller.selection.source == .window(WindowID(10)))
+        #expect(!controller.toolbarModel.scrollRunning)
+        if doubleClick { controller.overlayMouseDown(pointer, clickCount: 2) }
+
+        let deadline = ContinuousClock.now + .seconds(2)
+        while !finished, scroll.started.calls.isEmpty, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        if doubleClick {
+            #expect(finished)
+            #expect(files.written.count == 1)
+            #expect(scroll.started.calls.isEmpty)
+        } else {
+            #expect(scroll.started.calls == [QuartzRect(x: 300, y: 200, width: 400, height: 300)])
+            #expect(files.written.calls.isEmpty)
+        }
+    }
+
     @Test func turnedOffNothingIsHighlightedAndDoubleClickTakesTheDisplay() {
         let model = SelectionModel(frames: frames(pointer: QuartzPoint(x: 350, y: 250)), snapsToWindows: false)
         #expect(model.hovered == nil)
@@ -67,4 +172,25 @@ struct WindowSnapTests {
         #expect(old.detectsWindows)
         #expect(!old.playsSound)
     }
+}
+
+private struct CaptureTestTopology: DisplayTopologyProviding {
+    let frames: FrozenFrameSet
+    func topology() async throws(AppError) -> DisplayTopology { frames.topology }
+    func pointerLocation() -> QuartzPoint { frames.request.pointer }
+}
+
+private struct RecordingScroll: ScrollCaptureWorkflow {
+    let started = CallLog<QuartzRect>()
+    func begin(_ rect: QuartzRect, excluding: Set<WindowID>) async throws(AppError) -> AsyncStream<ScrollCaptureEvent> {
+        started.append(rect)
+        return AsyncStream { $0.finish() }
+    }
+    func finish() async throws(AppError) -> SessionID { throw .cancelled }
+    func cancel() async {}
+}
+
+private final class CaptureTestErrors: ErrorPresenting {
+    func present(_ error: AppError, near anchor: CGPoint?, retry: (() -> Void)?) { Issue.record("Unexpected capture error: \(error)") }
+    func toast(_ model: ToastModel, near anchor: CGPoint?, action: (() -> Void)?) {}
 }

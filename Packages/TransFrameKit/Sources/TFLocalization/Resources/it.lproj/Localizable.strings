@@ -427,7 +427,7 @@
 "settings.general.capture" = "Cattura";
 "settings.general.choose" = "Scegli…";
 "settings.general.detectWindows" = "Rileva automaticamente le finestre";
-"settings.general.detectWindowsNote" = "Durante la selezione la finestra sotto il puntatore viene evidenziata: fai clic per selezionarla, doppio clic per catturarla subito. Tab passa tra finestre sovrapposte; Spazio passa alla selezione libera.";
+"settings.general.detectWindowsNote" = "Durante la selezione la finestra sotto il puntatore viene evidenziata: fai clic per selezionarla o doppio clic per salvare l’istantanea. Tab passa tra finestre sovrapposte; Spazio passa alla selezione libera.";
 "settings.general.format" = "Formato immagine";
 "settings.general.history" = "Cronologia";
 "settings.general.historyLimit" = "Mantieni al massimo";

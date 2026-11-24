@@ -63,11 +63,9 @@ public final class CaptureCoordinator: CaptureCoordinating {
                 if intent == .fullDisplay {
                     try await captureFullDisplay(frames)
                 } else {
-                    var created: CaptureController?
                     let controller = CaptureController(frames: frames, deps: deps) { [weak self] in
-                        if self?.controller === created { self?.controller = nil }
+                        self?.controller = nil
                     }
-                    created = controller
                     self.controller = controller
                     starting = false
                     controller.present()

@@ -427,7 +427,7 @@
 "settings.general.capture" = "Captura";
 "settings.general.choose" = "Escolher…";
 "settings.general.detectWindows" = "Detectar janelas automaticamente";
-"settings.general.detectWindowsNote" = "Ao selecionar, a janela sob o ponteiro é destacada: clique para selecioná-la ou clique duas vezes para capturá-la na hora. Tab alterna entre janelas sobrepostas; Espaço muda para seleção livre.";
+"settings.general.detectWindowsNote" = "Ao selecionar, a janela sob o ponteiro é destacada: clique para selecioná-la ou clique duas vezes para salvar a captura. Tab alterna entre janelas sobrepostas; Espaço muda para seleção livre.";
 "settings.general.format" = "Formato de imagem";
 "settings.general.history" = "Histórico";
 "settings.general.historyLimit" = "Manter no máximo";

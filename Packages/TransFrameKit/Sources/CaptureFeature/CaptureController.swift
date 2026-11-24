@@ -13,6 +13,7 @@ final class CaptureController: OverlayViewDelegate {
     let selection: SelectionModel
     private var frames: FrozenFrameSet?
     private let deps: CaptureDependencies
+    private let doubleClickInterval: Duration
     private let onFinish: () -> Void
     private var overlays: [OverlayView] = []
     private var windows: [OverlayWindow] = []
@@ -26,10 +27,12 @@ final class CaptureController: OverlayViewDelegate {
     private var observer: DocumentObserver?
     private(set) var results: ResultsModel?
     private var busy = false
-    private var escapeMonitor: Any?
+    private var localEscapeMonitor: Any?
+    private var globalEscapeMonitor: Any?
     private let owner: SessionOwner
     let toolbarModel = ToolbarModel()
     private var creating: Task<SessionID?, Never>?
+    private var pendingSelectionAction: Task<Void, Never>?
     private var finished = false
     /// Last toolbar placement; the panel is only moved when the selection or the toolbar size changes.
     private var toolbarPlacement: ToolbarPlacement?
@@ -41,9 +44,13 @@ final class CaptureController: OverlayViewDelegate {
         let hasDrawer: Bool
     }
 
-    init(frames: FrozenFrameSet, deps: CaptureDependencies, onFinish: @escaping () -> Void) {
+    init(
+        frames: FrozenFrameSet, deps: CaptureDependencies,
+        doubleClickInterval: Duration = .seconds(NSEvent.doubleClickInterval), onFinish: @escaping () -> Void
+    ) {
         self.frames = frames
         self.deps = deps
+        self.doubleClickInterval = doubleClickInterval
         self.onFinish = onFinish
         selection = SelectionModel(frames: frames, snapsToWindows: deps.workspace.settings.general.detectsWindows)
         owner = .capture(frames.request.id)
@@ -73,8 +80,14 @@ final class CaptureController: OverlayViewDelegate {
         refresh()
         CATransaction.flush()
         recordFrozenVisible(frames)
-        // Global Esc fallback while the app is not active (CAP-14).
-        escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        localEscapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, event.keyCode == 53, let window = event.window ?? NSApp.keyWindow,
+                  self.windows.contains(where: { $0 === window }) || self.toolbarPanel === window || self.drawerPanel === window
+            else { return event }
+            self.cancel()
+            return nil
+        }
+        globalEscapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard event.keyCode == 53 else { return }
             Task { @MainActor in self?.cancel() }
         }
@@ -87,7 +100,6 @@ final class CaptureController: OverlayViewDelegate {
                 self.refresh()
             }
         }
-        if frames.request.intent == .scroll { toolbarModel.scrollMode = true }
     }
 
     private func recordFrozenVisible(_ frames: FrozenFrameSet) {
@@ -98,6 +110,7 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     private func refresh() {
+        guard !overlays.isEmpty else { return }
         let showHandles = selection.phase == .selected && !selection.isLocked
         let showMagnifier = selection.phase != .selected
         let hex = showMagnifier ? overlays.lazy.compactMap { $0.hex(at: self.selection.pointer) }.first : nil
@@ -121,33 +134,52 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     func overlayMouseDown(_ point: QuartzPoint, clickCount: Int) {
-        guard !busy else { return }
-        if clickCount >= 2, selection.isLocked, !(selection.rect?.contains(point) ?? false) { return }
+        guard !busy, !finished else { return }
         if clickCount >= 2, let target = selection.doubleClickTarget(at: point) {
-            if sessionID != nil, target.0 != selection.rect { discardSession() }
             selection.select(target.0, source: target.1)
             refresh()
-            perform(.copy)
+            perform(.save)
             return
         }
-        if selection.phase == .selected, sessionID != nil, selection.isLocked { return }
         selection.mouseDown(at: point)
         refresh()
     }
 
     func overlayMouseDragged(_ point: QuartzPoint) {
+        guard !busy, !finished else { return }
         let start = ContinuousClock.now
+        let previousGeometry = selection.geometry()
         selection.mouseDragged(to: point)
-        if sessionID != nil, !selection.isLocked { discardSession() }
+        if sessionID != nil, selection.geometry() != previousGeometry { discardSession() }
         refresh()
         services.performance.record(PerformanceSample(budget: Budget.overlayEventHandling, duration: .now - start))
     }
 
     func overlayMouseUp(_ point: QuartzPoint) {
+        guard !busy, !finished else { return }
+        let outsideClick = selection.isOutsideClick(at: point)
+        let wasDragging = selection.phase == .dragging
         let created = selection.mouseUp(at: point)
+        if outsideClick { cancel(); return }
         refresh()
-        if created, frames?.request.intent == .regionThenTranslate { perform(.translate) }
-        if created, toolbarModel.scrollMode { perform(.scroll) }
+        if created { performSelectionAction(waitForDoubleClick: !wasDragging) }
+    }
+
+    private func performSelectionAction(waitForDoubleClick: Bool) {
+        let action: Action
+        switch frames?.request.intent {
+        case .regionThenTranslate: action = .translate
+        case .scroll: action = .scroll
+        default: return
+        }
+        guard waitForDoubleClick else { perform(action); return }
+        pendingSelectionAction?.cancel()
+        let geometry = selection.geometry()
+        pendingSelectionAction = Task { [weak self, doubleClickInterval] in
+            do { try await Task.sleep(for: doubleClickInterval) } catch { return }
+            guard let self, !Task.isCancelled, self.selection.phase == .selected, self.selection.geometry() == geometry else { return }
+            self.perform(action)
+        }
     }
 
     func overlayRightMouseDown() { cancel() }
@@ -167,9 +199,7 @@ final class CaptureController: OverlayViewDelegate {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
         switch event.keyCode {
-        case 53: // Esc: text → selection → tool → drawer → capture (EDT-08, INP-12)
-            if editor?.cancelStep() == true { return true }
-            if drawerPanel != nil { closeDrawer(); return true }
+        case 53: // Esc
             cancel(); return true
         case 36, 76: // Enter
             if selection.rect != nil { perform(.copy) }
@@ -220,7 +250,9 @@ final class CaptureController: OverlayViewDelegate {
             errors.toast(ToastModel(message: message), near: nil)
         }
     }
+}
 
+extension CaptureController {
     // MARK: Session
 
     /// One creation task per controller; results arriving after the capture ended are released (review-1 P1-1).
@@ -265,6 +297,12 @@ final class CaptureController: OverlayViewDelegate {
             canvas.frame = overlay.local(rect)
             canvas.onEscapeUnhandled = { [weak self] in self?.cancel() }
             canvas.keyHandler = { [weak self] event in self?.overlayKeyDown(event) ?? false }
+            canvas.mouseDownHandler = { [weak self, weak editor] event, point in
+                guard let self, let editor, event.clickCount >= 2, editor.tool == nil, editor.textEditing == nil, editor.hitTest(point) == nil
+                else { return false }
+                self.perform(.save)
+                return true
+            }
             let selectionFrame = canvas.frame
             canvas.onRender = { [weak canvas] plan in
                 // Padding (beautify) extends outside the selection so the content stays aligned with the frozen pixels.
@@ -325,7 +363,9 @@ final class CaptureController: OverlayViewDelegate {
     enum Action { case copy, save, pin, upload, recognize, translate, smartMosaic, beautify, cancel, scroll, tool(AnnotationTool) }
 
     func perform(_ action: Action) {
-        guard !busy else { return }
+        guard !busy, !finished else { return }
+        pendingSelectionAction?.cancel()
+        pendingSelectionAction = nil
         let settings = services.settings.snapshot
         switch action {
         case .cancel: cancel()
@@ -411,7 +451,7 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     private func showDrawerPanel(_ model: ResultsModel) {
-        let panel = drawerPanel ?? Self.makePanel(level: windows.first?.level ?? .floating)
+        let panel = drawerPanel ?? KeyPanel(above: windows.first?.level ?? .floating)
         panel.contentView = NSHostingView(rootView: ResultsDrawerView(model: model) { [weak self] in self?.closeDrawer() }.localized(l10n))
         drawerPanel = panel
         toolbarPlacement = nil
@@ -466,7 +506,7 @@ final class CaptureController: OverlayViewDelegate {
     }
 
     private func makeToolbarPanel() -> NSPanel {
-        let panel = Self.makePanel(level: windows.first?.level ?? .floating)
+        let panel = KeyPanel(above: windows.first?.level ?? .floating)
         toolbarModel.uploadEnabled = services.settings.imageHost.provider != nil
         toolbarModel.pipelineEnabled = services.pipeline != nil
         toolbarModel.scrollEnabled = deps.scroll != nil
@@ -480,18 +520,6 @@ final class CaptureController: OverlayViewDelegate {
         hosting.sizingOptions = [.intrinsicContentSize]
         panel.contentView = hosting
         toolbarPanel = panel
-        return panel
-    }
-
-    static func makePanel(level: NSWindow.Level) -> NSPanel {
-        let panel = KeyPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
-        panel.level = NSWindow.Level(rawValue: level.rawValue + 1)
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.isReleasedWhenClosed = false
-        panel.hidesOnDeactivate = false
         return panel
     }
 
@@ -542,9 +570,13 @@ final class CaptureController: OverlayViewDelegate {
     private func finish() {
         guard !finished else { return }
         finished = true
+        pendingSelectionAction?.cancel()
+        pendingSelectionAction = nil
         creating?.cancel()
-        if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
-        escapeMonitor = nil
+        if let localEscapeMonitor { NSEvent.removeMonitor(localEscapeMonitor) }
+        if let globalEscapeMonitor { NSEvent.removeMonitor(globalEscapeMonitor) }
+        localEscapeMonitor = nil
+        globalEscapeMonitor = nil
         results?.cancel()
         observer?.stop()
         for window in windows { window.orderOut(nil) }
@@ -564,9 +596,4 @@ final class CaptureController: OverlayViewDelegate {
         sessionID = nil
         onFinish()
     }
-}
-
-/// Panels that can take keyboard focus (drawer text, toolbar menus).
-final class KeyPanel: NSPanel {
-    override var canBecomeKey: Bool { true }
 }

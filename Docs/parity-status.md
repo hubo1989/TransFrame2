@@ -36,8 +36,8 @@
 | CAP-10 | 选区尺寸标签 | CaptureFeature | S | 待核 |  | ☐ |
 | CAP-11 | 像素放大镜 | CaptureFeature | S+P | 待核 | perf.sh | ☐ |
 | CAP-12 | `C` 复制指针处像素的 HEX 色值 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
-| CAP-13 | 双击确认：选区内双击复制；未框选时双击悬停窗口截该窗口，无窗口则截整屏 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
-| CAP-14 | `Esc` 取消（含应用未激活时的全局兜底），右键取消 | CaptureFeature | I+M | 待核 | 自动化（见下）；走查 W01 | ☐ |
+| CAP-13 | 双击保存：已框选时保存选区，未框选时保存悬停窗口，无候选时保存指针所在整屏 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
+| CAP-14 | 选区外左键单击、右键或按 `Esc` 取消截图，应用未激活时有全局 `Esc` 兜底 | CaptureFeature | I+M | 待核 | 自动化（见下）；走查 W01 | ☐ |
 | CAP-15 | 冻结期间滚轮不透传到底下的应用 | CaptureFeature | M | 待核 | 走查 W01 | ☐ |
 | CAP-16 | 全屏截图：不进选区界面，直接成图、复制到剪贴板并打开编辑器 | CaptureFeature | I+M | 待核 | 自动化（见下）；走查 W01 | ☐ |
 | CAP-17 | 多屏、混合缩放、负坐标布局下选区与输出一致；跨屏选区按最高密度拼接 | TFDomain、TFCaptureInfra | U+M | 待核 | 自动化（见下）；走查 W01 | ☐ |
@@ -57,7 +57,7 @@
 | INP-09 | 上传到图床（1.x 因无设置入口而永不显示） | CaptureFeature、TFUploadInfra | I+R | 待核 | 自动化（见下）；真实引擎验收 | ☐ |
 | INP-10 | 取消按钮 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
 | INP-11 | 结果抽屉：识别与翻译两个标签；重跑；复制全部、原文、译文；逐行复制；目标语言快速切换 | TFWorkspaceUI | S+I | 待核 | 自动化（见下） | ☐ |
-| INP-12 | 抽屉有键盘焦点时 `Esc` 只关抽屉，不取消截图 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
+| INP-12 | 结果抽屉有键盘焦点时，`Esc` 关闭整个截图 | CaptureFeature | U | 待核 | 自动化（见下） | ☐ |
 | INP-13 | 就地状态消息（成功、错误） | TFDesignSystem | S | 待核 |  | ☐ |
 | INP-14 | 新一轮识别或翻译取消旧一轮；旧结果不得覆盖新结果 | TFPipelines | I | 待核 | 自动化（见下） | ☐ |
 | ANN-01 | 10 种工具：矩形、椭圆、直线、箭头、手绘、文字、编号、高亮、马赛克、隐私遮挡 | TFWorkspaceUI、TFDomain | U+S | 待核 | 自动化（见下） | ☐ |
@@ -67,7 +67,7 @@
 | ANN-05 | 马赛克强度调节 | TFWorkspaceUI | U+S | 待核 | 自动化（见下） | ☐ |
 | ANN-06 | 矩形与椭圆的填充开关与填充色 | TFWorkspaceUI | U+S | 待核 | 自动化（见下） | ☐ |
 | ANN-07 | 文字字号调节 | TFWorkspaceUI | U+S | 待核 | 自动化（见下） | ☐ |
-| ANN-08 | 文字就地输入：`Enter` 提交、`Esc` 取消、双击已有文字重新编辑 | TFWorkspaceUI | U+M | 待核 | 自动化（见下）；走查 W01 | ☐ |
+| ANN-08 | 文字就地输入：`Enter` 提交，双击已有文字重新编辑。编辑器内 `Esc` 取消输入，截图时 `Esc` 退出截图 | TFWorkspaceUI | U+M | 待核 | 自动化（见下）；走查 W01 | ☐ |
 | ANN-09 | 选中已有标注后移动、用手柄缩放或调端点；文字提交后可拖动 | TFWorkspaceUI | U+M | 待核 | 自动化（见下）；走查 W01 | ☐ |
 | ANN-10 | `Delete` 删除选中的标注 | TFWorkspaceUI | U | 待核 | 自动化（见下） | ☐ |
 | ANN-11 | 撤销与重做（`⌘Z`、`⌘⇧Z`、工具条按钮） | TFPipelines | U | 待核 | 自动化（见下） | ☐ |

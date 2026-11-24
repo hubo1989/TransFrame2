@@ -30,6 +30,7 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
     public var onEscapeUnhandled: (() -> Void)?
     /// Host shortcuts get the first look at keys (capture overlay actions), then the annotation editor.
     public var keyHandler: ((NSEvent) -> Bool)?
+    public var mouseDownHandler: ((NSEvent, DocumentPoint) -> Bool)?
     /// A mirror (the same document on another display) leaves settling pending edits and inline text input to the primary
     /// canvas, so neither happens twice.
     public var isMirror = false
@@ -413,8 +414,9 @@ public final class DocumentCanvasView: NSView, NSTextFieldDelegate {
 
     override public func mouseDown(with event: NSEvent) {
         guard let editor else { return super.mouseDown(with: event) }
-        window?.makeFirstResponder(self)
         let point = documentPoint(for: convert(event.locationInWindow, from: nil))
+        if mouseDownHandler?(event, point) == true { return }
+        window?.makeFirstResponder(self)
         editor.mouseDown(at: point, clickCount: event.clickCount, constrain: event.modifierFlags.contains(.command))
         updateCursor(at: point)
     }

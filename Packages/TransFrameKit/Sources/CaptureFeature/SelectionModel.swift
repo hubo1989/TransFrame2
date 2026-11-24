@@ -87,7 +87,7 @@ public final class SelectionModel {
 
     /// Tab cycles overlapping candidates under the pointer (CAP-06).
     public func cycleCandidates() {
-        guard snapsToWindows else { return }
+        guard phase == .choosing, snapsToWindows else { return }
         let list = candidates(at: pointer)
         guard list.count > 1 else { return }
         cycleIndex = (cycleIndex + 1) % list.count
@@ -129,11 +129,10 @@ public final class SelectionModel {
         case .selected:
             if let handle = handle(at: point), let rect {
                 resizing = (handle, rect)
-            } else if let rect, rect.contains(point), !isLocked {
-                moveOrigin = (point, rect)
-            } else if !isLocked {
+            } else if let rect, rect.contains(point) {
+                if !isLocked { moveOrigin = (point, rect) }
+            } else {
                 dragStart = point
-                phase = .choosing
             }
         }
     }
@@ -151,6 +150,10 @@ public final class SelectionModel {
             let dx = point.x - moveOrigin.pointer.x, dy = point.y - moveOrigin.pointer.y
             setRect(clampedMove(moveOrigin.rect, dx: dx, dy: dy), source: source)
         } else if let start = dragStart, hypot(point.x - start.x, point.y - start.y) >= Self.dragThreshold {
+            if isLocked {
+                dragStart = nil
+                return
+            }
             phase = .dragging
             hovered = nil
             let r = CGRect(x: min(start.x, point.x), y: min(start.y, point.y), width: abs(point.x - start.x), height: abs(point.y - start.y))
@@ -189,11 +192,19 @@ public final class SelectionModel {
         return false
     }
 
-    /// Double click: copy the selection, else the window under the pointer (when window detection is on), else the display
-    /// under the pointer (CAP-13).
+    func isOutsideClick(at point: QuartzPoint) -> Bool {
+        guard phase == .selected, let rect, let start = dragStart else { return false }
+        return !rect.contains(point) && hypot(point.x - start.x, point.y - start.y) < Self.dragThreshold
+    }
+
+    /// Double-click save target (CAP-13).
     public func doubleClickTarget(at point: QuartzPoint) -> (QuartzRect, SelectionSource)? {
-        if let rect, rect.contains(point) { return (rect, source) }
-        if snapsToWindows, let window = candidates(at: point).first { return (window.rect, window.source) }
+        if phase == .selected, let rect {
+            return rect.contains(point) ? (rect, source) : nil
+        }
+        if snapsToWindows, let candidate = point == pointer ? hovered : candidates(at: point).first {
+            return (candidate.rect, candidate.source)
+        }
         guard let display = topology.display(containing: point) else { return nil }
         return (display.frame, .display(display.id))
     }
