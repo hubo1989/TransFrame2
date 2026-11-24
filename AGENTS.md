@@ -261,3 +261,7 @@
   MARKETING_VERSION 0.0.1. release.yml: tags v0.* and v2.*, notes = CHANGELOG section for the version, 0.x → --prerelease.
   Secrets: user runs Scripts/setup-release-secrets.sh <DeveloperID.p12> (verifies notary creds, sets 6 secrets + 1 variable).
   Old README's shortcut table was wrong: ⌘⇧T = region then translate, ⌘⇧Y = translate selection, ⌘⇧I = translate and insert.
+- PR #1 Codex review (7 findings) fixed in e7cc384 with tests; replies posted on each comment. CI green at 6fbcb2e.
+  CI arm64 (3 cores) wedged the parallel Swift Testing run (no test finished, root cause not isolated); test.sh now runs
+  serially when CI is set, under a 25-min watchdog with script(1) line-buffered logs (lists unfinished tests) + log artifacts.
+  gh API is flaky here (EOF): retry loops; job logs via curl with `gh auth token`.
