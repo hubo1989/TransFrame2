@@ -54,8 +54,14 @@ smoke() {
   local app
   app="$("$ROOT/Scripts/build.sh" Debug -quiet | tail -1)"
   local out
-  out="$(TF_SMOKE_TEST=1 timeout 60 "$app/Contents/MacOS/TransFrame 2" 2>/dev/null || true)"
-  if grep -q "TF2_MENU_READY" <<<"$out"; then echo "launch smoke passed"; else echo "launch smoke FAILED"; exit 1; fi
+  out="$(TF_SMOKE_TEST=1 timeout 60 "$app/Contents/MacOS/TransFrame 2" 2>&1; echo "exit=$?")"
+  if grep -q "TF2_MENU_READY" <<<"$out"; then echo "launch smoke passed"; return 0; fi
+  echo "launch smoke FAILED"
+  tail -40 <<<"$out"
+  # Crash report, if any, for diagnosis on CI.
+  report="$(ls -t ~/Library/Logs/DiagnosticReports/TransFrame* 2>/dev/null | head -1)"
+  [[ -n "$report" ]] && head -80 "$report"
+  exit 1
 }
 
 app_tests() {
