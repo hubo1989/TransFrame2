@@ -29,13 +29,17 @@ struct HoverHintTests {
     @Test func hintFloatsAboveTheOverlayToolbarUnderTheControlAndWarmsUp() async throws {
         let (window, first, second) = toolbarWindow()
         defer { window.close() }
+        try #require(window.isVisible, "the window server did not order the test window in")
         let presenter = HoverHintPresenter()
         let a = HoverHintAnchor(), b = HoverHintAnchor()
         a.view = first
         b.view = second
         presenter.enter(HoverHintContent("Rectangle", keys: ["R", "1"], detail: "Drag to draw."), anchor: a)
         #expect(presenter.shown == nil)
-        try await Task.sleep(for: HoverHintPresenter.delay + .milliseconds(150))
+        // Not before the delay; then within a generous bound (CI machines wake timers late).
+        try await Task.sleep(for: HoverHintPresenter.delay - .milliseconds(150))
+        #expect(presenter.shown == nil)
+        for _ in 0..<60 where presenter.shown == nil { try await Task.sleep(for: .milliseconds(50)) }
         #expect(presenter.shown?.title == "Rectangle")
         let panel = try #require(presenter.panel)
         #expect(panel.isVisible)
