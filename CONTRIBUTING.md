@@ -104,11 +104,21 @@ on macOS 15, a universal Release build, and the package tests plus smoke on Inte
 
 ## Releases
 
-Maintainers release by pushing a tag `v0.*` or `v2.*` on `main`. `.github/workflows/release.yml` then runs the gates, builds a
-universal app signed with the Developer ID and Hardened Runtime, packs and notarizes a DMG, signs the Sparkle appcast and
-publishes both to GitHub Releases as the latest release (never a pre-release: the app's update feed is
-`releases/latest/download/appcast.xml`, which skips pre-releases). Release notes come from the matching section of
-`CHANGELOG.md`.
+Add the version to `CHANGELOG.md` and push its tag (`v0.*` or `v2.*`) from `main`. The release workflow runs the gates,
+builds a universal app with Developer ID signing and Hardened Runtime, notarizes and staples the DMG, and signs the Sparkle
+appcast. GitHub publishes the DMG and appcast as a pre-release. The version comes from the tag and the Sparkle build number
+comes from the tagged commit's full history on `main`.
+
+Download the DMG from the tagged release and test the installed app. After it passes, open that release on GitHub, select
+**Edit release**, clear **This is a pre-release**, select **Set as the latest release**, and save. From a terminal in this
+repository, the equivalent command for version `0.0.002` is:
+
+```bash
+gh release edit v0.0.002 --prerelease=false --latest
+```
+
+The stable appcast at `releases/latest/download/appcast.xml` will then point to the same DMG that passed testing. If the
+release needs a code change, build a new version and tag so the tested assets always match the published assets.
 
 Repository configuration it needs (one-time; `Scripts/setup-release-secrets.sh` sets all of them with the GitHub CLI):
 
