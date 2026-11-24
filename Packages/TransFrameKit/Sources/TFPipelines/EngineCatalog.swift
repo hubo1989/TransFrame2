@@ -42,9 +42,75 @@ public struct EngineCatalogService: EngineCatalogProviding {
         guard let engine = translation.engine(id, settings: settings) else { throw .engine(.notConfigured(id)) }
         let target = settings.languages.capture.target.resolved(preferred: Locale.preferredLanguages)
         let unit = TranslationUnit(text: target.isSameLanguage(as: .english) ? "你好，世界" : "Hello, world")
-        let results = try await engine.translate(TranslationBatch(units: [unit], from: nil, to: target))
+        let batch = TranslationBatch(units: [unit], from: nil, to: target)
+        // A hung model must not leave the settings page "testing" forever.
+        let results: [TranslatedUnit]
+        do {
+            results = try await Deadline.run(Self.testTimeout, engine: id) { try await engine.translate(batch) }
+        } catch {
+            throw AppError.from(error)
+        }
         guard let text = results.first?.text, !text.isEmpty else { throw .engine(.invalidResponse(id, detail: "empty")) }
         return text
+    }
+
+    public static let testTimeout: Duration = .seconds(20)
+    public static let speedTestConcurrency = 3
+    static let speedSample = ["Good morning.", "The meeting moved to Friday at 3 pm.", "Open Settings to change the shortcut."]
+
+    public func benchmarkModels(_ id: EngineID, models: [String], settings: SettingsSnapshot) -> AsyncStream<ModelSpeedResult> {
+        AsyncStream { continuation in
+            let task = Task {
+                await withTaskGroup(of: ModelSpeedResult.self) { group in
+                    var pending = models[...]
+                    for _ in 0..<min(Self.speedTestConcurrency, pending.count) {
+                        let next = pending.removeFirst()
+                        group.addTask { await measure(id, model: next, settings: settings) }
+                    }
+                    for await result in group {
+                        continuation.yield(result)
+                        if Task.isCancelled { group.cancelAll(); break }
+                        if let next = pending.first {
+                            pending.removeFirst()
+                            group.addTask { await measure(id, model: next, settings: settings) }
+                        }
+                    }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Full response time of a fixed three-sentence translation through the same engine path the app uses.
+    func measure(_ id: EngineID, model: String, settings: SettingsSnapshot) async -> ModelSpeedResult {
+        var settings = settings
+        if let index = settings.engines.compatibleInstances.firstIndex(where: { $0.engineID == id }) {
+            settings.engines.compatibleInstances[index].config.model = model
+        } else {
+            var config = settings.engines.config(for: id)
+            config.model = model
+            settings.engines.builtins[id] = config
+        }
+        guard let engine = translation.engine(id, settings: settings) else {
+            return ModelSpeedResult(model: model, outcome: .failure(.engine(.notConfigured(id))))
+        }
+        let resolved = settings.languages.capture.target.resolved(preferred: Locale.preferredLanguages)
+        let target = resolved.isSameLanguage(as: .english) ? LanguageCode.simplifiedChinese : resolved
+        let units = Self.speedSample.map { TranslationUnit(text: $0) }
+        let batch = TranslationBatch(units: units, from: .english, to: target)
+        let start = ContinuousClock.now
+        do {
+            let output = try await Deadline.run(Self.testTimeout, engine: id) { try await engine.translate(batch) }
+            let elapsed = ContinuousClock.now - start
+            let texts = output.compactMap { $0.text?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            guard texts.count == units.count, zip(texts, Self.speedSample).contains(where: { $0 != $1 }) else {
+                return ModelSpeedResult(model: model, outcome: .failure(.engine(.invalidResponse(id, detail: "incomplete"))))
+            }
+            return ModelSpeedResult(model: model, outcome: .success(duration: elapsed, sample: texts[1]))
+        } catch {
+            return ModelSpeedResult(model: model, outcome: .failure(AppError.from(error)))
+        }
     }
 
     /// Explicit image request to verify the configured model supports screenshot recognition.

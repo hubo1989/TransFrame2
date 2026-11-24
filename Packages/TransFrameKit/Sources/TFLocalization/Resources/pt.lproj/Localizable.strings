@@ -99,6 +99,7 @@
 "engines.enabled" = "Ativado";
 "engines.endpoint" = "Endpoint";
 "engines.fetchModels" = "Modelos";
+"engines.fetchModelsAction" = "Buscar modelos";
 "engines.instanceName" = "Mecanismo compatível %d";
 "engines.instanceNameLabel" = "Nome";
 "engines.locked" = "As chaves salvas estão bloqueadas nesta sessão.";
@@ -106,6 +107,9 @@
 "engines.modeCompare" = "Comparar";
 "engines.modeOrdered" = "Cadeia de fallback";
 "engines.model" = "Modelo";
+"engines.modelsChoose" = "Escolher modelo";
+"engines.modelsEmpty" = "O endpoint não retornou modelos.";
+"engines.modelsLoaded" = "%d modelos";
 "engines.moveDown" = "Mover para baixo";
 "engines.moveUp" = "Mover para cima";
 "engines.ocrEngine" = "Mecanismo para “Reconhecer texto”";
@@ -122,6 +126,16 @@
 "engines.remove" = "Remover";
 "engines.removeInstance" = "Remover mecanismo";
 "engines.routing" = "Roteamento de tradução";
+"engines.speedCapped" = "Apenas os primeiros %d modelos são testados — use o filtro para reduzir a lista.";
+"engines.speedCurrent" = "Atual";
+"engines.speedFastest" = "Mais rápido";
+"engines.speedFilter" = "Filtrar modelos";
+"engines.speedHint" = "Cada modelo traduz as mesmas três frases; o tempo de resposta completo é medido, até 20 segundos por modelo. São solicitações reais e podem ser cobradas.";
+"engines.speedProgress" = "%d de %d";
+"engines.speedRun" = "Testar %d modelos";
+"engines.speedSeconds" = "%.1f s";
+"engines.speedTest" = "Teste de velocidade dos modelos";
+"engines.speedUse" = "Usar";
 "engines.test" = "Testar";
 "engines.testing" = "Testando…";
 "engines.translation" = "Mecanismos de tradução";

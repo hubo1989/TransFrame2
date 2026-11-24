@@ -111,11 +111,22 @@ private struct EngineCard: View {
                     HStack {
                         TextField(l10n[.enginesModel], text: Binding(get: { config.model }, set: { v in model.update(id) { $0.model = v } }))
                             .textFieldStyle(.roundedBorder).font(DS.Typography.mono)
-                        Menu(l10n[.enginesFetchModels]) {
-                            ForEach(model.models[id] ?? [], id: \.self) { name in Button(name) { model.update(id) { $0.model = name } } }
+                        if model.fetchingModels.contains(id) {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            IconButton(l10n[.enginesFetchModelsAction], systemImage: "arrow.clockwise") {
+                                model.fetchModels(id, endpoint: config.endpoint, credential: .engine(id))
+                            }
                         }
-                        .onTapGesture { model.fetchModels(id, endpoint: config.endpoint, credential: .engine(id)) }
-                        .fixedSize()
+                        if let names = model.models[id], !names.isEmpty {
+                            Menu(l10n[.enginesModelsChoose]) {
+                                ForEach(names, id: \.self) { name in Button(name) { model.useModel(name, for: id) } }
+                            }
+                            .fixedSize()
+                        }
+                    }
+                    if let status = model.testResult["models-" + id.raw] {
+                        Text(status).font(DS.Typography.caption).foregroundStyle(.secondary)
                     }
                     if id != .claude, id != .gemini {
                         Picker(l10n[.enginesApiMode], selection: Binding(get: { config.apiMode }, set: { v in model.update(id) { $0.apiMode = v } })) {
@@ -138,6 +149,9 @@ private struct EngineCard: View {
                     }
                     .onAppear { model.loadSecret(.engine(id)) }
                 }
+                if descriptor.isLanguageModel, let names = model.models[id], !names.isEmpty {
+                    SpeedTestSection(model: model, id: id, names: names, current: config.model)
+                }
                 HStack {
                     Button(l10n[.enginesTest]) { model.test(id) }
                     if let result = model.testResult[id.raw] { Text(result).font(DS.Typography.caption).foregroundStyle(.secondary).lineLimit(2) }
@@ -154,6 +168,105 @@ private struct EngineCard: View {
                 Spacer()
                 HealthDot(health: model.health[id])
             }
+        }
+        .onChange(of: expanded) { _, isOpen in
+            // Load the model list as soon as a language-model card opens (the Menu itself cannot trigger a fetch).
+            if isOpen, descriptor.isLanguageModel, model.models[descriptor.id] == nil, !model.config(descriptor.id).endpoint.isEmpty {
+                model.fetchModels(descriptor.id, endpoint: model.config(descriptor.id).endpoint, credential: .engine(descriptor.id))
+            }
+        }
+    }
+}
+
+/// Measures every candidate model with the same three-sentence translation and lists them fastest first.
+private struct SpeedTestSection: View {
+    @Bindable var model: EnginesModel
+    let id: EngineID
+    let names: [String]
+    let current: String
+    @Environment(Localizer.self) private var l10n
+    @State private var filter = ""
+
+    static let cap = 30
+
+    private var matching: [String] {
+        let query = filter.trimmingCharacters(in: .whitespaces)
+        return query.isEmpty ? names : names.filter { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        let candidates = Array(matching.prefix(Self.cap))
+        let ranked = ModelSpeedResult.ranked(model.speedResults[id] ?? [])
+        let fastest = ranked.first { $0.duration != nil }?.model
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Divider()
+            HStack(spacing: DS.Space.s2) {
+                Text(l10n[.enginesSpeedTest]).font(DS.Typography.section)
+                Spacer()
+                TextField(l10n[.enginesSpeedFilter], text: $filter)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 180)
+                    .disabled(model.isSpeedTesting(id))
+                if model.isSpeedTesting(id) {
+                    ProgressView().controlSize(.small)
+                    if let progress = model.speedProgress[id] {
+                        Text(l10n.string(.enginesSpeedProgress, progress.done, progress.total)).font(DS.Typography.caption).monospacedDigit()
+                    }
+                    Button(l10n[.actionCancel]) { model.cancelSpeedTest(id) }
+                } else {
+                    Button(l10n.string(.enginesSpeedRun, candidates.count)) { model.runSpeedTest(id, models: candidates) }
+                        .disabled(candidates.isEmpty)
+                }
+            }
+            Text(l10n[.enginesSpeedHint]).font(DS.Typography.caption).foregroundStyle(.secondary)
+            if matching.count > Self.cap {
+                Text(l10n.string(.enginesSpeedCapped, Self.cap)).font(DS.Typography.caption).foregroundStyle(.secondary)
+            }
+            ForEach(ranked) { result in
+                SpeedRow(result: result, isFastest: result.model == fastest, isCurrent: result.model == current) {
+                    model.useModel(result.model, for: id)
+                }
+            }
+        }
+    }
+}
+
+private struct SpeedRow: View {
+    let result: ModelSpeedResult
+    let isFastest: Bool
+    let isCurrent: Bool
+    let use: () -> Void
+    @Environment(Localizer.self) private var l10n
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Image(systemName: isFastest ? "bolt.fill" : (result.duration == nil ? "xmark.circle" : "circle"))
+                .foregroundStyle(isFastest ? DS.Palette.accent : .secondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: result.model).font(DS.Typography.mono).lineLimit(1)
+                if case .success(_, let sample) = result.outcome {
+                    Text(verbatim: sample).font(DS.Typography.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            Spacer()
+            Text(detail).font(DS.Typography.caption).monospacedDigit().foregroundStyle(result.duration == nil ? .secondary : .primary)
+            if isCurrent {
+                Text(l10n[.enginesSpeedCurrent]).font(DS.Typography.caption).foregroundStyle(.secondary)
+            } else {
+                Button(l10n[.enginesSpeedUse], action: use).controlSize(.small).disabled(result.duration == nil)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var detail: String {
+        switch result.outcome {
+        case .success(let duration, _):
+            let seconds = Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+            return (isFastest ? l10n[.enginesSpeedFastest] + " · " : "") + l10n.string(.enginesSpeedSeconds, seconds)
+        case .failure(let error):
+            return LocalizedErrorText(error, localizer: l10n).title
         }
     }
 }

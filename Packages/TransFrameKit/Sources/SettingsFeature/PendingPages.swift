@@ -15,6 +15,10 @@ public final class EnginesModel {
     var secrets: [CredentialRef: String] = [:]
     var analysisModels: [AnalysisProvider: [String]] = [:]
     var models: [EngineID: [String]] = [:]
+    var fetchingModels: Set<EngineID> = []
+    var speedResults: [EngineID: [ModelSpeedResult]] = [:]
+    var speedProgress: [EngineID: (done: Int, total: Int)] = [:]
+    @ObservationIgnored private var speedTasks: [EngineID: Task<Void, Never>] = [:]
     var testResult: [String: String] = [:]
     var paddle: PaddleInstallation?
     var glossaryEntries: [GlossaryEntry] = []
@@ -124,12 +128,52 @@ public final class EnginesModel {
         Task { try? await credentials.remove(.engine(engineID)) }
     }
 
+    /// Loads the free `/models` list; the outcome is shown next to the field (count, empty, or the error).
     func fetchModels(_ id: EngineID, endpoint: String, credential: CredentialRef?) {
-        guard let catalog = deps.catalog else { return }
-        let errors = deps.errors
+        guard let catalog = deps.catalog, !fetchingModels.contains(id) else { return }
+        let key = "models-" + id.raw
+        fetchingModels.insert(id)
+        testResult[key] = nil
         Task {
-            do { models[id] = try await catalog.models(for: id, endpoint: endpoint, credential: credential) } catch { errors.present(error, near: nil) }
+            defer { fetchingModels.remove(id) }
+            do {
+                let names = try await catalog.models(for: id, endpoint: endpoint, credential: credential)
+                models[id] = names
+                testResult[key] = names.isEmpty ? l10n[.enginesModelsEmpty] : l10n.string(.enginesModelsLoaded, names.count)
+            } catch {
+                models[id] = []
+                testResult[key] = "✗ " + LocalizedErrorText(AppError.from(error), localizer: l10n).title
+            }
         }
+    }
+
+    // MARK: Model speed test
+
+    func isSpeedTesting(_ id: EngineID) -> Bool { speedTasks[id] != nil }
+
+    func runSpeedTest(_ id: EngineID, models candidates: [String]) {
+        guard let catalog = deps.catalog, speedTasks[id] == nil, !candidates.isEmpty else { return }
+        speedResults[id] = []
+        speedProgress[id] = (0, candidates.count)
+        let snapshot = settings.snapshot
+        speedTasks[id] = Task { [weak self] in
+            for await result in catalog.benchmarkModels(id, models: candidates, settings: snapshot) {
+                guard let self else { return }
+                self.speedResults[id, default: []].append(result)
+                self.speedProgress[id] = (self.speedResults[id]?.count ?? 0, candidates.count)
+            }
+            self?.speedTasks[id] = nil
+        }
+    }
+
+    func cancelSpeedTest(_ id: EngineID) {
+        speedTasks[id]?.cancel()
+        speedTasks[id] = nil
+    }
+
+    func useModel(_ name: String, for id: EngineID) {
+        update(id) { $0.model = name }
+        Task { await refreshHealth(force: true) }
     }
 
     func test(_ id: EngineID) {

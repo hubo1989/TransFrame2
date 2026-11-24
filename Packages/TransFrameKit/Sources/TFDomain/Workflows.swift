@@ -193,12 +193,42 @@ public protocol ScrollCaptureWorkflow: Sendable {
 
 // MARK: Engine catalog (settings pages)
 
+/// One model's result in the settings speed test: the full response time of a small fixed translation.
+public struct ModelSpeedResult: Sendable, Equatable, Identifiable {
+    public enum Outcome: Sendable, Equatable {
+        case success(duration: Duration, sample: String)
+        case failure(AppError)
+    }
+
+    public let model: String
+    public let outcome: Outcome
+    public var id: String { model }
+
+    public init(model: String, outcome: Outcome) {
+        self.model = model
+        self.outcome = outcome
+    }
+
+    public var duration: Duration? {
+        if case .success(let duration, _) = outcome { return duration }
+        return nil
+    }
+
+    /// Successes fastest first, then failures in their original order.
+    public static func ranked(_ results: [ModelSpeedResult]) -> [ModelSpeedResult] {
+        let ok = results.filter { $0.duration != nil }.sorted { ($0.duration ?? .zero) < ($1.duration ?? .zero) }
+        return ok + results.filter { $0.duration == nil }
+    }
+}
+
 public protocol EngineCatalogProviding: Sendable {
     func translationEngines(settings: SettingsSnapshot) -> [EngineDescriptor]
     func health(of id: EngineID, settings: SettingsSnapshot, forceRefresh: Bool) async -> EngineHealth
     func testTranslation(_ id: EngineID, settings: SettingsSnapshot) async throws(AppError) -> String
     func testAnalysis(_ provider: AnalysisProvider, settings: SettingsSnapshot) async throws(AppError) -> String
     func models(for id: EngineID, endpoint: String, credential: CredentialRef?) async throws(AppError) -> [String]
+    /// Runs the same small translation on each model (a few at a time) and streams results as they finish.
+    func benchmarkModels(_ id: EngineID, models: [String], settings: SettingsSnapshot) -> AsyncStream<ModelSpeedResult>
     func paddleStatus(settings: SettingsSnapshot) async -> PaddleInstallation
     func generators(settings: SettingsSnapshot) async -> [EngineDescriptor]
     func testUpload(settings: SettingsSnapshot) async throws(AppError) -> UploadReceipt

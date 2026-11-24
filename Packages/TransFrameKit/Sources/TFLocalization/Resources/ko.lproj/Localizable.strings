@@ -99,6 +99,7 @@
 "engines.enabled" = "활성화됨";
 "engines.endpoint" = "엔드포인트";
 "engines.fetchModels" = "모델 목록";
+"engines.fetchModelsAction" = "모델 가져오기";
 "engines.instanceName" = "호환 엔진 %d";
 "engines.instanceNameLabel" = "이름";
 "engines.locked" = "저장된 키는 이번 세션 동안 잠겨 있습니다.";
@@ -106,6 +107,9 @@
 "engines.modeCompare" = "비교";
 "engines.modeOrdered" = "순차 대체";
 "engines.model" = "모델";
+"engines.modelsChoose" = "모델 선택";
+"engines.modelsEmpty" = "엔드포인트에서 모델을 반환하지 않았습니다.";
+"engines.modelsLoaded" = "모델 %d개";
 "engines.moveDown" = "아래로 이동";
 "engines.moveUp" = "위로 이동";
 "engines.ocrEngine" = "텍스트 인식 엔진";
@@ -122,6 +126,16 @@
 "engines.remove" = "제거";
 "engines.removeInstance" = "엔진 삭제";
 "engines.routing" = "번역 라우팅";
+"engines.speedCapped" = "처음 %d개 모델만 테스트합니다. 필터로 범위를 좁히세요.";
+"engines.speedCurrent" = "현재";
+"engines.speedFastest" = "가장 빠름";
+"engines.speedFilter" = "모델 필터";
+"engines.speedHint" = "각 모델이 같은 세 문장을 번역하며 전체 응답 시간을 측정합니다(모델당 최대 20초). 실제 요청이므로 요금이 부과될 수 있습니다.";
+"engines.speedProgress" = "%d/%d";
+"engines.speedRun" = "모델 %d개 테스트";
+"engines.speedSeconds" = "%.1f초";
+"engines.speedTest" = "모델 속도 테스트";
+"engines.speedUse" = "사용";
 "engines.test" = "테스트";
 "engines.testing" = "테스트 중…";
 "engines.translation" = "번역 엔진";

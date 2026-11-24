@@ -99,6 +99,7 @@
 "engines.enabled" = "启用";
 "engines.endpoint" = "端点";
 "engines.fetchModels" = "模型列表";
+"engines.fetchModelsAction" = "获取模型列表";
 "engines.instanceName" = "兼容引擎 %d";
 "engines.instanceNameLabel" = "名称";
 "engines.locked" = "本次运行中已保存的密钥处于锁定状态。";
@@ -106,6 +107,9 @@
 "engines.modeCompare" = "对比";
 "engines.modeOrdered" = "顺序退避";
 "engines.model" = "模型";
+"engines.modelsChoose" = "选择模型";
+"engines.modelsEmpty" = "端点没有返回模型。";
+"engines.modelsLoaded" = "共 %d 个模型";
 "engines.moveDown" = "下移";
 "engines.moveUp" = "上移";
 "engines.ocrEngine" = "“识别”使用的引擎";
@@ -122,6 +126,16 @@
 "engines.remove" = "移除";
 "engines.removeInstance" = "删除引擎";
 "engines.routing" = "翻译路由";
+"engines.speedCapped" = "只测前 %d 个模型，可用筛选缩小范围。";
+"engines.speedCurrent" = "当前";
+"engines.speedFastest" = "最快";
+"engines.speedFilter" = "筛选模型";
+"engines.speedHint" = "每个模型翻译同样的三句话，记录完整响应时间，每个模型最多等待 20 秒。测速会发出真实请求，可能产生费用。";
+"engines.speedProgress" = "%d/%d";
+"engines.speedRun" = "测速 %d 个模型";
+"engines.speedSeconds" = "%.1f 秒";
+"engines.speedTest" = "模型测速";
+"engines.speedUse" = "使用";
 "engines.test" = "测试";
 "engines.testing" = "测试中…";
 "engines.translation" = "翻译引擎";

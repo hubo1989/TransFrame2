@@ -4,7 +4,7 @@ import TFDomain
 import TFDomainTestSupport
 @testable import TFPipelines
 
-private struct CatalogDependencies: ModelDiscovering, EngineHealthProbing, PaddleInstallationChecking {
+struct CatalogDependencies: ModelDiscovering, EngineHealthProbing, PaddleInstallationChecking {
     let discovery = CallLog<(String, CredentialRef?, EngineID)>()
     let probes = CallLog<(EngineID, Bool)>()
     let paths = CallLog<String?>()

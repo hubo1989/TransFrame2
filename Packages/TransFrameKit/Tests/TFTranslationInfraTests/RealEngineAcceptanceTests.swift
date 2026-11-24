@@ -34,4 +34,26 @@ struct RealEngineAcceptanceTests {
         #expect(result.allSatisfy { ($0.text ?? "").contains(where: { $0.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) } }) })
         print("TF_ACCEPT translate 3 units: \(elapsed)")
     }
+
+    /// Optional: `TF_ACCEPT_MODELS=a,b,c` times the same three-sentence batch on each model (what Settings › Speed Test does).
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TF_ACCEPT_MODELS"] != nil))
+    func speedOfModels() async throws {
+        let names = (env["TF_ACCEPT_MODELS"] ?? "").split(separator: ",").map(String.init)
+        let descriptor = EngineDescriptor(id: .openAICompatible, roles: [.translation], name: .userDefined("acceptance"), locality: .cloud,
+                                          capabilities: [.batch, .segmentIDs], configDigest: "acceptance")
+        for name in names {
+            let key = env["TF_ACCEPT_KEY"]
+            let client = LLMClient(wire: .openAIChat, endpoint: env["TF_ACCEPT_ENDPOINT"] ?? "", model: name, engine: .openAICompatible,
+                                   transport: URLSessionTransport()) { () throws(AppError) in key }
+            let units = ["Good morning.", "The meeting moved to Friday at 3 pm.", "Open Settings to change the shortcut."].map { TranslationUnit(text: $0) }
+            let start = ContinuousClock.now
+            do {
+                let out = try await LLMTranslationEngine(descriptor: descriptor, client: client)
+                    .translate(TranslationBatch(units: units, from: .english, to: .simplifiedChinese))
+                print("TF_ACCEPT speed \(name): \(ContinuousClock.now - start) → \(out.compactMap(\.text).joined(separator: " | "))")
+            } catch {
+                print("TF_ACCEPT speed \(name): failed \(error.leafKey) after \(ContinuousClock.now - start)")
+            }
+        }
+    }
 }

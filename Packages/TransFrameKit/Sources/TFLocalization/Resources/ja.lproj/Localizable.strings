@@ -99,6 +99,7 @@
 "engines.enabled" = "有効";
 "engines.endpoint" = "エンドポイント";
 "engines.fetchModels" = "モデル一覧";
+"engines.fetchModelsAction" = "モデルを取得";
 "engines.instanceName" = "互換エンジン %d";
 "engines.instanceNameLabel" = "名前";
 "engines.locked" = "保存済みのキーはこのセッションではロックされています。";
@@ -106,6 +107,9 @@
 "engines.modeCompare" = "比較";
 "engines.modeOrdered" = "フォールバック順";
 "engines.model" = "モデル";
+"engines.modelsChoose" = "モデルを選択";
+"engines.modelsEmpty" = "エンドポイントからモデルが返されませんでした。";
+"engines.modelsLoaded" = "%d 個のモデル";
 "engines.moveDown" = "下に移動";
 "engines.moveUp" = "上に移動";
 "engines.ocrEngine" = "「テキスト認識」エンジン";
@@ -122,6 +126,16 @@
 "engines.remove" = "削除";
 "engines.removeInstance" = "エンジンを削除";
 "engines.routing" = "翻訳ルーティング";
+"engines.speedCapped" = "最初の %d 個のモデルのみテストします。絞り込みで対象を減らしてください。";
+"engines.speedCurrent" = "使用中";
+"engines.speedFastest" = "最速";
+"engines.speedFilter" = "モデルを絞り込む";
+"engines.speedHint" = "各モデルで同じ 3 文を翻訳し、完全な応答時間を測定します（1 モデルあたり最大 20 秒）。実際のリクエストのため、料金が発生する場合があります。";
+"engines.speedProgress" = "%d/%d";
+"engines.speedRun" = "%d 個のモデルをテスト";
+"engines.speedSeconds" = "%.1f 秒";
+"engines.speedTest" = "モデル速度テスト";
+"engines.speedUse" = "使用";
 "engines.test" = "テスト";
 "engines.testing" = "テスト中…";
 "engines.translation" = "翻訳エンジン";

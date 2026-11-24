@@ -99,6 +99,7 @@
 "engines.enabled" = "Enabled";
 "engines.endpoint" = "Endpoint";
 "engines.fetchModels" = "Models";
+"engines.fetchModelsAction" = "Fetch Models";
 "engines.instanceName" = "Compatible Engine %d";
 "engines.instanceNameLabel" = "Name";
 "engines.locked" = "Saved keys are locked for this session.";
@@ -106,6 +107,9 @@
 "engines.modeCompare" = "Compare";
 "engines.modeOrdered" = "Fallback Chain";
 "engines.model" = "Model";
+"engines.modelsChoose" = "Choose Model";
+"engines.modelsEmpty" = "The endpoint returned no models.";
+"engines.modelsLoaded" = "%d models";
 "engines.moveDown" = "Move Down";
 "engines.moveUp" = "Move Up";
 "engines.ocrEngine" = "Recognize Text engine";
@@ -122,6 +126,16 @@
 "engines.remove" = "Remove";
 "engines.removeInstance" = "Remove Engine";
 "engines.routing" = "Translation Routing";
+"engines.speedCapped" = "Only the first %d models are tested — use the filter to narrow the list.";
+"engines.speedCurrent" = "Current";
+"engines.speedFastest" = "Fastest";
+"engines.speedFilter" = "Filter models";
+"engines.speedHint" = "Each model translates the same three sentences; the full response time is measured, up to 20 seconds per model. These are real requests and may be billed.";
+"engines.speedProgress" = "%d of %d";
+"engines.speedRun" = "Test %d Models";
+"engines.speedSeconds" = "%.1f s";
+"engines.speedTest" = "Model Speed Test";
+"engines.speedUse" = "Use";
 "engines.test" = "Test";
 "engines.testing" = "Testing…";
 "engines.translation" = "Translation Engines";

@@ -99,6 +99,7 @@
 "engines.enabled" = "Включено";
 "engines.endpoint" = "Конечная точка";
 "engines.fetchModels" = "Модели";
+"engines.fetchModelsAction" = "Получить модели";
 "engines.instanceName" = "Совместимый движок %d";
 "engines.instanceNameLabel" = "Название";
 "engines.locked" = "Сохранённые ключи заблокированы для этого сеанса.";
@@ -106,6 +107,9 @@
 "engines.modeCompare" = "Сравнение";
 "engines.modeOrdered" = "Цепочка резерва";
 "engines.model" = "Модель";
+"engines.modelsChoose" = "Выбрать модель";
+"engines.modelsEmpty" = "Конечная точка не вернула моделей.";
+"engines.modelsLoaded" = "Моделей: %d";
 "engines.moveDown" = "Переместить вниз";
 "engines.moveUp" = "Переместить вверх";
 "engines.ocrEngine" = "Движок для «Распознать текст»";
@@ -122,6 +126,16 @@
 "engines.remove" = "Удалить";
 "engines.removeInstance" = "Удалить движок";
 "engines.routing" = "Маршрутизация перевода";
+"engines.speedCapped" = "Проверяются только первые %d моделей — сузьте список фильтром.";
+"engines.speedCurrent" = "Текущая";
+"engines.speedFastest" = "Быстрее всех";
+"engines.speedFilter" = "Фильтр моделей";
+"engines.speedHint" = "Каждая модель переводит одни и те же три предложения; измеряется полное время ответа, не более 20 секунд на модель. Это реальные запросы, они могут тарифицироваться.";
+"engines.speedProgress" = "%d из %d";
+"engines.speedRun" = "Проверить моделей: %d";
+"engines.speedSeconds" = "%.1f с";
+"engines.speedTest" = "Тест скорости моделей";
+"engines.speedUse" = "Выбрать";
 "engines.test" = "Проверить";
 "engines.testing" = "Проверка…";
 "engines.translation" = "Движки перевода";

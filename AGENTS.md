@@ -201,3 +201,10 @@
 - CI GREEN on PR #1 (run 45296774144): checks (macOS 15 + Xcode 26.2: gates, package tests + coverage, UI tests, smoke, universal Release) and intel (x86_64 tests + smoke).
 - Installed Release build to /Applications/TransFrame 2.app (com.transframe.v2, 2.0.0, Developer ID 27LU47J28S signed, hardened runtime, NOT notarized — runs because locally built/no quarantine). Running pid 56270, onboarding shown. Dev instance stopped.
 - Update check fix: SparkleUpdater preflights feed (UpdateFeedDecision: 404/same build → upToDate alert, newer → Sparkle UI, failure → unavailable alert). Reinstalled /Applications build (old copy at /tmp/tf2-old-install).
+- User report (settings › 引擎 › OpenAI 兼容, endpoint http://127.0.0.1:3425/v1 = local magpie proxy, 82 models): "模型列表" empty —
+  root cause: EngineCard fetches via `.onTapGesture` on a Menu, which never fires. "测试中…" stuck — model group/free hangs >60 s
+  (curl), test has no short deadline. Request: model speed test to pick the fastest model. Working on: fetch button + auto-fetch on
+  expand, 20 s test deadline, EngineCatalogService.benchmarkModels stream + UI (filter, cap 30, concurrency 3, sort, "使用").
+  curl timings: group/turbo 4.2 s, group/flash 7.2 s, auto/deepseek-v4.1-flash 10 s.
+- Done: Domain ModelSpeedResult (+ranked), EngineCatalogProviding.benchmarkModels, EngineCatalogService.benchmarkModels/measure (3 concurrent, 20 s each), testTranslation 20 s deadline. Next: EnginesModel speed state + fetch fix, EngineCard UI (SpeedTestSection), strings, test, reinstall.
+- Speed test UI/model fetch done (SpeedTestSection, fetch button + auto-fetch on expand). Real endpoint check via RealEngineAcceptance speedOfModels: glm-5.3-flash 2.9 s, group/flash 6.0 s, group/turbo 13.5 s.
