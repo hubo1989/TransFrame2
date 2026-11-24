@@ -30,6 +30,19 @@ team="$(sed -E 's/.*\(([A-Z0-9]{10})\)$/\1/' <<<"$identity")"
 echo "Signing identity: $identity"
 
 read -r -s -p "Password of the .p12 file: " p12_password; echo
+# The .p12 must open with this password and hold this team's Developer ID identity (checked in a throwaway keychain).
+check_keychain="$tmp/check.keychain-db"
+security create-keychain -p "" "$check_keychain" >/dev/null
+if ! security import "$p12" -k "$check_keychain" -P "$p12_password" -T /usr/bin/codesign >/dev/null 2>&1; then
+  security delete-keychain "$check_keychain" >/dev/null 2>&1 || true
+  echo "The .p12 did not open with that password; nothing was changed."; exit 1
+fi
+if ! security find-identity -p codesigning "$check_keychain" | grep -q "Developer ID Application: .*($team)"; then
+  security delete-keychain "$check_keychain" >/dev/null 2>&1 || true
+  echo "The .p12 holds no Developer ID Application identity for team $team; nothing was changed."; exit 1
+fi
+security delete-keychain "$check_keychain" >/dev/null 2>&1 || true
+echo "Certificate file checked: Developer ID Application for team $team."
 read -r -p "Apple ID used for notarization (e-mail): " apple_id
 read -r -s -p "App-specific password for that Apple ID: " notary_password; echo
 
