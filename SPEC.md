@@ -3110,7 +3110,7 @@ swift-snapshot-testing 是 2.0 新增的唯一第三方依赖。引入时固定�
 #### 决定
 
 1. **2.x 从 TransFrame2 自己的仓库发版**，tag 用 `v2.*`，发布工作流随项目仓库建立。远端仓库地址在创建时确定，更新源 URL 随第一个发布版冻结——它写进 2.0 的 Info.plist 之后不可改。
-2. **更新源**：`appcast.xml` 放在该仓库的 `releases/latest/download/`。仓库里只有这一个产品，`latest` 不会被别的发布顶掉，不需要固定 tag 的变通方案。
+2. **更新源**：稳定版读取该仓库的 `releases/latest/download/appcast.xml`。构建产物先作为 GitHub 预发布供下载安装验证。验证通过后，将同一发布设为正式版和 latest，稳定版用户即可收到该构建。
 3. **新的 Sparkle 签名密钥对**（X5）。私钥放新仓库的密钥里，公钥写进 2.0 的 Info.plist，与 1.x 的密钥互相独立。
 4. **只管 2.x 自己的升级**（D29）：不接管 v1 的更新源，不在 v1 的更新源里发任何条目，2.x 的发版工作流不需要附带或校验任何 v1 文件。v1 用户检查更新仍然读 v1 仓库的 appcast，由它原样服务，永远停在 1.x 的最后一版。
 5. 2.x 的更新源条目写 `minimumSystemVersion 15.0`；产物是双架构的单个 DMG。
