@@ -477,3 +477,7 @@
 "undo.smartMosaic" = "Smart Mosaic";
 "undo.style" = "Change Style";
 "unlock.reason" = "unlock your saved API keys for this session";
+"update.unavailableMessage" = "The update server couldn’t be reached. Check your internet connection and try again.";
+"update.unavailableTitle" = "Can’t Check for Updates";
+"update.upToDateMessage" = "TransFrame 2 %@ is the newest version available.";
+"update.upToDateTitle" = "You’re up to date";

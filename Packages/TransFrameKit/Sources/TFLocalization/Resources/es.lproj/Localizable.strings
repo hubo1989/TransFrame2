@@ -477,3 +477,7 @@
 "undo.smartMosaic" = "Mosaico inteligente";
 "undo.style" = "Cambiar estilo";
 "unlock.reason" = "desbloquear las claves de API guardadas para esta sesión";
+"update.unavailableMessage" = "No se pudo conectar con el servidor de actualizaciones. Comprueba tu conexión a Internet e inténtalo de nuevo.";
+"update.unavailableTitle" = "No se pueden buscar actualizaciones";
+"update.upToDateMessage" = "TransFrame 2 %@ es la versión más reciente disponible.";
+"update.upToDateTitle" = "Tienes la versión más reciente";

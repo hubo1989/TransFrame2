@@ -477,3 +477,7 @@
 "undo.smartMosaic" = "スマートモザイク";
 "undo.style" = "スタイルを変更";
 "unlock.reason" = "このセッション用に保存された API キーのロックを解除";
+"update.unavailableMessage" = "アップデートサーバに接続できません。インターネット接続を確認して、もう一度お試しください。";
+"update.unavailableTitle" = "アップデートを確認できません";
+"update.upToDateMessage" = "TransFrame 2 %@ は利用可能な最新バージョンです。";
+"update.upToDateTitle" = "最新の状態です";

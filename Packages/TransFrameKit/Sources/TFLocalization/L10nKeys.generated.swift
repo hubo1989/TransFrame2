@@ -480,4 +480,8 @@ public extension L10nKey {
     static let undoSmartMosaic = L10nKey("undo.smartMosaic")
     static let undoStyle = L10nKey("undo.style")
     static let unlockReason = L10nKey("unlock.reason")
+    static let updateUnavailableMessage = L10nKey("update.unavailableMessage")
+    static let updateUnavailableTitle = L10nKey("update.unavailableTitle")
+    static let updateUpToDateMessage = L10nKey("update.upToDateMessage")
+    static let updateUpToDateTitle = L10nKey("update.upToDateTitle")
 }

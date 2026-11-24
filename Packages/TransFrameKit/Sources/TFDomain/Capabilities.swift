@@ -325,9 +325,17 @@ public protocol PermissionGuiding: Sendable {
     @MainActor func openSystemSettings(_ pane: SystemSettingsPane)
 }
 
+/// Result of a user-initiated update check. Only a real update hands over to Sparkle's own UI; "no update" never shows an
+/// error, including before the first release exists (the feed answers 404).
+public enum UpdateCheckOutcome: Sendable, Equatable {
+    case updateAvailable
+    case upToDate(version: String)
+    case unavailable
+}
+
 public protocol AppUpdating: Sendable {
     @MainActor func start()
-    @MainActor func checkForUpdates()
+    @MainActor func checkForUpdates() async -> UpdateCheckOutcome
     @MainActor var canCheckForUpdates: Bool { get }
 }
 

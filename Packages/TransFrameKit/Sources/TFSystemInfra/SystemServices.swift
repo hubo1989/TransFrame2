@@ -62,11 +62,19 @@ private extension PermissionKind {
 public final class SparkleUpdater: AppUpdating {
     private var controller: SPUStandardUpdaterController?
     private let isConfigured: Bool
+    private let feedURL: URL?
+    private let currentBuild: Int
+    private let currentVersion: String
+    private let transport: (any HTTPTransport)?
 
-    public init(bundle: Bundle) {
+    public init(bundle: Bundle, transport: (any HTTPTransport)? = nil) {
         let feed = bundle.object(forInfoDictionaryKey: "SUFeedURL") as? String ?? ""
         let key = bundle.object(forInfoDictionaryKey: "SUPublicEDKey") as? String ?? ""
         isConfigured = !feed.isEmpty && !key.isEmpty
+        feedURL = URL(string: feed)
+        currentBuild = Int(bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "") ?? 0
+        currentVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        self.transport = transport
     }
 
     public func start() {
@@ -74,12 +82,53 @@ public final class SparkleUpdater: AppUpdating {
         controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     }
 
-    public func checkForUpdates() {
+    /// Reads the feed first; Sparkle's UI is shown only when a newer build exists. A missing feed (no release yet) means
+    /// up to date, so the user never sees Sparkle's "error retrieving update information" for a normal "no update".
+    public func checkForUpdates() async -> UpdateCheckOutcome {
         start()
-        controller?.checkForUpdates(nil)
+        guard let feedURL, let transport else {
+            controller?.checkForUpdates(nil)
+            return .updateAvailable
+        }
+        let outcome: UpdateCheckOutcome
+        do {
+            let response = try await transport.send(HTTPRequest(url: feedURL, timeout: .seconds(15)), engine: .updateFeed)
+            outcome = UpdateFeedDecision.outcome(status: response.status, body: response.body, currentBuild: currentBuild, currentVersion: currentVersion)
+        } catch {
+            outcome = .unavailable
+        }
+        if outcome == .updateAvailable { controller?.checkForUpdates(nil) }
+        return outcome
     }
 
     public var canCheckForUpdates: Bool { isConfigured }
+}
+
+/// Pure decision for a fetched update feed (testable without Sparkle or network).
+public enum UpdateFeedDecision {
+    public static func outcome(status: Int, body: Data, currentBuild: Int, currentVersion: String) -> UpdateCheckOutcome {
+        if status == 404 { return .upToDate(version: currentVersion) }
+        guard (200..<300).contains(status) else { return .unavailable }
+        let xml = String(bytes: body, encoding: .utf8) ?? ""
+        guard xml.contains("<rss") || xml.contains("<channel") else { return .unavailable }
+        let builds = newestBuilds(in: xml)
+        guard let newest = builds.max() else { return .upToDate(version: currentVersion) }
+        return newest > currentBuild ? .updateAvailable : .upToDate(version: currentVersion)
+    }
+
+    /// `<sparkle:version>` values (build numbers) of every item.
+    static func newestBuilds(in xml: String) -> [Int] {
+        var result: [Int] = []
+        var rest = xml[...]
+        while let open = rest.range(of: "<sparkle:version>"), let close = rest.range(of: "</sparkle:version>", range: open.upperBound..<rest.endIndex) {
+            if let value = Int(rest[open.upperBound..<close.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)) { result.append(value) }
+            rest = rest[close.upperBound...]
+        }
+        for match in xml.matches(of: /sparkle:version="([0-9]+)"/) {
+            if let value = Int(match.1) { result.append(value) }
+        }
+        return result
+    }
 }
 
 // MARK: - Session unlock (APP-06)

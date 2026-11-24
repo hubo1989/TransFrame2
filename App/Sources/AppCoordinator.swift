@@ -100,6 +100,29 @@ final class AppCoordinator: AppRouting {
         route(action.route, triggeredAt: instant, trigger: .hotkey)
     }
 
+    // MARK: Updates (ONB-05)
+
+    /// User-initiated check: only a newer build opens Sparkle's UI; "no update" is a calm confirmation, never an error.
+    private func checkForUpdates() {
+        let l = services.localizer, updater = services.updater
+        Task {
+            switch await updater.checkForUpdates() {
+            case .updateAvailable:
+                break
+            case .upToDate(let version):
+                SystemAlert.present(
+                    title: l[.updateUpToDateTitle], message: l.string(.updateUpToDateMessage, version),
+                    buttons: [AlertButton(l[.actionOk])], style: .informational
+                )
+            case .unavailable:
+                SystemAlert.present(
+                    title: l[.updateUnavailableTitle], message: l[.updateUnavailableMessage],
+                    buttons: [AlertButton(l[.actionOk])], style: .warning
+                )
+            }
+        }
+    }
+
     // MARK: Coexistence with 1.x (N-14, D24)
 
     private func checkCoexistence(failedActions: [HotkeyAction]) async {
@@ -160,7 +183,7 @@ final class AppCoordinator: AppRouting {
         case .openSettings(let page): features.settings.show(page: page)
         case .openOnboarding: features.onboarding.show {}
         case .openAbout: features.about.show()
-        case .checkForUpdates: services.updater.checkForUpdates()
+        case .checkForUpdates: checkForUpdates()
         case .quit:
             services.hotkeys.unregisterAllNow()
             NSApp.terminate(nil)

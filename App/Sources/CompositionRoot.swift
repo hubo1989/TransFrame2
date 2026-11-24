@@ -46,6 +46,7 @@ final class CompositionRoot {
     let performance = PerformanceRecorder()
     let topology = DisplayTopologyService()
     let pasteboard = SystemPasteboard()
+    let transport = URLSessionTransport()
     let sound = SystemSound()
     let renderer = CoreGraphicsRenderer()
     let codec = ImageCodec()
@@ -61,7 +62,7 @@ final class CompositionRoot {
         credentials = KeychainCredentialStore(service: environment.credentialService) {
             await MainActor.run { unlocker.isUnlocked }
         }
-        updater = SparkleUpdater(bundle: .main)
+        updater = SparkleUpdater(bundle: .main, transport: transport)
         logger = OSEventLogger(subsystem: environment.bundleID)
         errors = StandardErrorPresenter(localizer: localizer, feedback: feedback, permissions: permissions, router: nil)
 
@@ -92,7 +93,7 @@ final class CompositionRoot {
         let snapshotter = ScreenSnapshotter(topology: topology, windows: WindowEnumerator())
         let render = RenderService(sessions: sessions, planner: RenderPlanner(measurer: renderer), executor: renderer, performance: performance)
         let history = makeHistory()
-        let transport = URLSessionTransport()
+        let transport = transport
         let credentials = credentials
         let secrets: @Sendable (CredentialRef) async throws(AppError) -> String? = { ref throws(AppError) in try await credentials.secret(for: ref) }
         let detector = LocalSensitiveContentDetector()

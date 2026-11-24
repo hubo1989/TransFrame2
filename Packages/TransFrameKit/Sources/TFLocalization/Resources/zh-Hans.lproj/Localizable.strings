@@ -477,3 +477,7 @@
 "undo.smartMosaic" = "智能马赛克";
 "undo.style" = "修改样式";
 "unlock.reason" = "在本次运行中解锁已保存的 API 密钥";
+"update.unavailableMessage" = "无法连接更新服务器。请检查网络连接后再试。";
+"update.unavailableTitle" = "暂时无法检查更新";
+"update.upToDateMessage" = "TransFrame 2 %@ 是目前的最新版本。";
+"update.upToDateTitle" = "已是最新版本";

@@ -477,3 +477,7 @@
 "undo.smartMosaic" = "Умная мозаика";
 "undo.style" = "Изменить стиль";
 "unlock.reason" = "разблокировать сохранённые ключи API для этого сеанса";
+"update.unavailableMessage" = "Не удаётся подключиться к серверу обновлений. Проверьте подключение к интернету и повторите попытку.";
+"update.unavailableTitle" = "Не удалось проверить обновления";
+"update.upToDateMessage" = "TransFrame 2 %@ — последняя доступная версия.";
+"update.upToDateTitle" = "Установлена последняя версия";

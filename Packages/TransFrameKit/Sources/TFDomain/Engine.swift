@@ -27,6 +27,8 @@ public struct EngineID: Hashable, Sendable, Codable, CustomStringConvertible, Co
     public static let hostOSS = EngineID("host.oss")
     public static let hostCOS = EngineID("host.cos")
     public static let hostKodo = EngineID("host.kodo")
+    /// The 2.x update feed (not an engine; used to label the outbound request).
+    public static let updateFeed = EngineID("update.feed")
 
     public static func compatible(_ id: UUID) -> EngineID { EngineID("compatible:\(id.uuidString.lowercased())") }
     public var compatibleInstanceID: UUID? {

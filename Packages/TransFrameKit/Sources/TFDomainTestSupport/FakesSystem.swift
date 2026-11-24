@@ -217,7 +217,11 @@ public final class FakeUpdater: AppUpdating, @unchecked Sendable {
     public let checks = Locked(0)
     public init() {}
     @MainActor public func start() { started.mutate { $0 += 1 } }
-    @MainActor public func checkForUpdates() { checks.mutate { $0 += 1 } }
+    public let outcome = Locked<UpdateCheckOutcome>(.upToDate(version: "2.0.0"))
+    @MainActor public func checkForUpdates() async -> UpdateCheckOutcome {
+        checks.mutate { $0 += 1 }
+        return outcome.current
+    }
     @MainActor public var canCheckForUpdates: Bool { started.current > 0 }
 }
 
