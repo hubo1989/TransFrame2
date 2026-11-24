@@ -69,13 +69,39 @@ jobs:
             -destination 'generic/platform=macOS' ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" \
-            ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" \
+            ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
             TF_SPARKLE_PUBLIC_KEY="$SPARKLE_PUBLIC_KEY" \
             SYMROOT="$PWD/build/Products" OBJROOT="$PWD/build/Intermediates" build
           APP="build/Products/Release/TransFrame 2.app"
           lipo -archs "$APP/Contents/MacOS/TransFrame 2" | grep -q "x86_64 arm64\|arm64 x86_64"
-          codesign --verify --deep --strict --verbose=2 "$APP"
           test -n "$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$APP/Contents/Info.plist")"
+      - name: Sign for notarization
+        run: |
+          # Sparkle's helpers ship ad hoc signed and Xcode only re-signs the framework, so sign inside out (Sparkle docs,
+          # "Code signing"), then the app with its own entitlements (no get-task-allow).
+          APP="build/Products/Release/TransFrame 2.app"
+          SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+          ID="Developer ID Application"
+          codesign -f -s "$ID" -o runtime --timestamp "$SPARKLE/Versions/B/XPCServices/Installer.xpc"
+          codesign -f -s "$ID" -o runtime --timestamp --preserve-metadata=entitlements "$SPARKLE/Versions/B/XPCServices/Downloader.xpc"
+          codesign -f -s "$ID" -o runtime --timestamp "$SPARKLE/Versions/B/Autoupdate"
+          codesign -f -s "$ID" -o runtime --timestamp "$SPARKLE/Versions/B/Updater.app"
+          codesign -f -s "$ID" -o runtime --timestamp "$SPARKLE"
+          codesign -f -s "$ID" -o runtime --timestamp --entitlements App/TransFrame2.entitlements "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          # Every Mach-O: Developer ID of the app's team, secure timestamp, hardened runtime; and no get-task-allow.
+          team=$(codesign -dv "$APP" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+          bad=0
+          while IFS= read -r -d '' f; do
+            file -b "$f" | grep -q "Mach-O" || continue
+            info=$(codesign -dvv "$f" 2>&1)
+            if ! grep -q "^Authority=Developer ID Application" <<<"$info" || ! grep -q "^TeamIdentifier=$team$" <<<"$info" \
+               || ! grep -q "^Timestamp=" <<<"$info" || ! grep -q "(runtime)" <<<"$info"; then
+              echo "::error::not ready for notarization: ${f#"$APP"/}"; bad=1
+            fi
+          done < <(find "$APP" -type f -print0)
+          if codesign -d --entitlements - --xml "$APP" 2>/dev/null | grep -q "get-task-allow"; then echo "::error::get-task-allow entitlement"; bad=1; fi
+          exit "$bad"
       - name: DMG
         run: |
           create-dmg --volname "TransFrame 2" --app-drop-link 480 160 --window-size 640 360 --icon "TransFrame 2.app" 160 160 \
@@ -87,7 +113,16 @@ jobs:
           PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          xcrun notarytool submit "build/TransFrame-2-$VERSION.dmg" --apple-id "$APPLE_ID" --password "$PASSWORD" --team-id "$TEAM_ID" --wait
+          xcrun notarytool submit "build/TransFrame-2-$VERSION.dmg" --apple-id "$APPLE_ID" --password "$PASSWORD" --team-id "$TEAM_ID" \
+            --wait --output-format json > build/notary.json || true
+          cat build/notary.json
+          ID=$(plutil -extract id raw -o - build/notary.json 2>/dev/null || true)
+          STATUS=$(plutil -extract status raw -o - build/notary.json 2>/dev/null || true)
+          if [ "$STATUS" != "Accepted" ]; then
+            # Apple's reasons (which file, which rule) — the log holds no secrets.
+            [ -n "$ID" ] && xcrun notarytool log "$ID" --apple-id "$APPLE_ID" --password "$PASSWORD" --team-id "$TEAM_ID"
+            echo "::error::notarization status: ${STATUS:-unknown}"; exit 1
+          fi
           xcrun stapler staple "build/TransFrame-2-$VERSION.dmg"
           xcrun stapler validate "build/TransFrame-2-$VERSION.dmg"
       - name: Sparkle appcast (minimumSystemVersion 15.0)
