@@ -46,6 +46,7 @@ jobs:
           path: |
             PerfReports/*.json
             build/coverage.txt
+            build/package-tests.log
   intel:
     # x86_64 runtime check (SPEC §06 §6). If the runner is unavailable the Intel slice is compile-only.
     runs-on: macos-15-intel
@@ -57,3 +58,8 @@ jobs:
       - run: brew install xcodegen
       - run: Scripts/test.sh package
       - run: Scripts/test.sh smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: intel-reports
+          path: build/package-tests.log

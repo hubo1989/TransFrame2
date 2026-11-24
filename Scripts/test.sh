@@ -10,9 +10,32 @@ MODE="${1:-all}"
 mkdir -p "$ROOT/build"
 
 package_tests() {
-  (cd "$PKG" && swift test --enable-code-coverage --parallel 2>&1 | tee "$ROOT/build/package-tests.log" | grep -E "✘|error:|Test run|passed after|failed after" | tail -40)
-  grep -q "✘" "$ROOT/build/package-tests.log" && { echo "package tests failed"; exit 1; }
-  grep -qE "error: (fatalError|Build failed)" "$ROOT/build/package-tests.log" && { echo "package build failed"; exit 1; }
+  local log="$ROOT/build/package-tests.log" status=0
+  # Watchdog: a hung test must not eat the CI job. On timeout the tests that started but never finished are listed.
+  (cd "$PKG" && perl -e 'alarm shift; exec { $ARGV[0] } @ARGV or die "exec: $!"' "${TF_TEST_TIMEOUT:-1500}" \
+    swift test --enable-code-coverage --parallel) > "$log" 2>&1 || status=$?
+  grep -E "✘|error:|Test run|passed after|failed after" "$log" | tail -40
+  if [[ $status -eq 142 ]]; then
+    echo "--- package tests timed out after ${TF_TEST_TIMEOUT:-1500} s; started but never finished: ---"
+    python3 - "$log" <<'PY'
+import re, sys
+text = open(sys.argv[1], errors="replace").read()
+clean = lambda name: re.sub(r" with \d+ test cases?$", "", name)
+started = {clean(n) for n in re.findall(r"◇ (?:Test|Suite) (.+?) started\.", text)}
+finished = {clean(n) for n in re.findall(r"[✔✘] (?:Test|Suite) (.+?) (?:passed|failed)", text)}
+for name in sorted(started - finished):
+    print("  " + name)
+PY
+    exit 1
+  fi
+  if grep -q "✘" "$log"; then
+    # The summary above keeps only the tail; list every failing test and its expectation.
+    echo "--- failures ---"
+    grep -E "recorded an issue|↳" "$log" | grep -v -E "Testing Library|Target Platform" | head -120
+    echo "package tests failed"; exit 1
+  fi
+  grep -qE "error: (fatalError|Build failed)" "$log" && { echo "package build failed"; exit 1; }
+  [[ $status -eq 0 ]] || { echo "swift test exited with $status"; tail -20 "$log"; exit 1; }
   coverage
 }
 
